@@ -1,0 +1,9 @@
+cmake-build*
+.idea
+CMakeLists.txt.user
+build
+thirdparty/build-*
+data
+*~
+__pycache__
+.vscode

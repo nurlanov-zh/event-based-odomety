@@ -1,0 +1,70 @@
+image: registry.gitlab.vision.in.tum.de/visnav_ss20/team1/event-based-odometry
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  BUILD_TYPE: RelWithDebInfo
+
+# template for docker builds with ccache
+.prepare_docker_template: &prepare_docker_definition
+  tags:
+    - docker
+  before_script:
+    - mkdir -p ccache
+    - export CCACHE_BASEDIR=${PWD}
+    - export CCACHE_DIR=${PWD}/ccache
+    - ccache -s
+  cache:
+    paths:
+    - ccache/
+    key: ${CI_JOB_NAME}
+
+# template for build
+.compile_template: &compile_definition
+  stage: build
+  script:
+    - ./build_submodules.sh ${BUILD_TYPE}
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+    - make -j2
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 week
+
+# build on 18.04
+build:
+  <<: *prepare_docker_definition
+  <<: *compile_definition
+
+# temlate for unit test
+unit-test:
+  # run tests, and if any fail, run again verbose
+  stage: test
+  script:
+    - cd build
+    - ctest || (ctest -V && false)
+  dependencies:
+    - build
+
+# temlate for memory test
+memcheck-test:
+  stage: test
+  script:
+    - cd build
+    - ctest -V -T memcheck
+  dependencies:
+    - build
+
+# check if clang-format would make any changes
+clang-format:
+  tags:
+    - docker
+  stage: build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - apt update && apt -qy install clang-format    
+    - ./run_format.sh
+    # check if any files are now modified and error if yes
+    - (if [ -n "`git diff --name-only --diff-filter=M --ignore-submodules`" ]; then echo $'\n    Some files are not properly formatted. You can use "./run_format.sh".\n'; git diff --diff-filter=M; false; fi)
