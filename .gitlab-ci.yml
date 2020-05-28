@@ -30,7 +30,6 @@ variables:
   artifacts:
     paths:
       - build/
-    expire_in: 1 week
 
 # build on 18.04
 build:
