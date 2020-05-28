@@ -2,13 +2,12 @@
 
 #include <gtest/gtest.h>
 
-std::string TEST_DATA_PATH = "../../../../src/dataset_reader/test/data";
+std::string TEST_DATA_PATH = "../../../../tools/dataset_reader/test/data";
 
 TEST(Davis240cReader, eventsTest)
 {
-	std::unique_ptr<tools::Davis240cReader> reader(
-		new tools::Davis240cReader(TEST_DATA_PATH));
-	const auto events = reader->getEvents();
+	tools::Davis240cReader reader(TEST_DATA_PATH);
+	const auto events = reader.getEvents();
 
 	std::vector<common::Point2i> points = {
 		{33, 39}, {158, 145}, {88, 143}, {174, 154}, {112, 139}};
@@ -20,8 +19,7 @@ TEST(Davis240cReader, eventsTest)
 		common::timestamp_t(50), common::timestamp_t(55),
 		common::timestamp_t(80)};
 
-	for (size_t i = 0; i < events.size(); ++i)
-	{
+	for (size_t i = 0; i < events.size(); ++i) {
 		EXPECT_EQ(events[i].timestamp.count(), timestamps[i].count());
 		EXPECT_EQ(events[i].value.point.x, points[i].x);
 		EXPECT_EQ(events[i].value.point.y, points[i].y);
@@ -31,9 +29,8 @@ TEST(Davis240cReader, eventsTest)
 
 TEST(Davis240cReader, imagesTest)
 {
-	std::unique_ptr<tools::Davis240cReader> reader(
-		new tools::Davis240cReader(TEST_DATA_PATH));
-	const auto images = reader->getImages();
+	tools::Davis240cReader reader(TEST_DATA_PATH);
+	const auto images = reader.getImages();
 
 	std::vector<common::timestamp_t> timestamps = {common::timestamp_t(28046),
 												   common::timestamp_t(72111),
@@ -44,8 +41,7 @@ TEST(Davis240cReader, imagesTest)
 		cv::imread(TEST_DATA_PATH + "/images/frame_00000001.png", CV_8U),
 		cv::imread(TEST_DATA_PATH + "/images/frame_00000002.png", CV_8U)};
 
-	for (size_t i = 0; i < images.size(); ++i)
-	{
+	for (size_t i = 0; i < images.size(); ++i) {
 		const cv::Mat diff = images[i].value != imagesGT[i];
 		EXPECT_EQ(cv::countNonZero(diff), 0);
 		EXPECT_EQ(images[i].timestamp.count(), timestamps[i].count());
@@ -54,9 +50,8 @@ TEST(Davis240cReader, imagesTest)
 
 TEST(Davis240cReader, groundTruthTest)
 {
-	std::unique_ptr<tools::Davis240cReader> reader(
-		new tools::Davis240cReader(TEST_DATA_PATH));
-	const auto groundTruth = reader->getGroundTruth();
+	tools::Davis240cReader reader(TEST_DATA_PATH);
+	const auto groundTruth = reader.getGroundTruth();
 
 	std::vector<common::timestamp_t> timestamps = {common::timestamp_t(72111),
 												   common::timestamp_t(116176)};
@@ -79,8 +74,7 @@ TEST(Davis240cReader, groundTruthTest)
 		transforms.push_back({mat, {0, 0, 1}});
 	}
 
-	for (size_t i = 0; i < groundTruth.size(); ++i)
-	{
+	for (size_t i = 0; i < groundTruth.size(); ++i) {
 		EXPECT_TRUE(
 			groundTruth[i].value.matrix().isApprox(transforms[i].matrix()));
 		EXPECT_EQ(groundTruth[i].timestamp.count(), timestamps[i].count());

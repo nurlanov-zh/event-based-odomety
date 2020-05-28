@@ -102,5 +102,7 @@ find_program(CTEST_MEMORYCHECK_COMMAND REQUIRED valgrind)
 message(STATUS "Found Valgrind: ${CTEST_MEMORYCHECK_COMMAND}")
 
 enable_testing()
-add_subdirectory(src)
+add_subdirectory(tools)
+add_subdirectory(implementation)
+add_subdirectory(common)
 add_subdirectory(thirdparty/googletest)
