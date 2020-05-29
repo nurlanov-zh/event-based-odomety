@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-std::string TEST_DATA_PATH = "../../../../tools/dataset_reader/test/data";
+std::string TEST_DATA_PATH = "test/test_data";
 
 TEST(Davis240cReader, eventsTest)
 {
@@ -18,6 +18,8 @@ TEST(Davis240cReader, eventsTest)
 		common::timestamp_t(0), common::timestamp_t(11),
 		common::timestamp_t(50), common::timestamp_t(55),
 		common::timestamp_t(80)};
+
+	ASSERT_EQ(timestamps.size(), events.size());
 
 	for (size_t i = 0; i < events.size(); ++i) {
 		EXPECT_EQ(events[i].timestamp.count(), timestamps[i].count());
@@ -40,6 +42,8 @@ TEST(Davis240cReader, imagesTest)
 		cv::imread(TEST_DATA_PATH + "/images/frame_00000000.png", CV_8U),
 		cv::imread(TEST_DATA_PATH + "/images/frame_00000001.png", CV_8U),
 		cv::imread(TEST_DATA_PATH + "/images/frame_00000002.png", CV_8U)};
+
+	ASSERT_EQ(timestamps.size(), images.size());
 
 	for (size_t i = 0; i < images.size(); ++i) {
 		const cv::Mat diff = images[i].value != imagesGT[i];
@@ -73,6 +77,8 @@ TEST(Davis240cReader, groundTruthTest)
 		mat(2, 0)			= -1;
 		transforms.push_back({mat, {0, 0, 1}});
 	}
+
+	ASSERT_EQ(timestamps.size(), groundTruth.size());
 
 	for (size_t i = 0; i < groundTruth.size(); ++i) {
 		EXPECT_TRUE(

@@ -1,0 +1,3 @@
+0.028046000 images/frame_00000000.png
+0.072111000 images/frame_00000001.png
+0.116176001 images/frame_00000002.png

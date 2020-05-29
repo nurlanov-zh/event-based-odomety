@@ -12,4 +12,4 @@ target_link_libraries(dataset_reader_test
     dataset_reader
 )
 
-gtest_discover_tests(dataset_reader_test DISCOVERY_TIMEOUT 120)
+gtest_discover_tests(dataset_reader_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 120)

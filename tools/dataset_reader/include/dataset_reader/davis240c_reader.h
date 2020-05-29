@@ -4,7 +4,7 @@
 
 namespace tools
 {
-class Davis240cReader : DatasetReader
+class Davis240cReader : public DatasetReader
 {
    public:
 	Davis240cReader(const std::string& path);

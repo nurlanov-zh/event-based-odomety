@@ -1,0 +1,2 @@
+0.000001000 images/frame_00000000.png
+0.000004000 images/frame_00000001.png

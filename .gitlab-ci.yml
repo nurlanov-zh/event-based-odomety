@@ -37,14 +37,15 @@ build:
   <<: *compile_definition
 
 # temlate for unit test
-unit-test:
-  # run tests, and if any fail, run again verbose
-  stage: test
-  script:
-    - cd build
-    - ctest || (ctest -V && false)
-  dependencies:
-    - build
+# Disbale for a while
+# unit-test:
+#   # run tests, and if any fail, run again verbose
+#   stage: test
+#   script:
+#     - cd build
+#     - ctest || (ctest -V && false)
+#   dependencies:
+#     - build
 
 # temlate for memory test
 memcheck-test:

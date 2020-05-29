@@ -12,6 +12,8 @@ std::string SEPARATOR		  = "/";
 
 using namespace common;
 
+// TODO: you can make it faster...
+
 Davis240cReader::Davis240cReader(const std::string& path) : DatasetReader(path)
 {
 }

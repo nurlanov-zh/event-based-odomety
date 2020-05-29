@@ -33,4 +33,12 @@ using EventSequence = std::vector<Sample<Event>>;
 using ImageSequence = std::vector<Sample<cv::Mat>>;
 using GroundTruth   = std::vector<Sample<Pose3d>>;
 
+struct Corner
+{
+	Eigen::Vector2d point;
+	float angle;
+};
+
+using Corners = std::vector<Corner>;
+
 }  // namespace common
