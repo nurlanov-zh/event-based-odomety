@@ -7,10 +7,11 @@
 #include <memory>
 #include <string>
 
-namespace tools
-{
 #define REGISTER_CALLBACK(class, callback, object)                             \
 	std::bind(&class::callback, &object, std::placeholders::_1)
+
+namespace tools
+{
 
 enum EventType
 {
@@ -33,20 +34,24 @@ class Replayer
    public:
 	Replayer(const std::shared_ptr<DatasetReader> reader);
 
+    void reset();
+    
 	bool finished() const;
 
 	void addGroundTruthCallback(
-		std::function<void(const common::Sample<common::Pose3d>&)> callback);
+		std::function<void(const common::GroundTruthSample&)> callback);
 
 	void addEventCallback(
-		std::function<void(const common::Sample<common::Event>&)> callback);
+		std::function<void(const common::EventSample&)> callback);
 
 	void addImageCallback(
-		std::function<void(const common::Sample<cv::Mat>&)> callback);
+		std::function<void(const common::ImageSample&)> callback);
 
 	void next();
 
     void nextInterval(const common::timestamp_t& interval);
+
+	void nextImage();
 
     common::timestamp_t getLastTimestamp() { return lastTimestamp_; }
 
@@ -82,11 +87,13 @@ class Replayer
 
     common::timestamp_t lastTimestamp_;
 
-	std::vector<std::function<void(const common::Sample<common::Pose3d>&)>>
+	bool imageArrived_;
+
+	std::vector<std::function<void(const common::GroundTruthSample&)>>
 		groundTruthCallbacks_;
-	std::vector<std::function<void(const common::Sample<common::Event>&)>>
+	std::vector<std::function<void(const common::EventSample&)>>
 		eventCallbacks_;
-	std::vector<std::function<void(const common::Sample<cv::Mat>&)>>
+	std::vector<std::function<void(const common::ImageSample&)>>
 		imageCallbacks_;
 };
 

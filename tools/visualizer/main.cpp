@@ -1,4 +1,5 @@
 #include <dataset_reader/davis240c_reader.h>
+#include <evaluator/evaluator.h>
 #include <replayer/replayer.h>
 #include "visualizer/visualizer.h"
 
@@ -7,17 +8,8 @@
 #include <thread>
 
 tools::Visualizer visualizer;
-// temporary callback
-
-cv::Mat image;
-bool received = false;
-common::Corners defaultCorners = {{{5, 5}, 0}, {{25, 25}, 1.57}};
-
-void newImageCallback(const common::Sample<cv::Mat>& sample)
-{
-	image	= sample.value;
-	received = true;
-}
+const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
+	std::chrono::microseconds(5000);
 
 int main(int argc, char** argv)
 {
@@ -43,44 +35,62 @@ int main(int argc, char** argv)
 
 	tools::Replayer replayer(reader);
 
+	const auto param = tools::EvaluatorParams();
+	tools::Evaluator evaluator(param);
+
+	replayer.addEventCallback(
+		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
+	replayer.addImageCallback(
+		REGISTER_CALLBACK(tools::Evaluator, imageCallback, evaluator));
+
+	replayer.addEventCallback(
+		REGISTER_CALLBACK(tools::Visualizer, eventCallback, visualizer));
+	replayer.addImageCallback(
+		REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
+
 	if (showGui) {
 		visualizer.createWindow();
-		replayer.addImageCallback(newImageCallback);
 	}
 
-	std::thread thread([&replayer, showGui]() {
-		while (!replayer.finished() && !visualizer.shouldQuit()) {
-			const bool stop = visualizer.stopPressed();
-			if (!stop || !showGui) {
+	while (!visualizer.shouldQuit() && !replayer.finished()) {
+		const bool stop = visualizer.stopPressed();
+		if (!stop || !showGui) {
+			replayer.next();
+		}
+		else if (stop && showGui)
+		{
+			if (visualizer.nextPressed()) {
 				replayer.next();
 			}
-			else if (stop && showGui)
+			else if (visualizer.nextIntervalPressed())
 			{
-				if (visualizer.nextPressed()) {
-					replayer.next();
-				}
-				else if (visualizer.nextIntervalPressed())
-				{
-					replayer.nextInterval(visualizer.getStepInterval());
-				}
+				replayer.nextInterval(visualizer.getStepInterval());
+			}
+			else if (visualizer.nextImagePressed())
+			{
+				replayer.nextImage();
 			}
 		}
-	});
 
-	if (showGui) {
-		while (!visualizer.shouldQuit()) {
-			if (received) {
-				visualizer.drawOriginalImage(image);
-				visualizer.drawPredictedFlow(image);
-				visualizer.drawIntegratedFlow(image);
-                visualizer.setCorners(defaultCorners);
-            }
-            visualizer.setTimestamp(replayer.getLastTimestamp());
-            visualizer.step();
+		if (visualizer.resetPressed()) {
+			replayer.reset();
+			evaluator.reset();
+		}
+
+		if (showGui) {
+			const auto timestamp = replayer.getLastTimestamp();
+
+			// redraw only every so often if not stop
+			if (stop ||
+				(!stop &&
+				 (timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
+			{
+				visualizer.setPatches(evaluator.getPatches());
+				visualizer.setTimestamp(timestamp);
+				visualizer.step();
+			}
 		}
 	}
-
-	thread.join();
 
 	return 0;
 }

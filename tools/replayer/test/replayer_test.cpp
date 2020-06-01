@@ -10,19 +10,19 @@ class TestListener
 {
    public:
 	TestListener() {}
-	void eventCallback(const common::Sample<common::Event>& sample)
+	void eventCallback(const common::EventSample& sample)
 	{
 		timestamps.emplace_back(
 			std::make_pair(sample.timestamp, tools::EventType::EVENT));
 	}
 
-	void groundTruthCallback(const common::Sample<common::Pose3d>& sample)
+	void groundTruthCallback(const common::GroundTruthSample& sample)
 	{
 		timestamps.emplace_back(
 			std::make_pair(sample.timestamp, tools::EventType::GROUND_TRUTH));
 	}
 
-	void imageCallback(const common::Sample<cv::Mat>& sample)
+	void imageCallback(const common::ImageSample& sample)
 	{
 		timestamps.emplace_back(
 			std::make_pair(sample.timestamp, tools::EventType::IMAGE));
@@ -71,14 +71,35 @@ TEST_F(ReplayerTest, nextTest)
 	}
 }
 
-TEST_F(ReplayerTest, nextIntervalTest)
+TEST_F(ReplayerTest, nextImageTest)
 {
-	replayer->nextInterval(common::timestamp_t(3));
+	replayer->nextImage();
+	replayer->nextImage();
 
 	std::vector<std::pair<common::timestamp_t, tools::EventType>> timestamps = {
 		{common::timestamp_t(0), tools::EventType::EVENT},
 		{common::timestamp_t(1), tools::EventType::IMAGE},
-		{common::timestamp_t(3), tools::EventType::EVENT}};
+		{common::timestamp_t(3), tools::EventType::EVENT},
+		{common::timestamp_t(4), tools::EventType::IMAGE}};
+
+	ASSERT_EQ(timestamps.size(), listener.timestamps.size());
+	for (size_t i = 0; i < timestamps.size(); ++i) {
+		EXPECT_EQ(timestamps[i].first, listener.timestamps[i].first);
+		EXPECT_EQ(timestamps[i].second, listener.timestamps[i].second);
+	}
+}
+
+TEST_F(ReplayerTest, resetTest)
+{
+	replayer->nextInterval(common::timestamp_t(3));
+
+    replayer->reset();
+    listener.timestamps.clear();
+
+    replayer->next();
+
+	std::vector<std::pair<common::timestamp_t, tools::EventType>> timestamps = {
+		{common::timestamp_t(0), tools::EventType::EVENT}};
 
 	ASSERT_EQ(timestamps.size(), listener.timestamps.size());
 	for (size_t i = 0; i < timestamps.size(); ++i) {

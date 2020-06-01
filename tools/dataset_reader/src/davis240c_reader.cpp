@@ -24,13 +24,13 @@ EventSequence Davis240cReader::getEvents() const
 	const std::string filePath = path_ + SEPARATOR + EVENT_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open())
-	{ throw std::runtime_error("Unable to open " + filePath); }
+	if (!file.is_open()) {
+		throw std::runtime_error("Unable to open " + filePath);
+	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' '))
-	{
+	while (std::getline(file, line, ' ')) {
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
@@ -47,13 +47,17 @@ EventSequence Davis240cReader::getEvents() const
 
 		std::getline(file, line);
 
-		const int32_t sign = std::stoi(line);
+		int32_t sign = std::stoi(line);
 
-		if (sign != 1 && sign != 0)
-		{ throw std::runtime_error("Sign is not equal to 0/1"); }
+		common::EventPolarity polarity = POSITIVE;
+		if (sign == 0) {
+			polarity = NEGATIVE;
+		} else if (sign != 1) {
+			throw std::runtime_error("Sign is not equal to 0/1");
+		}
 
-		const Event event = {point, static_cast<int8_t>(sign)};
-		events.emplace_back(Sample<Event>(event, timestamp));
+		const Event event = {point, polarity};
+		events.emplace_back(EventSample(event, timestamp));
 		loaded++;
 	}
 
@@ -68,13 +72,13 @@ ImageSequence Davis240cReader::getImages() const
 	const std::string filePath = path_ + SEPARATOR + IMAGE_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open())
-	{ throw std::runtime_error("Unable to open " + filePath); }
+	if (!file.is_open()) {
+		throw std::runtime_error("Unable to open " + filePath);
+	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' '))
-	{
+	while (std::getline(file, line, ' ')) {
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
@@ -83,7 +87,7 @@ ImageSequence Davis240cReader::getImages() const
 
 		const std::string inputFilePath = path_ + SEPARATOR + line;
 		const cv::Mat image				= cv::imread(inputFilePath, CV_8U);
-		images.emplace_back(Sample<cv::Mat>(image, timestamp));
+		images.emplace_back(ImageSample(image, timestamp));
 		loaded++;
 	}
 
@@ -98,13 +102,13 @@ GroundTruth Davis240cReader::getGroundTruth() const
 	const std::string filePath = path_ + SEPARATOR + GROUND_TRUTH_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open())
-	{ throw std::runtime_error("Unable to open " + filePath); }
+	if (!file.is_open()) {
+		throw std::runtime_error("Unable to open " + filePath);
+	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' '))
-	{
+	while (std::getline(file, line, ' ')) {
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
@@ -135,7 +139,7 @@ GroundTruth Davis240cReader::getGroundTruth() const
 
 		const auto pose = Sophus::SE3d(quaternion, translation);
 
-		groundTruth.emplace_back(Sample<common::Pose3d>(pose, timestamp));
+		groundTruth.emplace_back(GroundTruthSample(pose, timestamp));
 		loaded++;
 	}
 

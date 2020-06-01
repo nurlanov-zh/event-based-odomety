@@ -1,5 +1,6 @@
 #pragma once
 #include <common/data_types.h>
+#include <feature_tracker/feature_detector.h>
 
 #include <pangolin/display/image_view.h>
 #include <pangolin/gl/gldraw.h>
@@ -14,8 +15,8 @@ namespace tools
 enum ImageViews
 {
 	ORIGINAL		= 0,
-	PREDICTED_FLOW  = 1,
-	INTEGRATED_FLOW = 2
+	PREDICTED_NABLA  = 1,
+	INTEGRATED_NABLA = 2
 };
 
 class Visualizer
@@ -28,8 +29,8 @@ class Visualizer
 	void createWindow();
 
 	void drawOriginalImage(const cv::Mat& cvImage);
-	void drawPredictedFlow(const cv::Mat& cvImage);
-	void drawIntegratedFlow(const cv::Mat& cvImage);
+	void drawPredictedNabla(const cv::Mat& cvImage);
+	void drawIntegratedNabla(const cv::Mat& cvImage);
 
 	void drawImageOverlay(pangolin::View&, size_t idx);
 
@@ -38,18 +39,22 @@ class Visualizer
 	bool stopPressed() const;
 	bool nextPressed() const;
 	bool nextIntervalPressed() const;
+	bool resetPressed() const;
+	bool nextImagePressed() const;
 
 	void setTimestamp(const common::timestamp_t& timestamp)
 	{
 		currentTimestamp_ = timestamp;
 	}
 
-	void setCorners(const common::Corners& corners)
+	void setPatches(const tracker::Patches& patches)
 	{
-		corners_ = corners;
+		patches_ = patches;
 	}
 
 	common::timestamp_t getStepInterval() const;
+	void eventCallback(const common::EventSample& sample);
+	void imageCallback(const common::ImageSample& sample);
 
    private:
 	void wait() const;
@@ -58,14 +63,27 @@ class Visualizer
 
 	void drawImage(const cv::Mat& cvImage, const ImageViews& view);
 	void drawOriginalOverlay();
-	void drawPredictedFlow();
-	void drawIntegratedFlow();
+	void drawPredictedNabla();
+	void drawIntegratedNabla();
+
+	void reset();
 
    private:
 	bool quit_;
+	bool nextPressed_;
+	bool nextIntervalPressed_;
+	bool nextImagePressed_;
+
 	common::timestamp_t currentTimestamp_;
 	std::vector<std::shared_ptr<pangolin::ImageView>> imgView_;
-	common::Corners corners_;
+	tracker::Patches patches_;
+
+	std::list<common::EventSample> integratedEvents_;
+
+	cv::Mat integratedNabla_;
+	cv::Mat predictedNabla_;
+	cv::Mat originalImage_;
+
 };
 
 }  // ns tools

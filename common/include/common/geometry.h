@@ -2,15 +2,14 @@
 
 #include <inttypes.h>
 #include <sophus/se3.hpp>
+#include <sophus/se2.hpp>
+#include <opencv2/opencv.hpp>
 
 namespace common
 {
-struct Point2i
-{
-	int32_t x;
-	int32_t y;
-};
 
+using Point2i = cv::Point2i;
 using Pose3d = Sophus::SE3d;
+using Pose2d = Sophus::SE2d;
 
 }  // namespace common

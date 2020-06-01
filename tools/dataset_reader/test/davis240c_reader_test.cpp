@@ -12,7 +12,10 @@ TEST(Davis240cReader, eventsTest)
 	std::vector<common::Point2i> points = {
 		{33, 39}, {158, 145}, {88, 143}, {174, 154}, {112, 139}};
 
-	std::vector<int8_t> signs = {1, 1, 0, 0, 1};
+	std::vector<common::EventPolarity> signs = {
+		common::EventPolarity::POSITIVE, common::EventPolarity::POSITIVE,
+		common::EventPolarity::NEGATIVE, common::EventPolarity::NEGATIVE,
+		common::EventPolarity::POSITIVE};
 
 	std::vector<common::timestamp_t> timestamps = {
 		common::timestamp_t(0), common::timestamp_t(11),

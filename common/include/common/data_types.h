@@ -2,8 +2,6 @@
 
 #include "common/geometry.h"
 
-#include <opencv2/opencv.hpp>
-
 #include <chrono>
 #include <vector>
 
@@ -19,26 +17,30 @@ struct Sample
 	{
 	}
 
+	Sample() {}
+
 	T value;
 	timestamp_t timestamp;
+};
+
+enum EventPolarity
+{
+	NEGATIVE = -1,
+	POSITIVE = 1
 };
 
 struct Event
 {
 	Point2i point;
-	int8_t sign;
+	EventPolarity sign;
 };
 
-using EventSequence = std::vector<Sample<Event>>;
-using ImageSequence = std::vector<Sample<cv::Mat>>;
-using GroundTruth   = std::vector<Sample<Pose3d>>;
+using EventSample		= Sample<Event>;
+using ImageSample		= Sample<cv::Mat>;
+using GroundTruthSample = Sample<Pose3d>;
 
-struct Corner
-{
-	Eigen::Vector2d point;
-	float angle;
-};
-
-using Corners = std::vector<Corner>;
+using EventSequence = std::vector<EventSample>;
+using ImageSequence = std::vector<ImageSample>;
+using GroundTruth   = std::vector<GroundTruthSample>;
 
 }  // namespace common
