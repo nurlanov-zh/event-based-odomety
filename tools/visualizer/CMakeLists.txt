@@ -16,4 +16,5 @@ target_link_libraries(${PROJECT_NAME}
     common 
     dataset_reader 
     replayer 
-    evaluator)
+    evaluator
+    spdlog::spdlog)

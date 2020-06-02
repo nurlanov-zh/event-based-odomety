@@ -16,6 +16,8 @@ using namespace common;
 
 Davis240cReader::Davis240cReader(const std::string& path) : DatasetReader(path)
 {
+	consoleLog_ = spdlog::get("console");
+	errLog_		= spdlog::get("stderr");
 }
 
 EventSequence Davis240cReader::getEvents() const
@@ -25,6 +27,7 @@ EventSequence Davis240cReader::getEvents() const
 	std::ifstream file(filePath);
 
 	if (!file.is_open()) {
+		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
@@ -52,7 +55,9 @@ EventSequence Davis240cReader::getEvents() const
 		common::EventPolarity polarity = POSITIVE;
 		if (sign == 0) {
 			polarity = NEGATIVE;
-		} else if (sign != 1) {
+		}
+		else if (sign != 1)
+		{
 			throw std::runtime_error("Sign is not equal to 0/1");
 		}
 
@@ -61,7 +66,7 @@ EventSequence Davis240cReader::getEvents() const
 		loaded++;
 	}
 
-	std::cout << std::to_string(loaded) << " events are loaded" << std::endl;
+	consoleLog_->info("{} event objects are loaded", loaded);
 
 	return events;
 }
@@ -73,6 +78,7 @@ ImageSequence Davis240cReader::getImages() const
 	std::ifstream file(filePath);
 
 	if (!file.is_open()) {
+		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
@@ -91,7 +97,7 @@ ImageSequence Davis240cReader::getImages() const
 		loaded++;
 	}
 
-	std::cout << std::to_string(loaded) << " images are loaded" << std::endl;
+	consoleLog_->info("{} images objects are loaded", loaded);
 
 	return images;
 }
@@ -103,6 +109,7 @@ GroundTruth Davis240cReader::getGroundTruth() const
 	std::ifstream file(filePath);
 
 	if (!file.is_open()) {
+		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
@@ -143,8 +150,7 @@ GroundTruth Davis240cReader::getGroundTruth() const
 		loaded++;
 	}
 
-	std::cout << std::to_string(loaded) << " ground truth objects are loaded"
-			  << std::endl;
+	consoleLog_->info("{} ground truth objects are loaded", loaded);
 
 	return groundTruth;
 }

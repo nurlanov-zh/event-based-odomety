@@ -4,6 +4,18 @@
 
 std::string TEST_DATA_PATH = "test/test_data";
 
+class LoggingTest
+{
+   public:
+	LoggingTest()
+	{
+		spdlog::stdout_color_mt("console");
+		spdlog::stderr_color_mt("stderr");
+	}
+};
+
+LoggingTest logger;
+
 TEST(Davis240cReader, eventsTest)
 {
 	tools::Davis240cReader reader(TEST_DATA_PATH);

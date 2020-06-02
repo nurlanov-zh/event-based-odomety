@@ -16,6 +16,7 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->updatePatches(sample);
 
+	// TODO add logger trace which patch is integrated as soon as patch ids come up
 	for (auto& patch : tracker_->getPatches()) {
 		if (patch.isReady()) {
 			patch.integrateEvents();
@@ -43,10 +44,15 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 
 void Evaluator::reset()
 {
+	consoleLog_ = spdlog::get("console");
+	errLog_		= spdlog::get("stderr");
+
 	corners_.clear();
 	tracker_.reset(new tracker::FeatureDetector(tracker::DetectorParams(),
 												params_.imageSize));
 	flowEstimator_.reset(
 		new tracker::FlowEstimator(tracker::FlowEstimatorParams()));
+
+	consoleLog_->info("Evaluator is reset");
 }
 }  // ns tools

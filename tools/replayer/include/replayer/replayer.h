@@ -2,17 +2,19 @@
 #include <common/data_types.h>
 #include <dataset_reader/dataset_reader.h>
 
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <string>
 
 #define REGISTER_CALLBACK(class, callback, object)                             \
-	std::bind(&class::callback, &object, std::placeholders::_1)
+	std::bind(&class ::callback, &object, std::placeholders::_1)
 
 namespace tools
 {
-
 enum EventType
 {
 	EVENT		 = 0,
@@ -34,8 +36,8 @@ class Replayer
    public:
 	Replayer(const std::shared_ptr<DatasetReader> reader);
 
-    void reset();
-    
+	void reset();
+
 	bool finished() const;
 
 	void addGroundTruthCallback(
@@ -49,11 +51,11 @@ class Replayer
 
 	void next();
 
-    void nextInterval(const common::timestamp_t& interval);
+	void nextInterval(const common::timestamp_t& interval);
 
 	void nextImage();
 
-    common::timestamp_t getLastTimestamp() { return lastTimestamp_; }
+	common::timestamp_t getLastTimestamp() { return lastTimestamp_; }
 
    private:
 	template <typename T>
@@ -74,6 +76,9 @@ class Replayer
 	}
 
    private:
+	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> errLog_;
+
 	common::GroundTruth groundTruth_;
 	common::EventSequence events_;
 	common::ImageSequence images_;
@@ -85,7 +90,7 @@ class Replayer
 	common::EventSequence::iterator eventIt_;
 	common::ImageSequence::iterator imageIt_;
 
-    common::timestamp_t lastTimestamp_;
+	common::timestamp_t lastTimestamp_;
 
 	bool imageArrived_;
 

@@ -10,6 +10,9 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	groundTruth_ = reader->getGroundTruth();
 
 	reset();
+
+	consoleLog_ = spdlog::get("console");
+	errLog_		= spdlog::get("stderr");
 }
 
 bool Replayer::finished() const
@@ -30,8 +33,8 @@ void Replayer::reset()
 	eventIt_ = events_.begin();
 	imageIt_ = images_.begin();
 
-    lastTimestamp_ = common::timestamp_t(0);
-	imageArrived_ = false;
+	lastTimestamp_ = common::timestamp_t(0);
+	imageArrived_  = false;
 }
 
 void Replayer::next()
@@ -41,6 +44,10 @@ void Replayer::next()
 	switch (minSample.second)
 	{
 		case EventType::EVENT:
+
+			consoleLog_->trace("New event sample is arrived at time {:08d}",
+							   imageIt_->timestamp.count());
+
 			notify(eventCallbacks_, *eventIt_);
 			if (eventIt_ != events_.end()) {
 				++eventIt_;
@@ -48,6 +55,10 @@ void Replayer::next()
 			break;
 
 		case EventType::IMAGE:
+
+			consoleLog_->trace("New image sample is arrived at time {:08d}",
+							   imageIt_->timestamp.count());
+
 			imageArrived_ = true;
 			notify(imageCallbacks_, *imageIt_);
 			if (imageIt_ != images_.end()) {
@@ -83,8 +94,7 @@ void Replayer::nextImage()
 	}
 	imageArrived_ = false;
 
-	while (!imageArrived_)
-	{
+	while (!imageArrived_) {
 		next();
 	}
 }
@@ -92,18 +102,21 @@ void Replayer::nextImage()
 void Replayer::addGroundTruthCallback(
 	std::function<void(const common::GroundTruthSample&)> callback)
 {
+	spdlog::get("console")->debug("New ground truth callback is registered");
 	groundTruthCallbacks_.push_back(callback);
 }
 
 void Replayer::addEventCallback(
 	std::function<void(const common::EventSample&)> callback)
 {
+	spdlog::get("console")->debug("New event callback is registered");
 	eventCallbacks_.push_back(callback);
 }
 
 void Replayer::addImageCallback(
 	std::function<void(const common::ImageSample&)> callback)
 {
+	spdlog::get("console")->debug("New image callback is registered");
 	imageCallbacks_.push_back(callback);
 }
 
