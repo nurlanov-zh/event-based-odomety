@@ -10,6 +10,7 @@ target_link_libraries(dataset_reader_test
     gtest
     gtest_main
     dataset_reader
+    spdlog::spdlog
 )
 
 gtest_discover_tests(dataset_reader_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 120)

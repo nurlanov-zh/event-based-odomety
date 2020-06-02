@@ -31,6 +31,18 @@ class TestListener
 	std::vector<std::pair<common::timestamp_t, tools::EventType>> timestamps;
 };
 
+class LoggingTest
+{
+   public:
+	LoggingTest()
+	{
+		spdlog::stdout_color_mt("console");
+		spdlog::stderr_color_mt("stderr");
+	}
+};
+
+LoggingTest logger;
+
 class ReplayerTest : public ::testing::Test
 {
    protected:

@@ -2,6 +2,9 @@
 
 #include "common/data_types.h"
 
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+
 #include <string>
 
 namespace tools
@@ -18,6 +21,9 @@ class DatasetReader
 	virtual common::GroundTruth getGroundTruth() const = 0;
 
    protected:
+	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> errLog_;
+
 	std::string path_;
 };
 

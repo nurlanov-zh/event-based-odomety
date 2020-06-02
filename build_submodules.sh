@@ -63,6 +63,7 @@ COMMON_CMAKE_ARGS=(
 BUILD_CERES=thirdparty/build-ceres-solver
 BUILD_PANGOLIN=thirdparty/build-Pangolin
 BUILD_OPENGV=thirdparty/build-opengv
+BUILD_SPDLOG=thirdparty/build-spdlog
 
 git submodule sync --recursive
 git submodule update --init --recursive
@@ -70,6 +71,7 @@ git submodule update --init --recursive
 rm -rf "$BUILD_CERES"
 rm -rf "$BUILD_PANGOLIN"
 rm -rf "$BUILD_OPENGV"
+rm -rf "$BUILD_SPDLOG"
 
 mkdir -p "$BUILD_CERES"
 pushd "$BUILD_CERES"
@@ -99,4 +101,10 @@ cmake ../opengv "${COMMON_CMAKE_ARGS[@]}" \
     "-DEIGEN_INCLUDE_DIR=$EIGEN_DIR" \
     -DBUILD_TESTS=OFF
 make -j$NUM_PARALLEL_BUILDS opengv
+popd
+
+mkdir -p "$BUILD_SPDLOG"
+pushd "$BUILD_SPDLOG"
+cmake ../spdlog "${COMMON_CMAKE_ARGS[@]}"
+make -j$NUM_PARALLEL_BUILDS
 popd

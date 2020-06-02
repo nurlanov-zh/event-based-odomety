@@ -4,6 +4,8 @@
 #include "visualizer/visualizer.h"
 
 #include <CLI/CLI.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 #include <thread>
 
@@ -13,6 +15,15 @@ const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 
 int main(int argc, char** argv)
 {
+	spdlog::set_level(spdlog::level::from_str("debug"));
+
+	spdlog::stdout_color_mt("console");
+	spdlog::stderr_color_mt("stderr");
+	auto console = spdlog::get("console");
+	auto errLogger = spdlog::get("stderr");
+
+	console->info("Event based odometry has been started!");
+
 	bool showGui		= true;
 	std::string dataset = "../data/DAVIS240C/shapes_rotation";
 
@@ -20,6 +31,10 @@ int main(int argc, char** argv)
 
 	app.add_option("--show-gui", showGui, "Show GUI");
 	app.add_option("--dataset", dataset, "Dataset. Default: " + dataset);
+
+	console->info("Options passed are:");
+	console->info("\tshow-gui: {}", showGui);
+	console->info("\tdataset: {}", dataset);
 
 	try
 	{

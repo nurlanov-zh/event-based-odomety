@@ -9,6 +9,8 @@
 #include <pangolin/image/typed_image.h>
 #include <pangolin/pangolin.h>
 #include <opencv2/opencv.hpp>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
 
 namespace tools
 {
@@ -69,6 +71,9 @@ class Visualizer
 	void reset();
 
    private:
+   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> errLog_;
+
 	bool quit_;
 	bool nextPressed_;
 	bool nextIntervalPressed_;

@@ -8,6 +8,7 @@ set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
 set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
 set(OPENGV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-opengv")
+set(SPDLOG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-spdlog")
 
 # Set default build type if not specified otherwise.
 # See https://cmake.org/pipermail/cmake/2012-May/050243.html
@@ -66,6 +67,7 @@ message(STATUS "Found Eigen headers in: ${EIGEN3_INCLUDE_DIR}")
 
 include_directories(thirdparty/Sophus)
 include_directories(thirdparty/CLI11/include)
+include_directories(thirdparty/spdlog/include)
 include_directories(include)
 
 # to use link to target "ceres"
@@ -97,6 +99,9 @@ set_property(TARGET OpenCV PROPERTY INTERFACE_LINK_LIBRARIES ${OpenCV_LIBS})
 if(OpenCV_VERSION VERSION_LESS 3)
   set_property(TARGET OpenCV PROPERTY INTERFACE_COMPILE_DEFINITIONS DBATK_OPENCV2)
 endif()
+
+find_package(spdlog REQUIRED CONFIG HINTS "${SPDLOG_ROOT}" NO_DEFAULT_PATH)
+message(STATUS "Found spdlog")
 
 find_program(CTEST_MEMORYCHECK_COMMAND REQUIRED valgrind)
 message(STATUS "Found Valgrind: ${CTEST_MEMORYCHECK_COMMAND}")

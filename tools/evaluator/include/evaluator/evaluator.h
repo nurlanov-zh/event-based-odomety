@@ -4,6 +4,9 @@
 #include <feature_tracker/feature_detector.h>
 #include <feature_tracker/flow_estimator.h>
 
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+
 #include <memory>
 
 namespace tools
@@ -29,6 +32,9 @@ class Evaluator
 	tracker::Patches const& getPatches() const;
 
    private:
+   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> errLog_;
+
 	EvaluatorParams params_;
 
 	std::unique_ptr<tracker::FeatureDetector> tracker_;

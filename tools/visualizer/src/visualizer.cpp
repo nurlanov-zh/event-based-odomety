@@ -138,6 +138,8 @@ void Visualizer::drawOriginalOverlay()
 	// Control mouse click
 	if (imgView_[ImageViews::ORIGINAL]->MousePressed()) {
 		const auto selection = imgView_[ImageViews::ORIGINAL]->GetSelection();
+		// TODO add logger debug which patch is clicked as soon as patch id come up
+		// add this info to images layouts as well
 		for (const auto& patch : patches_) {
 			const auto& point = patch.toCorner();
 			if (std::abs(point.x - selection.x.min) <= radius &&
@@ -230,6 +232,9 @@ void Visualizer::step()
 
 void Visualizer::reset()
 {
+	consoleLog_ = spdlog::get("console");
+	errLog_		= spdlog::get("stderr");
+
 	while (!integratedEvents_.empty()) {
 		integratedEvents_.erase(integratedEvents_.begin());
 	}
