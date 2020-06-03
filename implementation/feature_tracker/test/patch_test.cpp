@@ -84,10 +84,7 @@ TEST(Patch, warpImageTest)
 	{
 		for (int j = 1; j < 10; ++j)
 		{
-			if (i == j || i == 10 - j)
-			{
-				EXPECT_GE(image.at<double>(i, j), 0);
-			}
+			if (i == j || i == 10 - j) { EXPECT_GE(image.at<double>(i, j), 0); }
 		}
 	}
 

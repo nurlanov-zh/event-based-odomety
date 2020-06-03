@@ -13,4 +13,13 @@ target_link_libraries(dataset_reader_test
     spdlog::spdlog
 )
 
+add_executable(mapped_file_test mapped_file_test.cpp)
+
+target_link_libraries(mapped_file_test
+    gtest
+    gtest_main
+    mapped_file
+)
+
 gtest_discover_tests(dataset_reader_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 120)
+gtest_discover_tests(mapped_file_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 120)

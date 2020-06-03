@@ -14,6 +14,10 @@ class Davis240cReader : public DatasetReader
 	common::ImageSequence getImages() const override;
 
 	common::GroundTruth getGroundTruth() const override;
+
+	common::EventSample getEventSample(std::string& line) const;
+	common::ImageSample getImageSample(std::string& line) const;
+	common::GroundTruthSample getGroundTruthSample(std::string& line) const;
 };
 
 }  // namespace tools

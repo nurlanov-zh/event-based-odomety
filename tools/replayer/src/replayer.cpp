@@ -108,21 +108,21 @@ void Replayer::nextImage()
 void Replayer::addGroundTruthCallback(
 	std::function<void(const common::GroundTruthSample&)> callback)
 {
-	spdlog::get("console")->debug("New ground truth callback is registered");
+	consoleLog_->debug("New ground truth callback is registered");
 	groundTruthCallbacks_.push_back(callback);
 }
 
 void Replayer::addEventCallback(
 	std::function<void(const common::EventSample&)> callback)
 {
-	spdlog::get("console")->debug("New event callback is registered");
+	consoleLog_->debug("New event callback is registered");
 	eventCallbacks_.push_back(callback);
 }
 
 void Replayer::addImageCallback(
 	std::function<void(const common::ImageSample&)> callback)
 {
-	spdlog::get("console")->debug("New image callback is registered");
+	consoleLog_->debug("New image callback is registered");
 	imageCallbacks_.push_back(callback);
 }
 

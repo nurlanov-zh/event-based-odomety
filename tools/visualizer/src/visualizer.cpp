@@ -213,10 +213,7 @@ void Visualizer::eventCallback(const common::EventSample& sample)
 	while (integratedEvents_.back().timestamp -
 			   integratedEvents_.front().timestamp >=
 		   INTEGRATION_TIME)
-	{
-		integratedEvents_.erase(integratedEvents_.begin());
-	}
-}
+	{ integratedEvents_.erase(integratedEvents_.begin()); } }
 
 void Visualizer::imageCallback(const common::ImageSample& sample)
 {
