@@ -9,6 +9,7 @@ struct DetectorParams
 {
 	double qualityLevel = 0.01;
 	double minDistance = 3;
+	double associationDistance = 5;
 	int32_t patchExtent = 17;
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
@@ -25,13 +26,14 @@ class FeatureDetector
 
 	void updatePatches(const common::EventSample& event);
 
-	void setPatches(const Patches& patches) { patches_ = patches; }
+	void associatePatches(Patches& newPatches);
 
+	void setPatches(const Patches& patches) { patches_ = patches; }
 	void setParams(const tracker::DetectorParams& params);
+	void setTrackId(TrackId trackId) { nextTrackId_ = trackId; }
 
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }
-
 	Corners const& getFeatures() const { return corners_; }
 
    private:
@@ -45,5 +47,6 @@ class FeatureDetector
 	cv::Mat mask_;
 	Patches patches_;
 	Corners corners_;
+	size_t nextTrackId_;
 };
 }  // namespace tracker

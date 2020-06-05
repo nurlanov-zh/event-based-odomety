@@ -22,17 +22,9 @@ Patch::Patch(const Corner& corner, int extent)
 	init();
 }
 
-Patch::Patch(const Corner& corner, int extent, const size_t num_patches)
-{
-	patch_ = cv::Rect2i(corner.x - extent, corner.y - extent, 2 * extent + 1,
-						2 * extent + 1);
-	patchId_ = num_patches;
-	init();
-}
-
 void Patch::init()
 {
-	lost_ = false;
+	trackId_ = -1;
 	numOfEvents_ = 50;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);

@@ -2,7 +2,8 @@
 
 namespace tools
 {
-Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
+Evaluator::Evaluator(const EvaluatorParams& params)
+	: params_(params)
 {
 	reset();
 }

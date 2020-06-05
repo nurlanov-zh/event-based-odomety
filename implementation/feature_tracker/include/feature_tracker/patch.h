@@ -9,6 +9,7 @@ namespace tracker
 {
 using Corner = cv::Point2d;
 using Corners = std::vector<Corner>;
+using TrackId = int32_t;
 
 class Patch
 {
@@ -50,51 +51,33 @@ class Patch
 	}
 
 	common::EventSequence const& getEvents() const;
-
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
-
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
-
 	cv::Rect2i const& getPatch() const { return patch_; }
-
-	size_t getTrackId() const { return trackId_; }
-
-	size_t getPatchId() const { return patchId_; }
-
+	TrackId getTrackId() const { return trackId_; }
+	const common::Pose2d& getWarp() const { return warp_; }
+	float getFlow() const { return flowDir_; }
+	cv::Mat getNormalizedIntegratedNabla() const;
+	const cv::Mat& getCostMap() const { return costMap_; }
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
 	{
 		return trajectory_;
 	}
 
-	cv::Mat getNormalizedIntegratedNabla() const;
-
-	const common::Pose2d& getWarp() const { return warp_; }
-	const cv::Mat& getCostMap() const { return costMap_; }
-
-	double getFlow() const { return flowDir_; }
-
 	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
-
+	void setTrackId(TrackId trackId) { trackId_ = trackId; }
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 	{
 		gradX_ = gradX;
 		gradY_ = gradY;
 	}
-
 	void setFlowDir(const double flowDir) { flowDir_ = flowDir; }
-
 	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
-
-	void setTrackId(const size_t trackId) { trackId_ = trackId; }
-
-	void setLost() { lost_ = true; }
-
+	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla)
 	{
 		integratedNabla_ = integratedNabla;
 	}
-
-	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -105,14 +88,12 @@ class Patch
 
    private:
 	size_t patchId_;
-	size_t trackId_;
 	cv::Rect2i patch_;
+	TrackId trackId_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
 	size_t minNumOfEvents_ = 20;
-
-	bool lost_;
 
 	cv::Mat gradX_;
 	cv::Mat gradY_;
@@ -125,6 +106,6 @@ class Patch
 	std::vector<common::Sample<common::Point2d>> trajectory_;
 };
 
-using Patches = std::vector<Patch>;
+using Patches = std::list<Patch>;
 
 }  // namespace tracker

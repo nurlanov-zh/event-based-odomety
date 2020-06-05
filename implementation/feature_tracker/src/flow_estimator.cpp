@@ -29,7 +29,7 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		return false;
 	}
 
-	for (auto& patch : patches)
+	for (auto patchIt = patches.begin(); patchIt != patches.end(); ++patchIt)
 	{
 		const auto& corner = patch.toCorner();
 
@@ -40,8 +40,11 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 			continue;
 		}
 
-		// TODO check if patch is lost
-		// TODO set initialized value
+		// check if patch is lost
+		if (!patch.isInPatch(nextPoint.value()))
+		{
+			patchIt = patches.erase(patchIt);
+		}
 
 		// Since the velocity is normalized we need to store only angle
 		const auto dirX = nextPoint.value().x - corner.x;
@@ -49,6 +52,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		const auto flowDir = std::atan2(dirY, dirX);
 
 		patch.setFlowDir(flowDir);
+
+		patch.updateNumOfEvents();
 
 		common::Pose2d warp;
 		warp.translation() = Eigen::Vector2d(dirX, dirY);

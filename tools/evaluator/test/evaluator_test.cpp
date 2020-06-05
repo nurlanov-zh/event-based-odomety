@@ -18,7 +18,7 @@ LoggingTest logger;
 
 TEST(EvaluatorTest, saveTrajectoryTest)
 {
-	std::vector<tracker::Patch> patches;
+	std::list<tracker::Patch> patches;
 	std::vector<std::pair<size_t, common::Sample<common::Point2d>>>
 		trajectories;
 

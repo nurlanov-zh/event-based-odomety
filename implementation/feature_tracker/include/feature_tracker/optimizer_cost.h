@@ -17,7 +17,7 @@ struct OptimizerCostFunctor
 	OptimizerCostFunctor(){};
 
 	OptimizerCostFunctor(const cv::Mat& normalizedIntegratedNabla,
-						 const std::shared_ptr<Interpolator>& gradInterpolator,
+						 const std::shared_ptr<Interpolator> gradInterpolator,
 						 const cv::Rect2i& patch)
 	{
 		normalizedIntegratedNabla_ = normalizedIntegratedNabla;
