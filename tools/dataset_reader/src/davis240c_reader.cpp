@@ -66,12 +66,6 @@ GroundTruthSample Davis240cReader::getGroundTruthSample(std::string& line) const
 {
 	size_t pos = line.find(' ');
 
-	if (!file.is_open())
-	{
-		errLog_->error("Failed to open {}", filePath);
-		throw std::runtime_error("Unable to open " + filePath);
-	}
-
 	std::string line;
 	size_t loaded = 0;
 	while (std::getline(file, line, ' '))
@@ -119,125 +113,67 @@ GroundTruthSample Davis240cReader::getGroundTruthSample(std::string& line) const
 		const auto pose = Sophus::SE3d(quaternion, translation);
 		return {pose, timestamp};
 	}
+}
 
-	Davis240cReader::Davis240cReader(const std::string& path)
-		: DatasetReader(path)
-	{
-		consoleLog_ = spdlog::get("console");
-		errLog_		= spdlog::get("stderr");
-	}
+Davis240cReader::Davis240cReader(const std::string& path) : DatasetReader(path)
+{
+	consoleLog_ = spdlog::get("console");
+	errLog_		= spdlog::get("stderr");
+}
 
-	EventSequence Davis240cReader::getEvents() const
-	{
-		const std::string filePath = path_ + SEPARATOR + EVENT_FILE;
+EventSequence Davis240cReader::getEvents() const
+{
+	const std::string filePath = path_ + SEPARATOR + EVENT_FILE;
 
-		const auto begin  = std::chrono::high_resolution_clock::now();
-		const auto events = readFile<EventSequence, EventSample>(
-			filePath, std::bind(&Davis240cReader::getEventSample, this,
-								std::placeholders::_1));
-		const auto end = std::chrono::high_resolution_clock::now();
+	const auto begin  = std::chrono::high_resolution_clock::now();
+	const auto events = readFile<EventSequence, EventSample>(
+		filePath, std::bind(&Davis240cReader::getEventSample, this,
+							std::placeholders::_1));
+	const auto end = std::chrono::high_resolution_clock::now();
 
-		consoleLog_->info(
-			"{} event objects are loaded in {} milliseconds", events.size(),
-			std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
-				.count());
+	consoleLog_->info(
+		"{} event objects are loaded in {} milliseconds", events.size(),
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+			.count());
 
-		return events;
-	}
+	return events;
+}
 
-	ImageSequence Davis240cReader::getImages() const
-	{
-		const std::string filePath = path_ + SEPARATOR + IMAGE_FILE;
+ImageSequence Davis240cReader::getImages() const
+{
+	const std::string filePath = path_ + SEPARATOR + IMAGE_FILE;
 
-		if (!file.is_open())
-		{
-			errLog_->error("Failed to open {}", filePath);
-			throw std::runtime_error("Unable to open " + filePath);
-		}
+	const auto begin  = std::chrono::high_resolution_clock::now();
+	const auto events = readFile<ImageSequence, ImageSample>(
+		filePath, std::bind(&Davis240cReader::getImageSample, this,
+							std::placeholders::_1));
+	const auto end = std::chrono::high_resolution_clock::now();
 
-		std::string line;
-		size_t loaded = 0;
-		while (std::getline(file, line, ' '))
-		{
-			const auto duration =
-				std::chrono::duration<double>(std::stod(line));
-			const timestamp_t timestamp =
-				std::chrono::duration_cast<timestamp_t>(duration);
+	consoleLog_->info(
+		"{} images objects are loaded in {} milliseconds", images.size(),
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+			.count());
 
-			consoleLog_->info(
-				"{} images objects are loaded in {} milliseconds",
-				images.size(),
-				std::chrono::duration_cast<std::chrono::milliseconds>(end -
-																	  begin)
-					.count());
+	return images;
+}
 
-			return images;
-		}
+GroundTruth Davis240cReader::getGroundTruth() const
+{
+	const std::string filePath = path_ + SEPARATOR + GROUND_TRUTH_FILE;
 
-		GroundTruth Davis240cReader::getGroundTruth() const
-		{
-			const std::string filePath = path_ + SEPARATOR + GROUND_TRUTH_FILE;
-			std::ifstream file(filePath);
+	const auto begin	   = std::chrono::high_resolution_clock::now();
+	const auto groundTruth = readFile<GroundTruth, GroundTruthSample>(
+		filePath, std::bind(&Davis240cReader::getGroundTruthSample, this,
+							std::placeholders::_1));
+	const auto end = std::chrono::high_resolution_clock::now();
 
-			if (!file.is_open())
-			{
-				errLog_->error("Failed to open {}", filePath);
-				throw std::runtime_error("Unable to open " + filePath);
-			}
+	consoleLog_->info(
+		"{} ground truth objects are loaded in {} milliseconds",
+		groundTruth.size(),
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+			.count());
 
-			std::string line;
-			size_t loaded = 0;
-			while (std::getline(file, line, ' '))
-			{
-				const auto duration =
-					std::chrono::duration<double>(std::stod(line));
-				const timestamp_t timestamp =
-					std::chrono::duration_cast<timestamp_t>(duration);
+	return groundTruth;
+}
 
-				std::getline(file, line, ' ');
-				const double tx = std::stod(line);
-
-				std::getline(file, line, ' ');
-				const double ty = std::stod(line);
-
-				std::getline(file, line, ' ');
-				const double tz = std::stod(line);
-
-				std::getline(file, line, ' ');
-				const double qx = std::stod(line);
-
-				std::getline(file, line, ' ');
-				const double qy = std::stod(line);
-
-				std::getline(file, line, ' ');
-				const double qz = std::stod(line);
-
-				std::getline(file, line);
-				const double w = std::stod(line);
-
-				Sophus::SE3d::Point translation(tx, ty, tz);
-				Eigen::Quaterniond quaternion(w, qx, qy, qz);
-
-				const auto pose = Sophus::SE3d(quaternion, translation);
-
-				groundTruth.emplace_back(GroundTruthSample(pose, timestamp));
-				loaded++;
-			}
-
-			const auto begin	   = std::chrono::high_resolution_clock::now();
-			const auto groundTruth = readFile<GroundTruth, GroundTruthSample>(
-				filePath, std::bind(&Davis240cReader::getGroundTruthSample,
-									this, std::placeholders::_1));
-			const auto end = std::chrono::high_resolution_clock::now();
-
-			consoleLog_->info(
-				"{} ground truth objects are loaded in {} milliseconds",
-				groundTruth.size(),
-				std::chrono::duration_cast<std::chrono::milliseconds>(end -
-																	  begin)
-					.count());
-
-			return groundTruth;
-		}
-
-	}  // namespace tools
+}  // namespace tools
