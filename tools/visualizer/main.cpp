@@ -19,12 +19,12 @@ int main(int argc, char** argv)
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
-	auto console   = spdlog::get("console");
+	auto console = spdlog::get("console");
 	auto errLogger = spdlog::get("stderr");
 
 	console->info("Event based odometry has been started!");
 
-	bool showGui		= true;
+	bool showGui = true;
 	std::string dataset = "../data/DAVIS240C/shapes_rotation";
 
 	CLI::App app{"Event based odometry"};

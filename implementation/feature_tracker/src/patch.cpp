@@ -32,12 +32,12 @@ void Patch::init()
 		trajectory_.push_back({pose, common::timestamp_t(0)});
 	}
 
-	lost_			 = false;
-	numOfEvents_	 = 50;
+	lost_ = false;
+	numOfEvents_ = 50;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	predictedNabla_  = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	gradX_			 = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	gradY_			 = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
+	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
+	gradX_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
+	gradY_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 }
 
 void Patch::addEvent(const common::EventSample& event)

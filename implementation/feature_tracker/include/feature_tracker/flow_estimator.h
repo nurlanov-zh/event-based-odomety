@@ -11,7 +11,7 @@ namespace tracker
 struct FlowEstimatorParams
 {
 	int32_t numLevels = 3;
-	cv::Size window   = {21, 21};
+	cv::Size window = {21, 21};
 };
 
 class FlowEstimator

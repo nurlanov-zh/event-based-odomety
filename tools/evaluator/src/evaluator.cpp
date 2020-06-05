@@ -49,7 +49,7 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 void Evaluator::reset()
 {
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 
 	corners_.clear();
 	tracker_.reset(new tracker::FeatureDetector(tracker::DetectorParams(),

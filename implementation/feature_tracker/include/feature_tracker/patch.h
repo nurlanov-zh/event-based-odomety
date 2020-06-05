@@ -4,7 +4,7 @@
 
 namespace tracker
 {
-using Corner  = cv::Point2d;
+using Corner = cv::Point2d;
 using Corners = std::vector<Corner>;
 
 class Patch

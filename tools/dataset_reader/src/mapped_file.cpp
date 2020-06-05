@@ -51,7 +51,7 @@ bool MappedFile::open()
 		return false;
 	}
 
-	handle_  = h;
+	handle_ = h;
 	mapping_ = static_cast<char*>(m);
 	return true;
 }

@@ -82,16 +82,16 @@ TEST(Davis240cReader, groundTruthTest)
 	std::vector<Sophus::SE3d> transforms;
 	{
 		Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
-		mat(0, 0)			= 1;
-		mat(1, 2)			= -1;
-		mat(2, 1)			= 1;
+		mat(0, 0) = 1;
+		mat(1, 2) = -1;
+		mat(2, 1) = 1;
 		transforms.push_back({mat, {1, 0, 0}});
 	}
 	{
 		Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
-		mat(0, 2)			= 1;
-		mat(1, 1)			= 1;
-		mat(2, 0)			= -1;
+		mat(0, 2) = 1;
+		mat(1, 1) = 1;
+		mat(2, 0) = -1;
 		transforms.push_back({mat, {0, 0, 1}});
 	}
 

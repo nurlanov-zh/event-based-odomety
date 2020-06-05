@@ -5,14 +5,14 @@ namespace tools
 Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	: lastTimestamp_(0)
 {
-	images_		 = reader->getImages();
-	events_		 = reader->getEvents();
+	images_ = reader->getImages();
+	events_ = reader->getEvents();
 	groundTruth_ = reader->getGroundTruth();
 
 	reset();
 
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 }
 
 bool Replayer::finished() const
@@ -35,7 +35,7 @@ void Replayer::reset()
 	imageIt_ = images_.begin();
 
 	lastTimestamp_ = common::timestamp_t(0);
-	imageArrived_  = false;
+	imageArrived_ = false;
 }
 
 void Replayer::next()
@@ -84,7 +84,7 @@ void Replayer::nextInterval(const common::timestamp_t& interval)
 
 	next();
 	const auto firstTime = lastTimestamp_;
-	auto lastTime		 = firstTime;
+	auto lastTime = firstTime;
 	do
 	{
 		next();

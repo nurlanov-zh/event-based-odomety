@@ -19,7 +19,7 @@ void FlowEstimator::addImage(const cv::Mat& image)
 	}
 
 	previousImage_ = std::move(currentImage_);
-	currentImage_  = image;
+	currentImage_ = image;
 }
 
 bool FlowEstimator::getFlowPatches(Patches& patches)
@@ -44,8 +44,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		// TODO set initialized value
 
 		// Since the velocity is normalized we need to store only angle
-		const auto dirX	= nextPoint.value().x - corner.x;
-		const auto dirY	= nextPoint.value().y - corner.y;
+		const auto dirX = nextPoint.value().x - corner.x;
+		const auto dirY = nextPoint.value().y - corner.y;
 		const auto flowDir = std::atan2(dirY, dirX);
 
 		patch.setFlowDir(flowDir);

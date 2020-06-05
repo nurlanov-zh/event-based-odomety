@@ -5,10 +5,10 @@
 
 namespace tools
 {
-constexpr int VISUALIZER_WIDTH  = 1800;
+constexpr int VISUALIZER_WIDTH = 1800;
 constexpr int VISUALIZER_HEIGHT = 1000;
-constexpr int UI_WIDTH			= 200;
-constexpr int IMAGE_VIEWS		= 3;
+constexpr int UI_WIDTH = 200;
+constexpr int IMAGE_VIEWS = 3;
 
 const std::chrono::microseconds SLEEP_MICROSECONDS =
 	std::chrono::microseconds(100);
@@ -151,7 +151,7 @@ void Visualizer::drawOriginalOverlay()
 				std::abs(point.y - selection.y.min) <= radius)
 			{
 				integratedNabla_ = patch.getIntegratedNabla();
-				predictedNabla_  = patch.getPredictedNabla();
+				predictedNabla_ = patch.getPredictedNabla();
 				break;
 			}
 		}
@@ -162,7 +162,7 @@ void Visualizer::drawOriginalOverlay()
 		if (patches_.size() > 0)
 		{
 			integratedNabla_ = patches_.front().getIntegratedNabla();
-			predictedNabla_  = patches_.front().getPredictedNabla();
+			predictedNabla_ = patches_.front().getPredictedNabla();
 		}
 	}
 
@@ -255,20 +255,20 @@ void Visualizer::step()
 void Visualizer::reset()
 {
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 
 	while (!integratedEvents_.empty())
 	{
 		integratedEvents_.erase(integratedEvents_.begin());
 	}
 	setTimestamp(common::timestamp_t(0));
-	integratedNabla_	 = cv::Mat::zeros(1, 1, CV_64F);
-	predictedNabla_		 = cv::Mat::zeros(1, 1, CV_64F);
-	originalImage_		 = cv::Mat::zeros(1, 1, CV_64F);
-	quit_				 = false;
-	nextPressed_		 = false;
+	integratedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
+	predictedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
+	originalImage_ = cv::Mat::zeros(1, 1, CV_64F);
+	quit_ = false;
+	nextPressed_ = false;
 	nextIntervalPressed_ = false;
-	nextImagePressed_	= false;
+	nextImagePressed_ = false;
 }
 
 bool Visualizer::stopPressed() const
@@ -304,10 +304,10 @@ common::timestamp_t Visualizer::getStepInterval() const
 void Visualizer::finishVisualizerIteration()
 {
 	pangolin::FinishFrame();
-	quit_				 = pangolin::ShouldQuit();
-	nextPressed_		 = pangolin::Pushed(nextStepButton);
+	quit_ = pangolin::ShouldQuit();
+	nextPressed_ = pangolin::Pushed(nextStepButton);
 	nextIntervalPressed_ = pangolin::Pushed(nextIntervalStepButton);
-	nextImagePressed_	= pangolin::Pushed(nextImageButton);
+	nextImagePressed_ = pangolin::Pushed(nextImageButton);
 }
 
 }  // namespace tools

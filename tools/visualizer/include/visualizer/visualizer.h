@@ -16,8 +16,8 @@ namespace tools
 {
 enum ImageViews
 {
-	ORIGINAL		 = 0,
-	PREDICTED_NABLA  = 1,
+	ORIGINAL = 0,
+	PREDICTED_NABLA = 1,
 	INTEGRATED_NABLA = 2
 };
 

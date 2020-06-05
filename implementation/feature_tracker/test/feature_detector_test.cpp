@@ -57,9 +57,9 @@ TEST(FeatureDetector, updatePatchTest)
 	for (size_t i = 0; i < 5; ++i)
 	{
 		common::EventSample event;
-		event.timestamp   = common::timestamp_t(i);
+		event.timestamp = common::timestamp_t(i);
 		event.value.point = {std::rand() % 30, std::rand() % 30};
-		event.value.sign  = std::rand() % 2 == 1
+		event.value.sign = std::rand() % 2 == 1
 							   ? common::EventPolarity::POSITIVE
 							   : common::EventPolarity::NEGATIVE;
 		detector.updatePatches(event);
@@ -80,7 +80,7 @@ TEST(FeatureDetector, updatePatchTest)
 	for (size_t i = 0; i < patches.size(); ++i)
 	{
 		const auto detectorEvents = detectorPatches[i].getEvents();
-		const auto gtEvents		  = patches[i].getEvents();
+		const auto gtEvents = patches[i].getEvents();
 		ASSERT_EQ(detectorEvents.size(), gtEvents.size());
 
 		auto detectorIt = detectorEvents.begin();

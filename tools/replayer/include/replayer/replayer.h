@@ -17,8 +17,8 @@ namespace tools
 {
 enum EventType
 {
-	EVENT		 = 0,
-	IMAGE		 = 1,
+	EVENT = 0,
+	IMAGE = 1,
 	GROUND_TRUTH = 2
 };
 

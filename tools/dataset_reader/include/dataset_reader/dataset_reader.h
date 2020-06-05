@@ -31,7 +31,7 @@ class DatasetReader
 		T sequence;
 		MappedFile mappedFile(path);
 		const char* filePtr = mappedFile.begin();
-		const char* lineTs  = nullptr;
+		const char* lineTs = nullptr;
 
 		std::vector<std::string> lines;
 		while ((lineTs = strchr(filePtr, '\n')))
