@@ -14,6 +14,7 @@ namespace tools
 struct EvaluatorParams
 {
 	cv::Size2i imageSize = {240, 180};
+	std::string outputDir = "/tmp";
 };
 
 class Evaluator
@@ -30,6 +31,8 @@ class Evaluator
 	void reset();
 
 	tracker::Patches const& getPatches() const;
+
+	void saveTrajectory(const tracker::Patches& patches);
 
    private:
    	std::shared_ptr<spdlog::logger> consoleLog_;
