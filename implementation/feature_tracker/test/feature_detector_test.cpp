@@ -87,5 +87,8 @@ TEST(FeatureDetector, updatePatchTest)
 		for (auto gtIt = gtEvents.begin();
 			 gtIt != gtEvents.end() && detectorIt != detectorEvents.end();
 			 ++gtIt, ++detectorIt)
-		{ EXPECT_EQ(detectorIt->timestamp, gtIt->timestamp); } }
+		{
+			EXPECT_EQ(detectorIt->timestamp, gtIt->timestamp);
+		}
+	}
 }

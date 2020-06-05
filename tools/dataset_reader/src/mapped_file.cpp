@@ -36,7 +36,10 @@ bool MappedFile::open()
 	close();
 
 	int h = ::open(fileName_.data(), O_RDONLY);
-	if (h < 0) { return false; }
+	if (h < 0)
+	{
+		return false;
+	}
 
 	lseek(h, 0, SEEK_END);
 	size_ = lseek(h, 0, SEEK_CUR);

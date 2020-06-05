@@ -34,7 +34,8 @@ class DatasetReader
 		const char* lineTs  = nullptr;
 
 		std::vector<std::string> lines;
-		while ((lineTs = strchr(filePtr, '\n'))) {
+		while ((lineTs = strchr(filePtr, '\n')))
+		{
 			lines.push_back(std::string(filePtr, lineTs));
 			filePtr = lineTs + 1;
 		}
@@ -43,7 +44,8 @@ class DatasetReader
 		std::vector<size_t> startLines;
 		std::vector<size_t> linesPerThread;
 
-		for (size_t i = 0; i < NUM_THREADS - 1; ++i) {
+		for (size_t i = 0; i < NUM_THREADS - 1; ++i)
+		{
 			startLines.push_back(i * (lines.size() / NUM_THREADS));
 			linesPerThread.push_back(lines.size() / NUM_THREADS);
 		}
@@ -53,7 +55,8 @@ class DatasetReader
 			lines.size() - (NUM_THREADS - 1) * (lines.size() / NUM_THREADS));
 
 		std::vector<std::thread> threads;
-		for (size_t threadIdx = 0; threadIdx < NUM_THREADS; ++threadIdx) {
+		for (size_t threadIdx = 0; threadIdx < NUM_THREADS; ++threadIdx)
+		{
 			threads.push_back(
 				std::thread([&lines, &sequenceThreads, &linesPerThread,
 							 &startLines, threadIdx, getData] {
@@ -65,12 +68,14 @@ class DatasetReader
 				}));
 		}
 
-		for (size_t threadIdx = 0; threadIdx < NUM_THREADS; ++threadIdx) {
+		for (size_t threadIdx = 0; threadIdx < NUM_THREADS; ++threadIdx)
+		{
 			threads[threadIdx].join();
 		}
 
 		sequenceThreads.reserve(lines.size());
-		for (auto& items : sequenceThreads) {
+		for (auto& items : sequenceThreads)
+		{
 			std::move(items.begin(), items.end(), std::back_inserter(sequence));
 		}
 
