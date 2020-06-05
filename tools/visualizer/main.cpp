@@ -3,9 +3,9 @@
 #include <replayer/replayer.h>
 #include "visualizer/visualizer.h"
 
-#include <CLI/CLI.hpp>
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+#include <CLI/CLI.hpp>
 
 #include <thread>
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
-	auto console = spdlog::get("console");
+	auto console   = spdlog::get("console");
 	auto errLogger = spdlog::get("stderr");
 
 	console->info("Event based odometry has been started!");
@@ -63,18 +63,22 @@ int main(int argc, char** argv)
 	replayer.addImageCallback(
 		REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
 
-	if (showGui) {
+	if (showGui)
+	{
 		visualizer.createWindow();
 	}
 
-	while (!visualizer.shouldQuit() && !replayer.finished()) {
+	while (!visualizer.shouldQuit() && !replayer.finished())
+	{
 		const bool stop = visualizer.stopPressed();
-		if (!stop || !showGui) {
+		if (!stop || !showGui)
+		{
 			replayer.next();
 		}
 		else if (stop && showGui)
 		{
-			if (visualizer.nextPressed()) {
+			if (visualizer.nextPressed())
+			{
 				replayer.next();
 			}
 			else if (visualizer.nextIntervalPressed())
@@ -87,12 +91,14 @@ int main(int argc, char** argv)
 			}
 		}
 
-		if (visualizer.resetPressed()) {
+		if (visualizer.resetPressed())
+		{
 			replayer.reset();
 			evaluator.reset();
 		}
 
-		if (showGui) {
+		if (showGui)
+		{
 			const auto timestamp = replayer.getLastTimestamp();
 
 			// redraw only every so often if not stop

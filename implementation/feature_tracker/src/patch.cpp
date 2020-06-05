@@ -48,9 +48,10 @@ void Patch::addEvent(const common::EventSample& event)
 void Patch::integrateEvents()
 {
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	for (const auto& event : events_) {
-
-		if (patch_.contains(event.value.point)) {
+	for (const auto& event : events_)
+	{
+		if (patch_.contains(event.value.point))
+		{
 			const auto& point = frameToPatchCoords(event.value.point);
 			integratedNabla_.at<double>(point.y, point.x) +=
 				static_cast<int32_t>(event.value.sign);
@@ -69,7 +70,8 @@ void Patch::warpImage()
 	const auto center =
 		Eigen::Vector2d((patch_.width - 1) / 2, (patch_.height - 1) / 2);
 
-	const Eigen::Vector2d offsetToCenter = -(warp_.rotationMatrix() * center) + center;
+	const Eigen::Vector2d offsetToCenter =
+		-(warp_.rotationMatrix() * center) + center;
 	warpCv.at<double>(0, 2) += offsetToCenter.x();
 	warpCv.at<double>(1, 2) += offsetToCenter.y();
 
@@ -112,4 +114,4 @@ common::EventSequence const& Patch::getEvents() const
 	return events_;
 }
 
-}  // ns tracker
+}  // namespace tracker

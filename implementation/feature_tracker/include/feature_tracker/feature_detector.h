@@ -42,4 +42,4 @@ class FeatureDetector
 	Patches patches_;
 	Corners corners_;
 };
-}  // ns tracker
+}  // namespace tracker

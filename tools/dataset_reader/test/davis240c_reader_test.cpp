@@ -36,7 +36,8 @@ TEST(Davis240cReader, eventsTest)
 
 	ASSERT_EQ(timestamps.size(), events.size());
 
-	for (size_t i = 0; i < events.size(); ++i) {
+	for (size_t i = 0; i < events.size(); ++i)
+	{
 		EXPECT_EQ(events[i].timestamp.count(), timestamps[i].count());
 		EXPECT_EQ(events[i].value.point.x, points[i].x);
 		EXPECT_EQ(events[i].value.point.y, points[i].y);
@@ -60,7 +61,8 @@ TEST(Davis240cReader, imagesTest)
 
 	ASSERT_EQ(timestamps.size(), images.size());
 
-	for (size_t i = 0; i < images.size(); ++i) {
+	for (size_t i = 0; i < images.size(); ++i)
+	{
 		const cv::Mat diff = images[i].value != imagesGT[i];
 		EXPECT_EQ(cv::countNonZero(diff), 0);
 		EXPECT_EQ(images[i].timestamp.count(), timestamps[i].count());
@@ -95,7 +97,8 @@ TEST(Davis240cReader, groundTruthTest)
 
 	ASSERT_EQ(timestamps.size(), groundTruth.size());
 
-	for (size_t i = 0; i < groundTruth.size(); ++i) {
+	for (size_t i = 0; i < groundTruth.size(); ++i)
+	{
 		EXPECT_TRUE(
 			groundTruth[i].value.matrix().isApprox(transforms[i].matrix()));
 		EXPECT_EQ(groundTruth[i].timestamp.count(), timestamps[i].count());

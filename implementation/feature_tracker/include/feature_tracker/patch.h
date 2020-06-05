@@ -86,4 +86,4 @@ class Patch
 
 using Patches = std::vector<Patch>;
 
-}  // ns tracker
+}  // namespace tracker

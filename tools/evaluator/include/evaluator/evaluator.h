@@ -32,7 +32,7 @@ class Evaluator
 	tracker::Patches const& getPatches() const;
 
    private:
-   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
 
 	EvaluatorParams params_;
@@ -42,4 +42,4 @@ class Evaluator
 
 	tracker::Corners corners_;
 };
-}  // ns tools
+}  // namespace tools

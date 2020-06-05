@@ -22,7 +22,8 @@ bool Replayer::finished() const
 
 void Replayer::reset()
 {
-	while (!timestampsQueue_.empty()) {
+	while (!timestampsQueue_.empty())
+	{
 		timestampsQueue_.pop();
 	}
 
@@ -49,7 +50,8 @@ void Replayer::next()
 							   imageIt_->timestamp.count());
 
 			notify(eventCallbacks_, *eventIt_);
-			if (eventIt_ != events_.end()) {
+			if (eventIt_ != events_.end())
+			{
 				++eventIt_;
 			}
 			break;
@@ -61,7 +63,8 @@ void Replayer::next()
 
 			imageArrived_ = true;
 			notify(imageCallbacks_, *imageIt_);
-			if (imageIt_ != images_.end()) {
+			if (imageIt_ != images_.end())
+			{
 				++imageIt_;
 			}
 			break;
@@ -74,7 +77,8 @@ void Replayer::next()
 
 void Replayer::nextInterval(const common::timestamp_t& interval)
 {
-	if (finished()) {
+	if (finished())
+	{
 		return;
 	}
 
@@ -89,12 +93,14 @@ void Replayer::nextInterval(const common::timestamp_t& interval)
 
 void Replayer::nextImage()
 {
-	if (finished()) {
+	if (finished())
+	{
 		return;
 	}
 	imageArrived_ = false;
 
-	while (!imageArrived_) {
+	while (!imageArrived_)
+	{
 		next();
 	}
 }
@@ -120,4 +126,4 @@ void Replayer::addImageCallback(
 	imageCallbacks_.push_back(callback);
 }
 
-}  // ns tools
+}  // namespace tools

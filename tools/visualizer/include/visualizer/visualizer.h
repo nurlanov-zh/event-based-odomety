@@ -8,15 +8,15 @@
 #include <pangolin/image/image_io.h>
 #include <pangolin/image/typed_image.h>
 #include <pangolin/pangolin.h>
-#include <opencv2/opencv.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <opencv2/opencv.hpp>
 
 namespace tools
 {
 enum ImageViews
 {
-	ORIGINAL		= 0,
+	ORIGINAL		 = 0,
 	PREDICTED_NABLA  = 1,
 	INTEGRATED_NABLA = 2
 };
@@ -49,10 +49,7 @@ class Visualizer
 		currentTimestamp_ = timestamp;
 	}
 
-	void setPatches(const tracker::Patches& patches)
-	{
-		patches_ = patches;
-	}
+	void setPatches(const tracker::Patches& patches) { patches_ = patches; }
 
 	common::timestamp_t getStepInterval() const;
 	void eventCallback(const common::EventSample& sample);
@@ -72,7 +69,7 @@ class Visualizer
 	void reset();
 
    private:
-   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
 
 	bool quit_;
@@ -89,7 +86,6 @@ class Visualizer
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat originalImage_;
-
 };
 
-}  // ns tools
+}  // namespace tools

@@ -8,11 +8,10 @@
 
 namespace tracker
 {
-
 struct FlowEstimatorParams
 {
-    int32_t numLevels = 3;
-    cv::Size window = {21, 21};
+	int32_t numLevels = 3;
+	cv::Size window   = {21, 21};
 };
 
 class FlowEstimator
@@ -32,6 +31,6 @@ class FlowEstimator
 	cv::Mat previousImage_;
 	cv::Mat currentImage_;
 
-    FlowEstimatorParams params_;
+	FlowEstimatorParams params_;
 };
-}  // ns tracker
+}  // namespace tracker

@@ -26,14 +26,16 @@ EventSequence Davis240cReader::getEvents() const
 	const std::string filePath = path_ + SEPARATOR + EVENT_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open()) {
+	if (!file.is_open())
+	{
 		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' ')) {
+	while (std::getline(file, line, ' '))
+	{
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
@@ -53,7 +55,8 @@ EventSequence Davis240cReader::getEvents() const
 		int32_t sign = std::stoi(line);
 
 		common::EventPolarity polarity = POSITIVE;
-		if (sign == 0) {
+		if (sign == 0)
+		{
 			polarity = NEGATIVE;
 		}
 		else if (sign != 1)
@@ -77,14 +80,16 @@ ImageSequence Davis240cReader::getImages() const
 	const std::string filePath = path_ + SEPARATOR + IMAGE_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open()) {
+	if (!file.is_open())
+	{
 		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' ')) {
+	while (std::getline(file, line, ' '))
+	{
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
@@ -108,14 +113,16 @@ GroundTruth Davis240cReader::getGroundTruth() const
 	const std::string filePath = path_ + SEPARATOR + GROUND_TRUTH_FILE;
 	std::ifstream file(filePath);
 
-	if (!file.is_open()) {
+	if (!file.is_open())
+	{
 		errLog_->error("Failed to open {}", filePath);
 		throw std::runtime_error("Unable to open " + filePath);
 	}
 
 	std::string line;
 	size_t loaded = 0;
-	while (std::getline(file, line, ' ')) {
+	while (std::getline(file, line, ' '))
+	{
 		const auto duration = std::chrono::duration<double>(std::stod(line));
 		const timestamp_t timestamp =
 			std::chrono::duration_cast<timestamp_t>(duration);
