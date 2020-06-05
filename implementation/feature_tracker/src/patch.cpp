@@ -24,14 +24,6 @@ Patch::Patch(const Corner& corner, int extent)
 
 void Patch::init()
 {
-	// Just for test visualization
-	for (size_t i = 0; i < 30; ++i)
-	{
-		common::Pose2d pose;
-		pose.translation() = Eigen::Vector2d(i + toCorner().x, toCorner().y);
-		trajectory_.push_back({pose, common::timestamp_t(0)});
-	}
-
 	lost_ = false;
 	numOfEvents_ = 50;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);

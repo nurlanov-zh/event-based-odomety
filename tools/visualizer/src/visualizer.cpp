@@ -221,7 +221,8 @@ void Visualizer::drawTrajectory(const tracker::Patch& patch)
 	trajectoryToDraw.reserve(trajectory.size());
 	for (const auto& point : trajectory)
 	{
-		trajectoryToDraw.push_back(point.value.translation());
+		trajectoryToDraw.push_back(
+			Eigen::Vector2d(point.value.x, point.value.y));
 	}
 	glColor3f(0.0, 1.0, 0.0);  // green
 	pangolin::glDrawPoints(trajectoryToDraw);

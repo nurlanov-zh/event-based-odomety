@@ -66,4 +66,26 @@ void Evaluator::setTrackerParams(const tracker::DetectorParams& params)
 	tracker_->setParams(params);
 }
 
+void Evaluator::saveTrajectory(const tracker::Patches& patches)
+{
+	// Since we are going to use evaluator by uzh-rpg lab. We just need to store
+	// trajectory in proper format
+	const std::string outputFilename = params_.outputDir + "/trajectory.txt";
+	consoleLog_->info("Saving trajectory into " + outputFilename);
+	std::ofstream trajFile;
+	trajFile.open(outputFilename);
+	for (const auto& patch : patches)
+	{
+		for (const auto& pos : patch.getTrajectory())
+		{
+			// feature_id timestamp x y
+			trajFile << std::fixed << std::setprecision(8) << patch.getTrackId()
+					 << " "
+					 << std::chrono::duration<double>(pos.timestamp).count()
+					 << " " << pos.value.x << " " << pos.value.y << std::endl;
+		}
+	}
+	trajFile.close();
+	consoleLog_->info("Saved!");
+}
 }  // namespace tools

@@ -32,32 +32,32 @@ class Patch
 
 	void warpImage();
 
+	void addTrajectoryPosition(const common::Point2d& pose,
+							   common::timestamp_t timestamp)
+	{
+		trajectory_.push_back({pose, timestamp});
+	}
+
 	common::EventSequence const& getEvents() const;
-
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
-
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
-
 	cv::Rect2i const& getPatch() const { return patch_; }
-
-	std::vector<common::Sample<common::Pose2d>> const& getTrajectory() const
+	size_t getTrackId() const { return trackId_; }
+	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
 	{
 		return trajectory_;
 	}
 
 	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
-
+	void setFlowDir(const float flowDir) { flowDir_ = flowDir; }
+	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
+	void setLost() { lost_ = true; }
+	void setTrackId(size_t trackId) { trackId_ = trackId; }
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 	{
 		gradX_ = gradX;
 		gradY_ = gradY;
 	}
-
-	void setFlowDir(const float flowDir) { flowDir_ = flowDir; }
-
-	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
-
-	void setLost() { lost_ = true; }
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -68,6 +68,7 @@ class Patch
 
    private:
 	cv::Rect2i patch_;
+	size_t trackId_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
@@ -81,7 +82,7 @@ class Patch
 
 	float flowDir_;
 	common::Pose2d warp_;
-	std::vector<common::Sample<common::Pose2d>> trajectory_;
+	std::vector<common::Sample<common::Point2d>> trajectory_;
 };
 
 using Patches = std::vector<Patch>;
