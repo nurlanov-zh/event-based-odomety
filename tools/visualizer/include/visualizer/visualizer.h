@@ -67,6 +67,7 @@ class Visualizer
 	void drawOriginalOverlay();
 	void drawPredictedNabla();
 	void drawIntegratedNabla();
+	void drawTrajectory(const tracker::Patch& patch);
 
 	void reset();
 

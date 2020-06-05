@@ -133,6 +133,7 @@ void Visualizer::drawOriginalOverlay()
 	for (const auto& patch : patches_) {
 		const auto& point = patch.toCorner();
 		pangolin::glDrawCirclePerimeter(point.x, point.y, radius);
+		drawTrajectory(patch);
 	}
 
 	// Control mouse click
@@ -178,11 +179,24 @@ void Visualizer::drawOriginalOverlay()
 	glColor3f(1.0, 0.0, 0.0);  // red
 	pangolin::glDrawPoints(positiveEvents);
 
-	glColor3f(0.0, 1.0, 0.0);  // green
+	glColor3f(0.0, 0.0, 1.0);  // blue
 	pangolin::glDrawPoints(negativeEvents);
 
 	drawIntegratedNabla(integratedNabla_);
 	drawPredictedNabla(predictedNabla_);
+}
+
+void Visualizer::drawTrajectory(const tracker::Patch& patch)
+{
+	const auto& trajectory = patch.getTrajectory();
+	std::vector<Eigen::Vector2d> trajectoryToDraw;
+	trajectoryToDraw.reserve(trajectory.size());
+	for (const auto& point: trajectory)
+	{
+		trajectoryToDraw.push_back(point.translation());
+	}
+	glColor3f(0.0, 1.0, 0.0);  // green
+	pangolin::glDrawPoints(trajectoryToDraw);
 }
 
 void Visualizer::eventCallback(const common::EventSample& sample)

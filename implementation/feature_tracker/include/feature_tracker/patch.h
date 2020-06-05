@@ -28,23 +28,19 @@ class Patch
 
 	bool isInPatch(const common::Point2i& point) const;
 
-	common::Point2i patchToFrameCoords(
-		const common::Point2i& pointInPatch) const;
-
-	common::Point2i frameToPatchCoords(
-		const common::Point2i& pointInFrame) const;
-
-	bool isReady() const { return readyToOptimize_; }
+	bool isReady() const { return events_.size() >= numOfEvents_; }
 
 	void warpImage();
 
-	std::list<common::EventSample> const& getEvents() const;
+	common::EventSequence const& getEvents() const;
 
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
 
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
 
 	cv::Rect2i const& getPatch() const { return patch_; }
+
+	std::vector<common::Pose2d> const& getTrajectory() const { return trajectory_; }
 
 	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
 
@@ -61,12 +57,18 @@ class Patch
 	void setLost() { lost_ = true; }
 
    private:
+	common::Point2i patchToFrameCoords(
+		const common::Point2i& pointInPatch) const;
+
+	common::Point2i frameToPatchCoords(
+		const common::Point2i& pointInFrame) const;
+
+   private:
 	cv::Rect2i patch_;
 
-	std::list<common::EventSample> events_;
+	common::EventSequence events_;
 	size_t numOfEvents_;
 
-	bool readyToOptimize_;
 	bool lost_;
 
 	cv::Mat gradX_;
@@ -76,6 +78,7 @@ class Patch
 
 	float flowDir_;
 	common::Pose2d warp_;
+	std::vector<common::Pose2d> trajectory_;
 };
 
 using Patches = std::vector<Patch>;
