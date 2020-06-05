@@ -8,7 +8,7 @@ TEST(Patch, addEventsTest)
 {
 	tracker::Patch patch({10, 10}, 5);
 	patch.setNumOfEvents(2);
-	for (size_t i = 0; i < 5; ++i) {
+	for (size_t i = 0; i < 2; ++i) {
 		common::EventSample event;
 		event.timestamp   = common::timestamp_t(i);
 		event.value.point = {5 + std::rand() % 10, 5 + std::rand() % 10};
@@ -23,42 +23,18 @@ TEST(Patch, addEventsTest)
 	const auto& events = patch.getEvents();
 
 	ASSERT_EQ(events.size(), 2);
-	EXPECT_EQ(events.front().timestamp.count(), 3);
-	EXPECT_EQ(events.back().timestamp.count(), 4);
+	EXPECT_EQ(events.front().timestamp.count(), 0);
+	EXPECT_EQ(events.back().timestamp.count(), 1);
 
 	patch.resetBatch();
 
 	EXPECT_FALSE(patch.isReady());
 }
 
-TEST(Patch, toCornerTest)
-{
-	tracker::Patch patch({10, 10}, 5);
-	const auto corner = patch.toCorner();
-	EXPECT_EQ(corner.x, 10);
-	EXPECT_EQ(corner.y, 10);
-}
-
-TEST(Patch, coordConvertTest)
-{
-	tracker::Patch patch({10, 10}, 5);
-
-	{
-		const auto point = patch.frameToPatchCoords({5, 5});
-		EXPECT_EQ(point.x, 0);
-		EXPECT_EQ(point.y, 0);
-	}
-
-	{
-		const auto point = patch.patchToFrameCoords({0, 0});
-		EXPECT_EQ(point.x, 5);
-		EXPECT_EQ(point.y, 5);
-	}
-}
-
 TEST(Patch, integrateEventsTest)
 {
 	tracker::Patch patch({10, 10}, 2);
+	patch.setNumOfEvents(5);
 
 	for (int32_t i = 0; i < 5; ++i) {
 		common::EventSample event;

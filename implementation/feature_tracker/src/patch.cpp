@@ -24,8 +24,15 @@ Patch::Patch(const Corner& corner, int extent)
 
 void Patch::init()
 {
+	// Just for test visualization
+	for (size_t i = 0; i < 30; ++i)
+	{
+		common::Pose2d pose;
+		pose.translation() = Eigen::Vector2d(i + toCorner().x, toCorner().y);
+		trajectory_.push_back({pose, common::timestamp_t(0)});
+	}
+
 	lost_			 = false;
-	readyToOptimize_ = false;
 	numOfEvents_	 = 50;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_  = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -36,11 +43,6 @@ void Patch::init()
 void Patch::addEvent(const common::EventSample& event)
 {
 	events_.emplace_back(event);
-
-	if (events_.size() > numOfEvents_) {
-		events_.pop_front();
-		readyToOptimize_ = true;
-	}
 }
 
 void Patch::integrateEvents()
@@ -80,10 +82,7 @@ void Patch::warpImage()
 
 void Patch::resetBatch()
 {
-	while (events_.size() > 0) {
-		events_.pop_back();
-	}
-	readyToOptimize_ = false;
+	events_.clear();
 }
 
 Corner Patch::toCorner() const
@@ -108,7 +107,7 @@ common::Point2i Patch::frameToPatchCoords(
 	return pointInFrame - patch_.tl();
 }
 
-std::list<common::EventSample> const& Patch::getEvents() const
+common::EventSequence const& Patch::getEvents() const
 {
 	return events_;
 }
