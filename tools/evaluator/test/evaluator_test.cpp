@@ -32,7 +32,7 @@ TEST(EvaluatorTest, saveTrajectoryTest)
 			common::Sample<common::Point2d> sample;
 			sample.value = cv::Point2d(j, j);
 			sample.timestamp = common::timestamp_t(j);
-			patch.addTrajectoryPosition(sample.value, sample.timestamp);
+//			patch.addTrajectoryPosition(sample.value, sample.timestamp);
 			trajectories.push_back(std::make_pair(patch.getTrackId(), sample));
 		}
 		patches.push_back(patch);

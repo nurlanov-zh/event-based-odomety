@@ -86,7 +86,7 @@ TEST(Patch, warpImageTest)
 		{
 			if (i == j || i == 10 - j)
 			{
-				EXPECT_GE(image.at<double>(i, j), 0);
+				EXPECT_LE(image.at<double>(i, j), 0);
 			}
 		}
 	}

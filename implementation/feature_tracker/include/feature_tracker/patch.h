@@ -2,6 +2,9 @@
 
 #include <common/data_types.h>
 
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+
 namespace tracker
 {
 using Corner = cv::Point2d;
@@ -16,6 +19,8 @@ class Patch
 
 	Patch(const Corner& corner, int extent);
 
+	Patch(const Corner& corner, int extent, const size_t num_patches);
+
 	void init();
 
 	void addEvent(const common::EventSample& event);
@@ -23,6 +28,12 @@ class Patch
 	void integrateEvents();
 
 	void resetBatch();
+
+	void updateNumOfEvents();
+
+	void optimizePatchParams();
+
+	void updatePatchRect(const common::Pose2d& warp);
 
 	Corner toCorner() const;
 
@@ -32,31 +43,48 @@ class Patch
 
 	void warpImage();
 
-	void addTrajectoryPosition(const common::Point2d& pose,
-							   common::timestamp_t timestamp)
-	{
-		trajectory_.push_back({pose, timestamp});
-	}
-
 	common::EventSequence const& getEvents() const;
+
+	size_t const& getTrackId() const { return trackId_; }
+
+	size_t const& getPatchId() const { return patchId_; }
+
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
+
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
+
 	cv::Rect2i const& getPatch() const { return patch_; }
-	size_t getTrackId() const { return trackId_; }
+
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
 	{
 		return trajectory_;
 	}
 
+	cv::Mat getNormalizedIntegratedNabla() const;
+
+	const common::Pose2d& getWarp() const { return warp_; }
+
+	float getFlow() const { return flowDir_; }
+
 	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
-	void setFlowDir(const float flowDir) { flowDir_ = flowDir; }
-	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
-	void setLost() { lost_ = true; }
-	void setTrackId(size_t trackId) { trackId_ = trackId; }
+
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 	{
 		gradX_ = gradX;
 		gradY_ = gradY;
+	}
+
+	void setFlowDir(const double flowDir) { flowDir_ = flowDir; }
+
+	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
+
+	void setTrackId(const size_t trackId) { trackId_ = trackId; }
+
+	void setLost() { lost_ = true; }
+
+	void setIntegratedNabla(const cv::Mat& integratedNabla)
+	{
+		integratedNabla_ = integratedNabla;
 	}
 
    private:
@@ -67,11 +95,13 @@ class Patch
 		const common::Point2i& pointInFrame) const;
 
    private:
-	cv::Rect2i patch_;
+	size_t patchId_;
 	size_t trackId_;
+	cv::Rect2i patch_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
+	size_t minNumOfEvents_ = 20;
 
 	bool lost_;
 
@@ -80,7 +110,7 @@ class Patch
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 
-	float flowDir_;
+	double flowDir_;
 	common::Pose2d warp_;
 	std::vector<common::Sample<common::Point2d>> trajectory_;
 };
