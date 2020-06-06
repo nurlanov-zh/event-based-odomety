@@ -38,14 +38,19 @@ build:
 
 # temlate for unit test
 # Disbale for a while
-# unit-test:
-#   # run tests, and if any fail, run again verbose
-#   stage: test
-#   script:
-#     - cd build
-#     - ctest || (ctest -V && false)
-#   dependencies:
-#     - build
+unit-test:
+  # run tests, and if any fail, run again verbose
+  stage: test
+  script:
+    - cd build
+    - ctest || (ctest -V && false)
+  dependencies:
+    - build
+  tags:
+    - atcremers60
+    - docker 
+    - labpc 
+    - shared
 
 # temlate for memory test
 memcheck-test:
@@ -55,6 +60,11 @@ memcheck-test:
     - ctest -V -T memcheck --overwrite MemoryCheckCommandOptions="--leak-check=full --track-origins=yes"
   dependencies:
     - build
+  tags:
+    - atcremers60
+    - docker 
+    - labpc 
+    - shared 
 
 # check if clang-format would make any changes
 clang-format:
