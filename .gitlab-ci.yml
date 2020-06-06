@@ -52,7 +52,7 @@ memcheck-test:
   stage: test
   script:
     - cd build
-    - ctest -V -T memcheck
+    - ctest -V -T memcheck --overwrite MemoryCheckCommandOptions="--leak-check=full --track-origins=yes"
   dependencies:
     - build
 
