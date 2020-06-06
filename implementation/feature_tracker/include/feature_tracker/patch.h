@@ -69,8 +69,9 @@ class Patch
 	cv::Mat getNormalizedIntegratedNabla() const;
 
 	const common::Pose2d& getWarp() const { return warp_; }
+	const cv::Mat& getCostMap() const { return costMap_; }
 
-	float getFlow() const { return flowDir_; }
+	double getFlow() const { return flowDir_; }
 
 	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
 
@@ -92,6 +93,8 @@ class Patch
 	{
 		integratedNabla_ = integratedNabla;
 	}
+
+	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -115,6 +118,7 @@ class Patch
 	cv::Mat gradY_;
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
+	cv::Mat costMap_;
 
 	double flowDir_;
 	common::Pose2d warp_;
