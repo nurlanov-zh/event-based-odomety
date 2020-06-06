@@ -31,6 +31,8 @@ class Evaluator
 
 	tracker::Patches const& getPatches() const;
 
+	void setTrackerParams(const tracker::DetectorParams& params);
+
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;

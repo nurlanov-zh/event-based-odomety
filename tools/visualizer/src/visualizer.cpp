@@ -1,7 +1,14 @@
 #include "visualizer/visualizer.h"
 
+#include <pangolin/display/display_internal.h>
+
 #include <chrono>
 #include <thread>
+
+namespace pangolin
+{
+extern __thread PangolinGl* context;
+}
 
 namespace tools
 {
@@ -15,13 +22,6 @@ const std::chrono::microseconds SLEEP_MICROSECONDS =
 
 const std::chrono::microseconds INTEGRATION_TIME =
 	std::chrono::microseconds(500);
-
-pangolin::Var<bool> stopPlayButton("ui.stopPlay", true, true);
-pangolin::Var<bool> nextStepButton("ui.nextStep", false, false);
-pangolin::Var<bool> nextIntervalStepButton("ui.nextIntervalStep", false, false);
-pangolin::Var<int> stepInterval("ui.stepInterval", 1000, 0, 10000);
-pangolin::Var<bool> nextImageButton("ui.stepImage", false, false);
-pangolin::Var<bool> resetButton("ui.reset", false, false);
 
 Visualizer::Visualizer()
 {
@@ -47,6 +47,14 @@ void Visualizer::createWindow()
 	// main ui panel
 	pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,
 										  pangolin::Attach::Pix(UI_WIDTH));
+
+	std::string panelName = "settings";
+	settingsPanel_.reset(new pangolin::Panel(panelName));
+	settingsPanel_->SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH),
+							  pangolin::Attach::Pix(2 * UI_WIDTH));
+	pangolin::context->named_managed_views[panelName] = settingsPanel_.get();
+	pangolin::context->base.views.push_back(settingsPanel_.get());
+	showSettingsPanel_->Meta().gui_changed = true;
 
 	// 2D image views
 	while (imgView_.size() < IMAGE_VIEWS)
@@ -269,11 +277,32 @@ void Visualizer::reset()
 	nextPressed_ = false;
 	nextIntervalPressed_ = false;
 	nextImagePressed_ = false;
+
+	stopPlayButton_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.stopPlay", true, true));
+	nextStepButton_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.nextStep", false, false));
+	nextIntervalStepButton_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.nextIntervalStep", false, false));
+	stepInterval_ = std::unique_ptr<pangolin::Var<int>>(
+		new pangolin::Var<int>("ui.stepInterval", 1000, 0, 10000));
+	nextImageButton_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.stepImage", false, false));
+	resetButton_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.reset", false, false));
+	showSettingsPanel_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("ui.showSettings", false, true));
+
+	patchExtent_ = std::unique_ptr<pangolin::Var<int>>(new pangolin::Var<int>(
+		"settings.patchExtent", trackerParams_.patchExtent, 0, 50));
+	minDistance_ =
+		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
+			"settings.minDistance", trackerParams_.minDistance, 1, 10));
 }
 
 bool Visualizer::stopPressed() const
 {
-	return stopPlayButton;
+	return *stopPlayButton_;
 }
 
 bool Visualizer::nextPressed() const
@@ -288,7 +317,7 @@ bool Visualizer::nextIntervalPressed() const
 
 bool Visualizer::resetPressed() const
 {
-	return pangolin::Pushed(resetButton);
+	return pangolin::Pushed(*resetButton_);
 }
 
 bool Visualizer::nextImagePressed() const
@@ -298,16 +327,24 @@ bool Visualizer::nextImagePressed() const
 
 common::timestamp_t Visualizer::getStepInterval() const
 {
-	return common::timestamp_t(stepInterval);
+	return common::timestamp_t(*stepInterval_);
 }
 
 void Visualizer::finishVisualizerIteration()
 {
 	pangolin::FinishFrame();
 	quit_ = pangolin::ShouldQuit();
-	nextPressed_ = pangolin::Pushed(nextStepButton);
-	nextIntervalPressed_ = pangolin::Pushed(nextIntervalStepButton);
-	nextImagePressed_ = pangolin::Pushed(nextImageButton);
+	nextPressed_ = pangolin::Pushed(*nextStepButton_);
+	nextIntervalPressed_ = pangolin::Pushed(*nextIntervalStepButton_);
+	nextImagePressed_ = pangolin::Pushed(*nextImageButton_);
+
+	if (showSettingsPanel_->GuiChanged())
+	{
+		settingsPanel_->Show(*showSettingsPanel_);
+	}
+
+	trackerParams_.patchExtent = (*patchExtent_);
+	trackerParams_.minDistance = (*minDistance_);
 }
 
 }  // namespace tools

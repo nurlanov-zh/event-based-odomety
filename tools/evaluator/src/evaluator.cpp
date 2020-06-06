@@ -52,11 +52,18 @@ void Evaluator::reset()
 	errLog_ = spdlog::get("stderr");
 
 	corners_.clear();
-	tracker_.reset(new tracker::FeatureDetector(tracker::DetectorParams(),
-												params_.imageSize));
+	tracker::DetectorParams params;
+	params.imageSize = params_.imageSize;
+	tracker_.reset(new tracker::FeatureDetector(params));
 	flowEstimator_.reset(
 		new tracker::FlowEstimator(tracker::FlowEstimatorParams()));
 
 	consoleLog_->info("Evaluator is reset");
 }
+
+void Evaluator::setTrackerParams(const tracker::DetectorParams& params)
+{
+	tracker_->setParams(params);
+}
+
 }  // namespace tools

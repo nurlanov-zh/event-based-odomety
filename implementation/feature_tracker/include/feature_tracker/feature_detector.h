@@ -11,12 +11,13 @@ struct DetectorParams
 	double minDistance = 3;
 	int32_t patchExtent = 17;
 	int32_t blockSize = 3;
+	cv::Size imageSize = {240, 180};
 };
 
 class FeatureDetector
 {
    public:
-	FeatureDetector(const DetectorParams& params, const cv::Size& imageSize);
+	FeatureDetector(const DetectorParams& params);
 
 	void extractPatches(const cv::Mat& image);
 
@@ -26,6 +27,8 @@ class FeatureDetector
 
 	void setPatches(const Patches& patches) { patches_ = patches; }
 
+	void setParams(const tracker::DetectorParams& params);
+
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }
 
@@ -34,6 +37,7 @@ class FeatureDetector
    private:
 	cv::Mat getLogImage(const cv::Mat& image);
 	cv::Mat getGradients(const cv::Mat& image, bool xDir);
+	void reset();
 
    private:
 	DetectorParams params_;

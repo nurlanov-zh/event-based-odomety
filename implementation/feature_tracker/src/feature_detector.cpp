@@ -2,19 +2,22 @@
 
 namespace tracker
 {
-FeatureDetector::FeatureDetector(const DetectorParams& params,
-								 const cv::Size& imageSize)
-	: params_(params)
+FeatureDetector::FeatureDetector(const DetectorParams& params) : params_(params)
+{
+	reset();
+}
+
+void FeatureDetector::reset()
 {
 	maxCorners_ =
-		imageSize.width * imageSize.height /
+		params_.imageSize.width * params_.imageSize.height /
 		((2 * params_.patchExtent + 1) * (2 * params_.patchExtent + 1));
 
-	mask_ = cv::Mat::zeros(imageSize, CV_8U);
+	mask_ = cv::Mat::zeros(params_.imageSize, CV_8U);
 	cv::rectangle(mask_,
 				  {params_.patchExtent + 1, params_.patchExtent + 1,
-				   imageSize.width - 2 * (params_.patchExtent + 1),
-				   imageSize.height - 2 * (params_.patchExtent + 1)},
+				   params_.imageSize.width - 2 * (params_.patchExtent + 1),
+				   params_.imageSize.height - 2 * (params_.patchExtent + 1)},
 				  cvScalar(1), CV_FILLED);
 }
 
@@ -89,6 +92,12 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 	cv::Mat grad;
 	cv::Sobel(image, grad, CV_64F, xDir, !xDir, 3);
 	return grad;
+}
+
+void FeatureDetector::setParams(const tracker::DetectorParams& params)
+{
+	params_ = params;
+	reset();
 }
 
 }  // namespace tracker

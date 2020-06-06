@@ -55,6 +55,11 @@ class Visualizer
 	void eventCallback(const common::EventSample& sample);
 	void imageCallback(const common::ImageSample& sample);
 
+	tracker::DetectorParams const& getTrackerParams() const
+	{
+		return trackerParams_;
+	}
+
    private:
 	void wait() const;
 
@@ -77,6 +82,17 @@ class Visualizer
 	bool nextIntervalPressed_;
 	bool nextImagePressed_;
 
+	std::unique_ptr<pangolin::Panel> settingsPanel_;
+	std::unique_ptr<pangolin::Var<bool>> stopPlayButton_;
+	std::unique_ptr<pangolin::Var<bool>> nextStepButton_;
+	std::unique_ptr<pangolin::Var<bool>> nextIntervalStepButton_;
+	std::unique_ptr<pangolin::Var<int>> stepInterval_;
+	std::unique_ptr<pangolin::Var<bool>> nextImageButton_;
+	std::unique_ptr<pangolin::Var<bool>> resetButton_;
+	std::unique_ptr<pangolin::Var<bool>> showSettingsPanel_;
+	std::unique_ptr<pangolin::Var<int>> patchExtent_;
+	std::unique_ptr<pangolin::Var<double>> minDistance_;
+
 	common::timestamp_t currentTimestamp_;
 	std::vector<std::shared_ptr<pangolin::ImageView>> imgView_;
 	tracker::Patches patches_;
@@ -86,6 +102,8 @@ class Visualizer
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat originalImage_;
+
+	tracker::DetectorParams trackerParams_;
 };
 
 }  // namespace tools

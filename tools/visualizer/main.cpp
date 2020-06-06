@@ -109,6 +109,7 @@ int main(int argc, char** argv)
 				visualizer.setPatches(evaluator.getPatches());
 				visualizer.setTimestamp(timestamp);
 				visualizer.step();
+				evaluator.setTrackerParams(visualizer.getTrackerParams());
 			}
 		}
 	}

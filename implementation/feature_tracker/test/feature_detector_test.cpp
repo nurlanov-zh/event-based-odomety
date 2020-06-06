@@ -11,7 +11,7 @@ TEST(FeatureDetector, featureDetectorTest)
 
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
-	tracker::FeatureDetector detector(params, image.size());
+	tracker::FeatureDetector detector(params);
 
 	const auto corners = detector.detectFeatures(image);
 	EXPECT_GT(corners.size(), 10);
@@ -44,7 +44,7 @@ TEST(FeatureDetector, updatePatchTest)
 {
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
-	tracker::FeatureDetector detector(params, {240, 180});
+	tracker::FeatureDetector detector(params);
 
 	tracker::Patches patches = {tracker::Patch({0, 0, 11, 11}),
 								tracker::Patch({5, 5, 11, 11}),
