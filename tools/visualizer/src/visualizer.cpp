@@ -5,10 +5,10 @@
 
 namespace tools
 {
-constexpr int VISUALIZER_WIDTH  = 1800;
+constexpr int VISUALIZER_WIDTH = 1800;
 constexpr int VISUALIZER_HEIGHT = 1000;
-constexpr int UI_WIDTH			= 200;
-constexpr int IMAGE_VIEWS		= 3;
+constexpr int UI_WIDTH = 200;
+constexpr int IMAGE_VIEWS = 3;
 
 const std::chrono::microseconds SLEEP_MICROSECONDS =
 	std::chrono::microseconds(100);
@@ -49,7 +49,8 @@ void Visualizer::createWindow()
 										  pangolin::Attach::Pix(UI_WIDTH));
 
 	// 2D image views
-	while (imgView_.size() < IMAGE_VIEWS) {
+	while (imgView_.size() < IMAGE_VIEWS)
+	{
 		std::shared_ptr<pangolin::ImageView> iv(new pangolin::ImageView);
 
 		size_t idx = imgView_.size();
@@ -130,24 +131,27 @@ void Visualizer::drawOriginalOverlay()
 		.Text("Detected %d corners", patches_.size())
 		.Draw(5, 15);
 
-	for (const auto& patch : patches_) {
+	for (const auto& patch : patches_)
+	{
 		const auto& point = patch.toCorner();
 		pangolin::glDrawCirclePerimeter(point.x, point.y, radius);
 		drawTrajectory(patch);
 	}
 
 	// Control mouse click
-	if (imgView_[ImageViews::ORIGINAL]->MousePressed()) {
+	if (imgView_[ImageViews::ORIGINAL]->MousePressed())
+	{
 		const auto selection = imgView_[ImageViews::ORIGINAL]->GetSelection();
-		// TODO add logger debug which patch is clicked as soon as patch id come up
-		// add this info to images layouts as well
-		for (const auto& patch : patches_) {
+		// TODO add logger debug which patch is clicked as soon as patch id come
+		// up add this info to images layouts as well
+		for (const auto& patch : patches_)
+		{
 			const auto& point = patch.toCorner();
 			if (std::abs(point.x - selection.x.min) <= radius &&
 				std::abs(point.y - selection.y.min) <= radius)
 			{
 				integratedNabla_ = patch.getIntegratedNabla();
-				predictedNabla_  = patch.getPredictedNabla();
+				predictedNabla_ = patch.getPredictedNabla();
 				break;
 			}
 		}
@@ -155,9 +159,10 @@ void Visualizer::drawOriginalOverlay()
 	else if (nextImagePressed_ || nextPressed_ || nextIntervalPressed_ ||
 			 !stopPressed())
 	{
-		if (patches_.size() > 0) {
+		if (patches_.size() > 0)
+		{
 			integratedNabla_ = patches_.front().getIntegratedNabla();
-			predictedNabla_  = patches_.front().getPredictedNabla();
+			predictedNabla_ = patches_.front().getPredictedNabla();
 		}
 	}
 
@@ -165,9 +170,11 @@ void Visualizer::drawOriginalOverlay()
 	std::vector<Eigen::Vector2d> positiveEvents;
 	std::vector<Eigen::Vector2d> negativeEvents;
 
-	for (const auto& event : integratedEvents_) {
+	for (const auto& event : integratedEvents_)
+	{
 		Eigen::Vector2d point(event.value.point.x, event.value.point.y);
-		if (event.value.sign == common::EventPolarity::POSITIVE) {
+		if (event.value.sign == common::EventPolarity::POSITIVE)
+		{
 			positiveEvents.push_back(point);
 		}
 		else
@@ -191,7 +198,7 @@ void Visualizer::drawTrajectory(const tracker::Patch& patch)
 	const auto& trajectory = patch.getTrajectory();
 	std::vector<Eigen::Vector2d> trajectoryToDraw;
 	trajectoryToDraw.reserve(trajectory.size());
-	for (const auto& point: trajectory)
+	for (const auto& point : trajectory)
 	{
 		trajectoryToDraw.push_back(point.value.translation());
 	}
@@ -235,7 +242,8 @@ void Visualizer::step()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// wait();
-	if (resetPressed()) {
+	if (resetPressed())
+	{
 		reset();
 	}
 
@@ -247,19 +255,20 @@ void Visualizer::step()
 void Visualizer::reset()
 {
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 
-	while (!integratedEvents_.empty()) {
+	while (!integratedEvents_.empty())
+	{
 		integratedEvents_.erase(integratedEvents_.begin());
 	}
 	setTimestamp(common::timestamp_t(0));
-	integratedNabla_	 = cv::Mat::zeros(1, 1, CV_64F);
-	predictedNabla_		 = cv::Mat::zeros(1, 1, CV_64F);
-	originalImage_		 = cv::Mat::zeros(1, 1, CV_64F);
-	quit_				 = false;
-	nextPressed_		 = false;
+	integratedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
+	predictedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
+	originalImage_ = cv::Mat::zeros(1, 1, CV_64F);
+	quit_ = false;
+	nextPressed_ = false;
 	nextIntervalPressed_ = false;
-	nextImagePressed_	= false;
+	nextImagePressed_ = false;
 }
 
 bool Visualizer::stopPressed() const
@@ -295,10 +304,10 @@ common::timestamp_t Visualizer::getStepInterval() const
 void Visualizer::finishVisualizerIteration()
 {
 	pangolin::FinishFrame();
-	quit_				 = pangolin::ShouldQuit();
-	nextPressed_		 = pangolin::Pushed(nextStepButton);
+	quit_ = pangolin::ShouldQuit();
+	nextPressed_ = pangolin::Pushed(nextStepButton);
 	nextIntervalPressed_ = pangolin::Pushed(nextIntervalStepButton);
-	nextImagePressed_	= pangolin::Pushed(nextImageButton);
+	nextImagePressed_ = pangolin::Pushed(nextImageButton);
 }
 
-}  // ns tools
+}  // namespace tools

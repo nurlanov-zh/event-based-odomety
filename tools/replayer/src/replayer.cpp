@@ -5,14 +5,14 @@ namespace tools
 Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	: lastTimestamp_(0)
 {
-	images_		 = reader->getImages();
-	events_		 = reader->getEvents();
+	images_ = reader->getImages();
+	events_ = reader->getEvents();
 	groundTruth_ = reader->getGroundTruth();
 
 	reset();
 
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 }
 
 bool Replayer::finished() const
@@ -22,7 +22,8 @@ bool Replayer::finished() const
 
 void Replayer::reset()
 {
-	while (!timestampsQueue_.empty()) {
+	while (!timestampsQueue_.empty())
+	{
 		timestampsQueue_.pop();
 	}
 
@@ -34,7 +35,7 @@ void Replayer::reset()
 	imageIt_ = images_.begin();
 
 	lastTimestamp_ = common::timestamp_t(0);
-	imageArrived_  = false;
+	imageArrived_ = false;
 }
 
 void Replayer::next()
@@ -49,7 +50,8 @@ void Replayer::next()
 							   imageIt_->timestamp.count());
 
 			notify(eventCallbacks_, *eventIt_);
-			if (eventIt_ != events_.end()) {
+			if (eventIt_ != events_.end())
+			{
 				++eventIt_;
 			}
 			break;
@@ -61,7 +63,8 @@ void Replayer::next()
 
 			imageArrived_ = true;
 			notify(imageCallbacks_, *imageIt_);
-			if (imageIt_ != images_.end()) {
+			if (imageIt_ != images_.end())
+			{
 				++imageIt_;
 			}
 			break;
@@ -74,13 +77,14 @@ void Replayer::next()
 
 void Replayer::nextInterval(const common::timestamp_t& interval)
 {
-	if (finished()) {
+	if (finished())
+	{
 		return;
 	}
 
 	next();
 	const auto firstTime = lastTimestamp_;
-	auto lastTime		 = firstTime;
+	auto lastTime = firstTime;
 	do
 	{
 		next();
@@ -89,12 +93,14 @@ void Replayer::nextInterval(const common::timestamp_t& interval)
 
 void Replayer::nextImage()
 {
-	if (finished()) {
+	if (finished())
+	{
 		return;
 	}
 	imageArrived_ = false;
 
-	while (!imageArrived_) {
+	while (!imageArrived_)
+	{
 		next();
 	}
 }
@@ -102,22 +108,22 @@ void Replayer::nextImage()
 void Replayer::addGroundTruthCallback(
 	std::function<void(const common::GroundTruthSample&)> callback)
 {
-	spdlog::get("console")->debug("New ground truth callback is registered");
+	consoleLog_->debug("New ground truth callback is registered");
 	groundTruthCallbacks_.push_back(callback);
 }
 
 void Replayer::addEventCallback(
 	std::function<void(const common::EventSample&)> callback)
 {
-	spdlog::get("console")->debug("New event callback is registered");
+	consoleLog_->debug("New event callback is registered");
 	eventCallbacks_.push_back(callback);
 }
 
 void Replayer::addImageCallback(
 	std::function<void(const common::ImageSample&)> callback)
 {
-	spdlog::get("console")->debug("New image callback is registered");
+	consoleLog_->debug("New image callback is registered");
 	imageCallbacks_.push_back(callback);
 }
 
-}  // ns tools
+}  // namespace tools

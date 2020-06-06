@@ -8,11 +8,12 @@ TEST(Patch, addEventsTest)
 {
 	tracker::Patch patch({10, 10}, 5);
 	patch.setNumOfEvents(2);
-	for (size_t i = 0; i < 2; ++i) {
+	for (size_t i = 0; i < 2; ++i)
+	{
 		common::EventSample event;
-		event.timestamp   = common::timestamp_t(i);
+		event.timestamp = common::timestamp_t(i);
 		event.value.point = {5 + std::rand() % 10, 5 + std::rand() % 10};
-		event.value.sign  = std::rand() % 2 == 1
+		event.value.sign = std::rand() % 2 == 1
 							   ? common::EventPolarity::POSITIVE
 							   : common::EventPolarity::NEGATIVE;
 		patch.addEvent(event);
@@ -36,11 +37,12 @@ TEST(Patch, integrateEventsTest)
 	tracker::Patch patch({10, 10}, 2);
 	patch.setNumOfEvents(5);
 
-	for (int32_t i = 0; i < 5; ++i) {
+	for (int32_t i = 0; i < 5; ++i)
+	{
 		common::EventSample event;
-		event.timestamp   = common::timestamp_t(i);
+		event.timestamp = common::timestamp_t(i);
 		event.value.point = {8 + i, 8 + i};
-		event.value.sign  = i % 2 == 0 ? common::EventPolarity::POSITIVE
+		event.value.sign = i % 2 == 0 ? common::EventPolarity::POSITIVE
 									  : common::EventPolarity::NEGATIVE;
 		patch.addEvent(event);
 	}
@@ -49,7 +51,8 @@ TEST(Patch, integrateEventsTest)
 
 	const auto& flow = patch.getIntegratedNabla();
 
-	for (int32_t i = 0; i < 5; ++i) {
+	for (int32_t i = 0; i < 5; ++i)
+	{
 		EXPECT_FLOAT_EQ(flow.at<double>(i, i),
 						i % 2 == 0 ? common::EventPolarity::POSITIVE
 								   : common::EventPolarity::NEGATIVE);

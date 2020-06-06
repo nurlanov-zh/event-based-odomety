@@ -16,9 +16,12 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->updatePatches(sample);
 
-	// TODO add logger trace which patch is integrated as soon as patch ids come up
-	for (auto& patch : tracker_->getPatches()) {
-		if (patch.isReady()) {
+	// TODO add logger trace which patch is integrated as soon as patch ids come
+	// up
+	for (auto& patch : tracker_->getPatches())
+	{
+		if (patch.isReady())
+		{
 			patch.integrateEvents();
 			patch.resetBatch();
 		}
@@ -37,7 +40,8 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 	flowEstimator_->addImage(sample.value);
 	flowEstimator_->getFlowPatches(tracker_->getPatches());
 
-	for (auto& patch : tracker_->getPatches()) {
+	for (auto& patch : tracker_->getPatches())
+	{
 		patch.warpImage();
 	}
 }
@@ -45,7 +49,7 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 void Evaluator::reset()
 {
 	consoleLog_ = spdlog::get("console");
-	errLog_		= spdlog::get("stderr");
+	errLog_ = spdlog::get("stderr");
 
 	corners_.clear();
 	tracker_.reset(new tracker::FeatureDetector(tracker::DetectorParams(),
@@ -55,4 +59,4 @@ void Evaluator::reset()
 
 	consoleLog_->info("Evaluator is reset");
 }
-}  // ns tools
+}  // namespace tools

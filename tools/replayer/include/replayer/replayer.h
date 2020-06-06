@@ -17,8 +17,8 @@ namespace tools
 {
 enum EventType
 {
-	EVENT		 = 0,
-	IMAGE		 = 1,
+	EVENT = 0,
+	IMAGE = 1,
 	GROUND_TRUTH = 2
 };
 
@@ -62,7 +62,8 @@ class Replayer
 	void notify(const std::vector<std::function<void(const T&)>>& callbacks,
 				const T& message)
 	{
-		for (const auto& callback : callbacks) {
+		for (const auto& callback : callbacks)
+		{
 			callback(message);
 		}
 	}
@@ -70,7 +71,8 @@ class Replayer
 	template <typename T>
 	void fillTimestampsQueue(const T& sequence, const EventType& type)
 	{
-		for (const auto& sample : sequence) {
+		for (const auto& sample : sequence)
+		{
 			timestampsQueue_.push(std::make_pair(sample.timestamp, type));
 		}
 	}
@@ -102,4 +104,4 @@ class Replayer
 		imageCallbacks_;
 };
 
-}  // ns tools
+}  // namespace tools

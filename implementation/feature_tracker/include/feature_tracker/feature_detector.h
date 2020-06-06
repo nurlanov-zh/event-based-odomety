@@ -8,9 +8,9 @@ namespace tracker
 struct DetectorParams
 {
 	double qualityLevel = 0.01;
-	double minDistance  = 3;
+	double minDistance = 3;
 	int32_t patchExtent = 17;
-	int32_t blockSize   = 3;
+	int32_t blockSize = 3;
 };
 
 class FeatureDetector
@@ -42,4 +42,4 @@ class FeatureDetector
 	Patches patches_;
 	Corners corners_;
 };
-}  // ns tracker
+}  // namespace tracker

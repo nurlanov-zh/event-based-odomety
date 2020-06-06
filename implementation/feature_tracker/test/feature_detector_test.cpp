@@ -16,7 +16,8 @@ TEST(FeatureDetector, featureDetectorTest)
 	const auto corners = detector.detectFeatures(image);
 	EXPECT_GT(corners.size(), 10);
 
-	for (const auto& corner : corners) {
+	for (const auto& corner : corners)
+	{
 		EXPECT_TRUE(corner.x > params.patchExtent + 1 &&
 					corner.x < image.cols - params.patchExtent - 1);
 		EXPECT_TRUE(corner.y > params.patchExtent + 1 &&
@@ -24,7 +25,8 @@ TEST(FeatureDetector, featureDetectorTest)
 	}
 
 #ifdef SAVE_IMAGES
-	for (const auto& corner : corners) {
+	for (const auto& corner : corners)
+	{
 		image.at<cv::Vec3b>(corner.y, corner.x) = {0, 0, 255};
 	}
 
@@ -52,17 +54,20 @@ TEST(FeatureDetector, updatePatchTest)
 
 	common::EventSequence events;
 
-	for (size_t i = 0; i < 5; ++i) {
+	for (size_t i = 0; i < 5; ++i)
+	{
 		common::EventSample event;
-		event.timestamp   = common::timestamp_t(i);
+		event.timestamp = common::timestamp_t(i);
 		event.value.point = {std::rand() % 30, std::rand() % 30};
-		event.value.sign  = std::rand() % 2 == 1
+		event.value.sign = std::rand() % 2 == 1
 							   ? common::EventPolarity::POSITIVE
 							   : common::EventPolarity::NEGATIVE;
 		detector.updatePatches(event);
 
-		for (size_t j = 0; j < patches.size(); ++j) {
-			if (patches[j].isInPatch(event.value.point)) {
+		for (size_t j = 0; j < patches.size(); ++j)
+		{
+			if (patches[j].isInPatch(event.value.point))
+			{
 				patches[j].addEvent(event);
 			}
 		}
@@ -72,9 +77,10 @@ TEST(FeatureDetector, updatePatchTest)
 
 	ASSERT_EQ(detectorPatches.size(), patches.size());
 
-	for (size_t i = 0; i < patches.size(); ++i) {
+	for (size_t i = 0; i < patches.size(); ++i)
+	{
 		const auto detectorEvents = detectorPatches[i].getEvents();
-		const auto gtEvents		  = patches[i].getEvents();
+		const auto gtEvents = patches[i].getEvents();
 		ASSERT_EQ(detectorEvents.size(), gtEvents.size());
 
 		auto detectorIt = detectorEvents.begin();

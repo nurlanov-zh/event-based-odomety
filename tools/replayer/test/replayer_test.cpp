@@ -61,12 +61,13 @@ class ReplayerTest : public ::testing::Test
 	}
 
 	TestListener listener;
-    std::unique_ptr<tools::Replayer> replayer;
+	std::unique_ptr<tools::Replayer> replayer;
 };
 
 TEST_F(ReplayerTest, nextTest)
 {
-	while (!replayer->finished()) {
+	while (!replayer->finished())
+	{
 		replayer->next();
 	}
 
@@ -77,7 +78,8 @@ TEST_F(ReplayerTest, nextTest)
 		{common::timestamp_t(4), tools::EventType::IMAGE}};
 
 	ASSERT_EQ(timestamps.size(), listener.timestamps.size());
-	for (size_t i = 0; i < timestamps.size(); ++i) {
+	for (size_t i = 0; i < timestamps.size(); ++i)
+	{
 		EXPECT_EQ(timestamps[i].first, listener.timestamps[i].first);
 		EXPECT_EQ(timestamps[i].second, listener.timestamps[i].second);
 	}
@@ -95,7 +97,8 @@ TEST_F(ReplayerTest, nextImageTest)
 		{common::timestamp_t(4), tools::EventType::IMAGE}};
 
 	ASSERT_EQ(timestamps.size(), listener.timestamps.size());
-	for (size_t i = 0; i < timestamps.size(); ++i) {
+	for (size_t i = 0; i < timestamps.size(); ++i)
+	{
 		EXPECT_EQ(timestamps[i].first, listener.timestamps[i].first);
 		EXPECT_EQ(timestamps[i].second, listener.timestamps[i].second);
 	}
@@ -105,16 +108,17 @@ TEST_F(ReplayerTest, resetTest)
 {
 	replayer->nextInterval(common::timestamp_t(3));
 
-    replayer->reset();
-    listener.timestamps.clear();
+	replayer->reset();
+	listener.timestamps.clear();
 
-    replayer->next();
+	replayer->next();
 
 	std::vector<std::pair<common::timestamp_t, tools::EventType>> timestamps = {
 		{common::timestamp_t(0), tools::EventType::EVENT}};
 
 	ASSERT_EQ(timestamps.size(), listener.timestamps.size());
-	for (size_t i = 0; i < timestamps.size(); ++i) {
+	for (size_t i = 0; i < timestamps.size(); ++i)
+	{
 		EXPECT_EQ(timestamps[i].first, listener.timestamps[i].first);
 		EXPECT_EQ(timestamps[i].second, listener.timestamps[i].second);
 	}

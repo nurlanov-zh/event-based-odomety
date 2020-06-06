@@ -35,12 +35,12 @@ struct Event
 	EventPolarity sign;
 };
 
-using EventSample		= Sample<Event>;
-using ImageSample		= Sample<cv::Mat>;
+using EventSample = Sample<Event>;
+using ImageSample = Sample<cv::Mat>;
 using GroundTruthSample = Sample<Pose3d>;
 
 using EventSequence = std::vector<EventSample>;
 using ImageSequence = std::vector<ImageSample>;
-using GroundTruth   = std::vector<GroundTruthSample>;
+using GroundTruth = std::vector<GroundTruthSample>;
 
 }  // namespace common
