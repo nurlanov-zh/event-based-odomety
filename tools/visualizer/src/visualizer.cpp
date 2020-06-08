@@ -1,4 +1,5 @@
 #include "visualizer/visualizer.h"
+#include "visualizer/scene_helper.h"
 
 #include <pangolin/display/display_internal.h>
 
@@ -15,7 +16,7 @@ namespace tools
 constexpr int VISUALIZER_WIDTH = 1800;
 constexpr int VISUALIZER_HEIGHT = 1000;
 constexpr int UI_WIDTH = 200;
-constexpr int IMAGE_VIEWS = 3;
+constexpr int IMAGE_VIEWS = 4;
 
 const std::chrono::microseconds SLEEP_MICROSECONDS =
 	std::chrono::microseconds(100);
@@ -34,21 +35,36 @@ void Visualizer::createWindow()
 
 	glEnable(GL_DEPTH_TEST);
 
-	// main parent display for images and 3d viewer
+	/*********** Main view ***********/
 	pangolin::View& mainView =
 		pangolin::Display("main")
 			.SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0)
 			.SetLayout(pangolin::LayoutEqualVertical);
 
 	pangolin::View& imgViewDisplay =
-		pangolin::Display("images").SetLayout(pangolin::LayoutEqual);
+		pangolin::Display("images").SetLayout(pangolin::LayoutEqualHorizontal);
 	mainView.AddDisplay(imgViewDisplay);
 
-	// main ui panel
+	/*********** Create scene ***********/
+	const std::string sceneName = "scene";
+	sceneView_.reset(new pangolin::View());
+	camera_.reset(new pangolin::OpenGlRenderState(
+		pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
+		pangolin::ModelViewLookAt(-3.4, -3.7, -8.3, 2.1, 0.6, 0.2,
+								  pangolin::AxisNegY)));
+
+	sceneView_->SetHandler(new pangolin::Handler3D(*(camera_.get())));
+	pangolin::context->named_managed_views[sceneName] = sceneView_.get();
+	pangolin::context->base.views.push_back(sceneView_.get());
+
+	mainView.AddDisplay(*(sceneView_.get()));
+
+	/*********** UI panel ***********/
 	pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,
 										  pangolin::Attach::Pix(UI_WIDTH));
 
-	std::string panelName = "settings";
+	/*********** Settings panel ***********/
+	const std::string panelName = "settings";
 	settingsPanel_.reset(new pangolin::Panel(panelName));
 	settingsPanel_->SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH),
 							  pangolin::Attach::Pix(2 * UI_WIDTH));
@@ -56,12 +72,11 @@ void Visualizer::createWindow()
 	pangolin::context->base.views.push_back(settingsPanel_.get());
 	showSettingsPanel_->Meta().gui_changed = true;
 
-	// 2D image views
-	while (imgView_.size() < IMAGE_VIEWS)
+	/*********** 2D image views ***********/
+	for (int idx = 0; idx < IMAGE_VIEWS; ++idx)
 	{
 		std::shared_ptr<pangolin::ImageView> iv(new pangolin::ImageView);
 
-		size_t idx = imgView_.size();
 		imgView_.push_back(iv);
 
 		imgViewDisplay.AddDisplay(*iv);
@@ -77,28 +92,17 @@ void Visualizer::drawOriginalImage(const cv::Mat& cvImage)
 
 void Visualizer::drawPredictedNabla(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage;
-
-	double minVal;
-	double maxVal;
-	cv::minMaxLoc(cvImage, &minVal, &maxVal);
-	cvImage.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
-					  -minVal * 255.0 / (maxVal - minVal));
-
-	drawImage(grayImage, ImageViews::PREDICTED_NABLA);
+	drawImage(convertImageToGray(cvImage), ImageViews::PREDICTED_NABLA);
 }
 
 void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage;
+	drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
+}
 
-	double minVal;
-	double maxVal;
-	cv::minMaxLoc(cvImage, &minVal, &maxVal);
-	cvImage.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
-					  -minVal * 255.0 / (maxVal - minVal));
-
-	drawImage(grayImage, ImageViews::INTEGRATED_NABLA);
+void Visualizer::drawCostMap(const cv::Mat& cvImage)
+{
+	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -122,11 +126,11 @@ void Visualizer::drawImageOverlay(pangolin::View& /*view*/, size_t idx)
 			break;
 
 		case static_cast<size_t>(ImageViews::PREDICTED_NABLA):
-			drawPredictedNabla();
+			drawPredictedNablaOverlay();
 			break;
 
 		case static_cast<size_t>(ImageViews::INTEGRATED_NABLA):
-			drawIntegratedNabla();
+			drawIntegratedNablaOverlay();
 			break;
 	}
 }
@@ -199,6 +203,15 @@ void Visualizer::drawOriginalOverlay()
 
 	drawIntegratedNabla(integratedNabla_);
 	drawPredictedNabla(predictedNabla_);
+	drawCostMap(predictedNabla_);
+}
+
+void Visualizer::drawScene()
+{
+	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
+	sceneView_->Activate(*(camera_.get()));
+	const u_int8_t colorCameraLeft[3]{0, 125, 0};
+	renderCamera(Eigen::Matrix4d::Identity(), 3.f, colorCameraLeft, 0.1f);
 }
 
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
@@ -226,17 +239,29 @@ void Visualizer::eventCallback(const common::EventSample& sample)
 	}
 }
 
+cv::Mat Visualizer::convertImageToGray(const cv::Mat& cvImage)
+{
+	cv::Mat grayImage;
+
+	double minVal;
+	double maxVal;
+	cv::minMaxLoc(cvImage, &minVal, &maxVal);
+	cvImage.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
+					  -minVal * 255.0 / (maxVal - minVal));
+	return grayImage;
+}
+
 void Visualizer::imageCallback(const common::ImageSample& sample)
 {
 	originalImage_ = sample.value;
 }
 
-void Visualizer::drawPredictedNabla()
+void Visualizer::drawPredictedNablaOverlay()
 {
 	pangolin::GlFont::I().Text("Predicted nabla").Draw(5, 5);
 }
 
-void Visualizer::drawIntegratedNabla()
+void Visualizer::drawIntegratedNablaOverlay()
 {
 	pangolin::GlFont::I().Text("Integrated nabla").Draw(5, 5);
 }
@@ -256,6 +281,7 @@ void Visualizer::step()
 	}
 
 	drawOriginalImage(originalImage_);
+	drawScene();
 
 	finishVisualizerIteration();
 }

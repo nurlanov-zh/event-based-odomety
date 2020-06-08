@@ -18,7 +18,8 @@ enum ImageViews
 {
 	ORIGINAL = 0,
 	PREDICTED_NABLA = 1,
-	INTEGRATED_NABLA = 2
+	INTEGRATED_NABLA = 2,
+	COST_MAP = 3
 };
 
 class Visualizer
@@ -29,12 +30,6 @@ class Visualizer
 	bool shouldQuit() const { return quit_; }
 
 	void createWindow();
-
-	void drawOriginalImage(const cv::Mat& cvImage);
-	void drawPredictedNabla(const cv::Mat& cvImage);
-	void drawIntegratedNabla(const cv::Mat& cvImage);
-
-	void drawImageOverlay(pangolin::View&, size_t idx);
 
 	void step();
 
@@ -66,10 +61,21 @@ class Visualizer
 	void finishVisualizerIteration();
 
 	void drawImage(const cv::Mat& cvImage, const ImageViews& view);
+
+	void drawOriginalImage(const cv::Mat& cvImage);
+	void drawPredictedNabla(const cv::Mat& cvImage);
+	void drawIntegratedNabla(const cv::Mat& cvImage);
+	void drawCostMap(const cv::Mat& cvImage);
+
+	void drawImageOverlay(pangolin::View&, size_t idx);
 	void drawOriginalOverlay();
-	void drawPredictedNabla();
-	void drawIntegratedNabla();
+	void drawPredictedNablaOverlay();
+	void drawIntegratedNablaOverlay();
 	void drawTrajectory(const tracker::Patch& patch);
+
+	cv::Mat convertImageToGray(const cv::Mat& cvImage);
+
+	void drawScene();
 
 	void reset();
 
@@ -83,6 +89,9 @@ class Visualizer
 	bool nextImagePressed_;
 
 	std::unique_ptr<pangolin::Panel> settingsPanel_;
+	std::unique_ptr<pangolin::View> sceneView_;
+	std::unique_ptr<pangolin::OpenGlRenderState> camera_;
+
 	std::unique_ptr<pangolin::Var<bool>> stopPlayButton_;
 	std::unique_ptr<pangolin::Var<bool>> nextStepButton_;
 	std::unique_ptr<pangolin::Var<bool>> nextIntervalStepButton_;
