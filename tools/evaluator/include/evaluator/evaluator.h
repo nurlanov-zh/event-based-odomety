@@ -38,10 +38,22 @@ class Evaluator
 	void setTrackerParams(const tracker::DetectorParams& params);
 
 	void saveTrajectory(const tracker::Patches& patches);
+	
+	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples)
+	{
+		groundTruthSamples_ = groundTruthSamples;
+	}
+
+   private:
+	std::optional<common::Pose3d> syncGtAndImage(
+		const common::timestamp_t& timestamp);
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
+
+	std::vector<common::GroundTruthSample> groundTruthSamples_;
+	std::deque<common::timestamp_t> imageTimestamps_;
 
 	EvaluatorParams params_;
 

@@ -1,1 +1,2 @@
 add_subdirectory(feature_tracker)
+add_subdirectory(visual_odometry)

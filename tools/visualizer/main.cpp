@@ -68,6 +68,8 @@ int main(int argc, char** argv)
 		visualizer.createWindow();
 	}
 
+	evaluator.setGroundTruthSamples(replayer.getGroundTruth());
+
 	while (!visualizer.shouldQuit() && !replayer.finished())
 	{
 		const bool stop = visualizer.stopPressed();

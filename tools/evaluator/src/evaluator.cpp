@@ -1,5 +1,11 @@
 #include "evaluator/evaluator.h"
 
+#include <visual_odometry/triangulation.h>
+
+#include <sophus/interpolate.hpp>
+
+namespace vo = visual_odometry;
+
 namespace tools
 {
 Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
@@ -42,6 +48,65 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 
 	tracker_->newImage(sample);
 	corners_ = tracker_->getFeatures();
+	
+	imageTimestamps_.push_back(sample.timestamp);
+
+	/**********************************/
+	if (imageTimestamps_.size() < 2)
+	{
+		return;
+	}
+
+	const auto firstImagePose = syncGtAndImage(imageTimestamps_[0]);
+	const auto secondImagePose = syncGtAndImage(imageTimestamps_[1]);
+
+	if (!firstImagePose.has_value() || !secondImagePose.has_value())
+	{
+		return;
+	}
+
+	// const auto& sharedLandmarks = vo::getSharedLandmarks(imageTimestamps_[0],
+	// imageTimestamps_[1]);
+	vo::triangulateLandmarks(firstImagePose.value(), secondImagePose.value(),
+							 {}, {});
+
+	imageTimestamps_.erase(imageTimestamps_.begin());
+}
+
+std::optional<common::Pose3d> Evaluator::syncGtAndImage(
+	const common::timestamp_t& timestamp)
+{
+	auto lowerBoundIt =
+		std::lower_bound(groundTruthSamples_.begin(), groundTruthSamples_.end(),
+						 common::GroundTruthSample({}, timestamp),
+						 [](const common::GroundTruthSample& a,
+							const common::GroundTruthSample& b) {
+							 return a.timestamp < b.timestamp;
+						 });
+	if (lowerBoundIt == groundTruthSamples_.end())
+	{
+		return {};
+	}
+	const auto prevPose = lowerBoundIt->value;
+
+	auto nextIt = (++lowerBoundIt);
+	if (nextIt == groundTruthSamples_.end())
+	{
+		return {};
+	}
+	const auto nextPose = nextIt->value;
+
+	const auto interploatedPose = Sophus::interpolate(
+		prevPose, nextPose,
+		static_cast<float>((timestamp - lowerBoundIt->timestamp).count()) /
+			(nextIt->timestamp - lowerBoundIt->timestamp).count());
+
+	// auto itErase = groundTruthSamples_.begin();
+	// while (nextIt != itErase)
+	// {
+	// 	itErase = groundTruthSamples_.erase(itErase);
+	// }
+	return std::make_optional(interploatedPose);
 }
 
 void Evaluator::reset()
