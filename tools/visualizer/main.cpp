@@ -13,8 +13,6 @@ tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 	std::chrono::microseconds(5000);
 
-size_t NUM_PATCHES = 0;
-
 int main(int argc, char** argv)
 {
 	spdlog::set_level(spdlog::level::from_str("debug"));
@@ -53,7 +51,7 @@ int main(int argc, char** argv)
 	tools::Replayer replayer(reader);
 
 	const auto param = tools::EvaluatorParams();
-	tools::Evaluator evaluator(param, NUM_PATCHES);
+	tools::Evaluator evaluator(param);
 
 	replayer.addEventCallback(
 		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
