@@ -28,18 +28,20 @@ void Optimizer::setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 	gradInterpolator_.reset(new Interpolator(*gradGrid_));
 }
 
-void Optimizer::drawCostMap(const cv::Rect& rect,
-							tracker::OptimizerCostFunctor* c)
+void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 {
-	cv::Mat costImage = cv::Mat::zeros(rect.height, rect.width, CV_64F);
+	const auto rect = patch.getPatch();
+	common::Pose2d pose = patch.getWarp();
+	double flowDir = patch.getFlow();
+
+	cv::Mat costMap = cv::Mat::zeros(rect.height, rect.width, CV_64F);
 	for (int x = -(rect.width - 1) / 2; x <= (rect.width - 1) / 2; ++x)
 	{
 		for (int y = -(rect.width - 1) / 2; y <= (rect.width - 1) / 2; ++y)
 		{
-			common::Pose2d pose;
 			pose.translation() = Eigen::Vector2d((float)x, (float)y);
 			cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
-			(*c)(pose.data(), &flowDir_, (double*)image.data);
+			(*c)(pose.data(), &flowDir, (double*)image.data);
 			double sum = 0;
 			for (int xx = 0; xx < rect.width; ++xx)
 			{
@@ -48,14 +50,14 @@ void Optimizer::drawCostMap(const cv::Rect& rect,
 					sum += std::pow(image.at<double>(yy, xx), 2);
 				}
 			}
-			costImage.at<double>(y + (rect.width - 1) / 2,
-								 x + (rect.width - 1) / 2) = sum;
+			costMap.at<double>(y + (rect.width - 1) / 2,
+							   x + (rect.width - 1) / 2) = sum;
 		}
 	}
-	costImage_ = costImage;
+	patch.setCostMap(costMap);
 }
 
-void Optimizer::optimize(const Patch& patch)
+void Optimizer::optimize(Patch& patch)
 {
 	const auto rect = patch.getPatch();
 	int size = rect.height * rect.width;
@@ -63,14 +65,14 @@ void Optimizer::optimize(const Patch& patch)
 	const cv::Mat normalizedIntegratedNabla =
 		patch.getNormalizedIntegratedNabla();
 
-	warp_ = patch.getWarp();
-	flowDir_ = patch.getFlow();
+	auto warp = patch.getWarp();
+	double flowDir = patch.getFlow();
 
 	ceres::Problem problem;
 
-	problem.AddParameterBlock(warp_.data(), Sophus::SE2d::num_parameters,
+	problem.AddParameterBlock(warp.data(), Sophus::SE2d::num_parameters,
 							  new Sophus::test::LocalParameterizationSE2());
-	problem.AddParameterBlock(&flowDir_, 1);
+	problem.AddParameterBlock(&flowDir, 1);
 
 	auto* c = new tracker::OptimizerCostFunctor(normalizedIntegratedNabla,
 												gradInterpolator_, rect);
@@ -81,11 +83,11 @@ void Optimizer::optimize(const Patch& patch)
 										Sophus::SE2d::num_parameters, 1>(c,
 																		 size);
 
-	problem.AddResidualBlock(cost_function, NULL, warp_.data(), &flowDir_);
+	problem.AddResidualBlock(cost_function, NULL, warp.data(), &flowDir);
 
 	if (params_.drawCostMap)
 	{
-		drawCostMap(rect, c);
+		drawCostMap(patch, c);
 	}
 	// Set solver options (precision / method)
 	ceres::Solver::Options options;
@@ -107,6 +109,10 @@ void Optimizer::optimize(const Patch& patch)
 
 	consoleLog_->debug(summary.BriefReport());
 
-	flowDir_ = fmod(flowDir_, 2 * M_PI);
+	flowDir = fmod(flowDir, 2 * M_PI);
+
+	// !!! Update patch params !!!
+	patch.setFlowDir(flowDir);
+	patch.setWarp(warp);
 }
 }  // namespace tracker

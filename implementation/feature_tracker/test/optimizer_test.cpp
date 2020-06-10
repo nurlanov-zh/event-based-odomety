@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 std::string TEST_DATA_PATH = "test/test_data";
+bool useRotation = false;
 
 class LoggingTest
 {
@@ -18,7 +19,7 @@ class LoggingTest
 
 LoggingTest logger;
 
-void saveImage(cv::Mat image, std::string name)
+void saveImage(cv::Mat image, std::string name, bool isCostMap = false)
 {
 	cv::Mat grayImage;
 	double minVal;
@@ -26,6 +27,12 @@ void saveImage(cv::Mat image, std::string name)
 	cv::minMaxLoc(image, &minVal, &maxVal);
 	image.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
 					-minVal * 255.0 / (maxVal - minVal));
+	if (isCostMap)
+	{
+		cv::Mat im_color;
+		applyColorMap(grayImage, im_color, cv::COLORMAP_JET);
+		grayImage = im_color;
+	}
 	cv::imwrite("/tmp/" +
 					std::string(::testing::UnitTest::GetInstance()
 									->current_test_info()
@@ -63,6 +70,7 @@ TEST(Optimizer, optimizerSimpleTest)
 {
 	const cv::Size2i imageSize = {35, 35};
 	tracker::OptimizerParams params;
+	params.drawCostMap = true;
 	tracker::Optimizer optimizer(params, imageSize);
 
 	const auto randomInt = [](int min, int max) -> int {
@@ -80,18 +88,19 @@ TEST(Optimizer, optimizerSimpleTest)
 		cv::line(gradY, {imageSize.height / 2, randomInt(0, imageSize.height)},
 				 {imageSize.height / 2, randomInt(0, imageSize.height)}, 2);
 
+		double rotation =
+			useRotation ? M_PI / static_cast<double>(randomInt(24, 30)) : 0;
 		common::Pose2d warp(
-			0, Eigen::Vector2d(randomInt(-5, 5), randomInt(-5, 5)));
+			rotation, Eigen::Vector2d(randomInt(-5, 5), randomInt(-5, 5)));
 
 		const Eigen::Vector2d shift =
 			Eigen::Vector2d(randomInt(-3, 3), randomInt(-3, 3));
 		common::Pose2d warpInit(0, shift);
-
-		optimizer.setWarp(warpInit);
-
 		const double flowDir = std::atan2(shift.y(), shift.x());
 
-		tracker::Patch patch({45, 27}, 17);
+		// Center of the patch is important! Because the warping is done around
+		// it.
+		tracker::Patch patch({17, 17}, 17);
 		patch.setWarp(warpInit);
 		patch.setFlowDir(flowDir);
 
@@ -107,8 +116,8 @@ TEST(Optimizer, optimizerSimpleTest)
 		optimizer.setGrad(gradXBlurred, gradYBlurred);
 		optimizer.optimize(patch);
 
-		const auto flowDirOut = optimizer.getFlowDir();
-		const auto warpOut = optimizer.getWarp();
+		const auto flowDirOut = patch.getFlow();
+		const auto warpOut = patch.getWarp();
 
 		auto predictedNabla =
 			warpGeneral(warpOut.inverse(), flowDirOut, gradX, gradY);
@@ -119,6 +128,14 @@ TEST(Optimizer, optimizerSimpleTest)
 		EXPECT_NEAR(warpOutTangent.x(), warpTangent.x(), 5e-1);
 		EXPECT_NEAR(warpOutTangent.y(), warpTangent.y(), 5e-1);
 		EXPECT_NEAR(warpOutTangent.z(), warpTangent.z(), 5e-1);
+
+		if (std::abs(flowDir - flowDirOut) > 1e-1 or
+			std::abs(warpTangent.x() - warpOutTangent.x()) > 5e-1 or
+			std::abs(warpTangent.y() - warpOutTangent.y()) > 5e-1 or
+			std::abs(warpTangent.z() - warpOutTangent.z()) > 1e-1)
+		{
+			saveImage(patch.getCostMap(), "costMap_" + std::to_string(i), true);
+		}
 
 #ifdef SAVE_IMAGES
 		saveImage(gradX, "gradX" + std::to_string(i));

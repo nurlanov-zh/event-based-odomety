@@ -54,7 +54,8 @@ struct OptimizerCostFunctor
 		auto transform = pose2D.matrix2x3();
 
 		const auto center =
-			Eigen::Vector2d((patch_.width - 1) / 2, (patch_.height - 1) / 2);
+			Eigen::Vector2d(((patch_.br() + patch_.tl()) * 0.5).x,
+							((patch_.br() + patch_.tl()) * 0.5).y);
 
 		const Eigen::Matrix<T, 2, 1> offsetToCenter =
 			-(pose2D.rotationMatrix() * center) + center;
