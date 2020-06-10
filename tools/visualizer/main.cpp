@@ -13,7 +13,6 @@ tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 	std::chrono::microseconds(5000);
 
-
 int main(int argc, char** argv)
 {
 	spdlog::set_level(spdlog::level::from_str("debug"));

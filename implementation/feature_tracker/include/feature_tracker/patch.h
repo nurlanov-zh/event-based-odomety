@@ -43,17 +43,23 @@ class Patch
 
 	void warpImage();
 
+	void addTrajectoryPosition(const common::Point2d& pose,
+							   common::timestamp_t timestamp)
+	{
+		trajectory_.push_back({pose, timestamp});
+	}
+
 	common::EventSequence const& getEvents() const;
-
-	size_t const& getTrackId() const { return trackId_; }
-
-	size_t const& getPatchId() const { return patchId_; }
 
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
 
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
 
 	cv::Rect2i const& getPatch() const { return patch_; }
+
+	size_t getTrackId() const { return trackId_; }
+
+	size_t getPatchId() const { return patchId_; }
 
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
 	{

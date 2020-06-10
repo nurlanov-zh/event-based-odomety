@@ -37,7 +37,7 @@ void Patch::init()
 	{
 		common::Pose2d pose;
 		pose.translation() = Eigen::Vector2d(i + toCorner().x, toCorner().y);
-//		trajectory_.push_back({pose, common::timestamp_t(0)});
+		//		trajectory_.push_back({pose, common::timestamp_t(0)});
 	}
 
 	lost_ = false;
