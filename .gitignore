@@ -7,3 +7,5 @@ data
 *~
 __pycache__
 .vscode
+*.png
+

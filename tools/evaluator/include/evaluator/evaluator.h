@@ -46,5 +46,7 @@ class Evaluator
 	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
 
 	tracker::Corners corners_;
+
+	size_t num_patches_;
 };
 }  // namespace tools

@@ -1,4 +1,5 @@
 #include "feature_tracker/patch.h"
+#include "feature_tracker/optimizer.h"
 
 #include <opencv2/core/eigen.hpp>
 
@@ -18,12 +19,27 @@ Patch::Patch(const Corner& corner, int extent)
 {
 	patch_ = cv::Rect2i(corner.x - extent, corner.y - extent, 2 * extent + 1,
 						2 * extent + 1);
+	init();
+}
 
+Patch::Patch(const Corner& corner, int extent, const size_t num_patches)
+{
+	patch_ = cv::Rect2i(corner.x - extent, corner.y - extent, 2 * extent + 1,
+						2 * extent + 1);
+	patchId_ = num_patches;
 	init();
 }
 
 void Patch::init()
 {
+	// Just for test visualization
+	for (size_t i = 0; i < 30; ++i)
+	{
+		common::Pose2d pose;
+		pose.translation() = Eigen::Vector2d(i + toCorner().x, toCorner().y);
+		//		trajectory_.push_back({pose, common::timestamp_t(0)});
+	}
+
 	lost_ = false;
 	numOfEvents_ = 50;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -32,9 +48,46 @@ void Patch::init()
 	gradY_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 }
 
+void Patch::updateNumOfEvents()
+{
+	size_t sumPatch = round(
+		sum(abs(gradX_ * std::cos(flowDir_) + gradY_ * std::sin(flowDir_)))[0]);
+	numOfEvents_ = std::max(minNumOfEvents_, sumPatch);
+}
+
 void Patch::addEvent(const common::EventSample& event)
 {
 	events_.emplace_back(event);
+}
+
+void Patch::optimizePatchParams()
+{
+	// optimize warping params and flow direction
+	// params:	warp_.data();	flowDir_;
+	integrateEvents();
+	// Optimizer opt;
+	// opt = Optimizer(integratedNabla_ / norm(integratedNabla_), gradX_,
+	// gradY_, 				warp_, flowDir_, patch_);
+
+	// opt.compute();
+	// warp_ = opt.getWarp();
+	// flowDir_ = opt.getFlowDir();
+
+	// after all reset everything
+	updatePatchRect(warp_);
+	resetBatch();
+	updateNumOfEvents();
+}
+
+void Patch::updatePatchRect(const common::Pose2d& warp)
+{
+	const auto center = Eigen::Vector2d(toCorner().x, toCorner().y);
+	const auto new_center = warp.inverse() * center;
+
+	int extent_x = (patch_.width - 1) / 2;
+	int extent_y = (patch_.height - 1) / 2;
+	patch_ = cv::Rect2i(new_center.x() - extent_x, new_center.y() - extent_y,
+						2 * extent_x + 1, 2 * extent_y + 1);
 }
 
 void Patch::integrateEvents()
@@ -71,7 +124,12 @@ void Patch::warpImage()
 	cv::warpAffine(gradY_, warpedGradY, warpCv, {patch_.width, patch_.height});
 
 	predictedNabla_ =
-		warpedGradX * std::cos(flowDir_) + warpedGradY * std::sin(flowDir_);
+		-warpedGradX * std::cos(flowDir_) - warpedGradY * std::sin(flowDir_);
+}
+
+cv::Mat Patch::getNormalizedIntegratedNabla() const
+{
+	return integratedNabla_ / cv::norm(integratedNabla_);
 }
 
 void Patch::resetBatch()
