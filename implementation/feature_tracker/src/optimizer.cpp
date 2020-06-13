@@ -28,7 +28,8 @@ void Optimizer::setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 	gradInterpolator_.reset(new Interpolator(*(gradGrid_.get())));
 }
 
-void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
+void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
+							bool first)
 {
 	const auto rect = patch.getPatch();
 	const common::Pose2d pose = patch.getWarp();
@@ -58,7 +59,14 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 							   x + (rect.width - 1) / 2) = sum;
 		}
 	}
-	patch.setCostMap(costMap);
+	if (first)
+	{
+		patch.setCostMap(costMap);
+	}
+	else
+	{
+		patch.setCostMap2(costMap);
+	}
 }
 
 void Optimizer::optimize(Patch& patch)
@@ -92,7 +100,7 @@ void Optimizer::optimize(Patch& patch)
 	if (params_.drawCostMap)
 	{
 		// it is too slow
-		drawCostMap(patch, c);
+		drawCostMap(patch, c, true);
 	}
 
 	// Set solver options (precision / method)
@@ -116,8 +124,6 @@ void Optimizer::optimize(Patch& patch)
 		return;
 	}
 
-	flowDir = fmod(flowDir, 2 * M_PI);
-
 	// !!! Update patch params !!!
 	consoleLog_->debug(
 		"New warp is (" + std::to_string(warp.translation().x()) + ", " +
@@ -130,8 +136,15 @@ void Optimizer::optimize(Patch& patch)
 	consoleLog_->debug("New flow is " + std::to_string(flowDir) + " vs " +
 					   std::to_string(patch.getFlow()));
 
+	flowDir = fmod(flowDir, 2 * M_PI);
 	patch.setFlowDir(flowDir);
 	patch.setWarp(warp);
 	patch.updatePatchRect(warp);
+
+	if (params_.drawCostMap)
+	{
+		// it is too slow
+		drawCostMap(patch, c, false);
+	}
 }
 }  // namespace tracker

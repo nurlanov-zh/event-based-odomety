@@ -45,9 +45,7 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 		patch.addTrajectoryPosition(corner, image.timestamp);
 		newPatches.emplace_back(patch);
 	}
-
 	// patches_ = newPatches;
-	associatePatches(newPatches, image.timestamp);
 
 	const auto& logImage = getLogImage(image.value);
 
@@ -55,6 +53,7 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 	gradY_ = getGradients(logImage, false);
 	optimizer_->setGrad(gradX_, gradY_);
 
+	associatePatches(newPatches, image.timestamp);
 	if (params_.drawImages)
 	{
 		for (auto& patch : patches_)
@@ -95,9 +94,12 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 			patch.integrateEvents();
 			optimizer_->optimize(patch);
 			updateNumOfEvents(patch);
-			patch.warpImage(gradX_, gradY_);
 			patch.resetBatch();
 			patch.addTrajectoryPosition(patch.toCorner(), event.timestamp);
+			if (params_.drawImages)
+			{
+				patch.warpImage(gradX_, gradY_);
+			}
 		}
 	}
 }
@@ -118,7 +120,6 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
 				patch.setCorner(newPatch.toCorner());
-				patch.warpImage(gradX_, gradY_);
 				patch.addTrajectoryPosition(patch.toCorner(), timestamp);
 				break;
 			}
@@ -172,7 +173,7 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 	assert(image.type() == CV_64F);
 
 	cv::Mat grad;
-	cv::Sobel(image, grad, CV_64F, xDir, !xDir, 3);
+	cv::Sobel(image / 8, grad, CV_64F, xDir, !xDir, 3);
 	return grad;
 }
 

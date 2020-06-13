@@ -59,6 +59,7 @@ class Patch
 	float getFlow() const { return flowDir_; }
 	cv::Mat getNormalizedIntegratedNabla() const;
 	const cv::Mat& getCostMap() const { return costMap_; }
+	const cv::Mat& getCostMap2() const { return costMap2_; }
 	bool isInit() { return init_; }
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
 	size_t getNumOfEvents() const { return numOfEvents_; }
@@ -70,6 +71,7 @@ class Patch
 	void setFlowDir(const double flowDir);
 	void setWarp(const common::Pose2d& warp);
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
+	void setCostMap2(const cv::Mat& costMap) { costMap2_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla);
 	void setCorner(const Corner& corner);
 
@@ -96,6 +98,7 @@ class Patch
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat costMap_;
+	cv::Mat costMap2_;
 
 	double flowDir_;
 	common::Pose2d warp_;

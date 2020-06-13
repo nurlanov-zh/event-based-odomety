@@ -97,7 +97,15 @@ void Visualizer::drawPredictedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 {
-	drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
+	cv::Mat grayImage = convertImageToGray(cvImage);
+	cv::Mat imColor;
+	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+
+	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
+								GL_RGB, GL_UNSIGNED_BYTE);
+	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
+	imgView_[static_cast<size_t>(ImageViews::INTEGRATED_NABLA)]->SetImage(texture);
+	//drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
 }
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
@@ -122,7 +130,6 @@ void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
 void Visualizer::drawImageOverlay(pangolin::View& /*view*/, size_t idx)
 {
 	glLineWidth(1.0);
-	glColor3f(1.0, 0.0, 0.0);  // red
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -179,7 +186,7 @@ void Visualizer::drawOriginalOverlay()
 			if (std::abs(point.x - selection.x.min) <= radius &&
 				std::abs(point.y - selection.y.min) <= radius)
 			{
-				integratedNabla_ = patch.getIntegratedNabla();
+				integratedNabla_ = patch.getCostMap2();
 				predictedNabla_ = patch.getPredictedNabla();
 				costMap_ = patch.getCostMap();
 				flow_ = patch.getFlow();
@@ -194,7 +201,7 @@ void Visualizer::drawOriginalOverlay()
 	{
 		if (patches_.size() > 0)
 		{
-			integratedNabla_ = patches_.front().getIntegratedNabla();
+			integratedNabla_ = patches_.front().getCostMap2();
 			predictedNabla_ = patches_.front().getPredictedNabla();
 			costMap_ = patches_.front().getCostMap();
 			flow_ = patches_.front().getFlow();
@@ -242,7 +249,7 @@ void Visualizer::drawScene()
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
 {
 	const auto& trajectory = patch.getTrajectory();
-	glColor3f(0.5, 0.0, 0.5);  // green
+	glColor3f(0.5, 0.0, 0.5); // purple
 	for (int i = static_cast<int>(trajectory.size()) - 1;
 		 i > static_cast<int>(trajectory.size()) - 7 && i >= 1; --i)
 	{
