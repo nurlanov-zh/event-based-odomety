@@ -15,6 +15,7 @@ struct EvaluatorParams
 {
 	cv::Size2i imageSize = {240, 180};
 	std::string outputDir = "/tmp";
+	bool drawImages = false;
 };
 
 class Evaluator

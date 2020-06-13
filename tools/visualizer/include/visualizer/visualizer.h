@@ -71,6 +71,7 @@ class Visualizer
 	void drawOriginalOverlay();
 	void drawPredictedNablaOverlay();
 	void drawIntegratedNablaOverlay();
+	void drawCostMapOverlay();
 	void drawTrajectory(const tracker::Patch& patch);
 
 	cv::Mat convertImageToGray(const cv::Mat& cvImage);
@@ -109,10 +110,15 @@ class Visualizer
 	std::list<common::EventSample> integratedEvents_;
 
 	cv::Mat integratedNabla_;
+	cv::Mat costMap_;
 	cv::Mat predictedNabla_;
 	cv::Mat originalImage_;
+	cv::Rect2i newPatch_;
+	cv::Rect2i initPatch_;
 
 	tracker::DetectorParams trackerParams_;
+
+	float flow_;
 };
 
 }  // namespace tools

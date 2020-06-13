@@ -23,15 +23,15 @@ void Optimizer::setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
 				gradY.at<double>(row, col);
 		}
 	}
-
-	gradGrid_.reset(new Grid(grad_.data(), 0, gradX.rows, 0, gradX.cols));
-	gradInterpolator_.reset(new Interpolator(*gradGrid_));
+	gradGrid_.reset(
+		new Grid(grad_.data(), 0, imageSize_.height, 0, imageSize_.width));
+	gradInterpolator_.reset(new Interpolator(*(gradGrid_.get())));
 }
 
 void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 {
 	const auto rect = patch.getPatch();
-	common::Pose2d pose = patch.getWarp();
+	const common::Pose2d pose = patch.getWarp();
 	double flowDir = patch.getFlow();
 
 	cv::Mat costMap = cv::Mat::zeros(rect.height, rect.width, CV_64F);
@@ -39,9 +39,13 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 	{
 		for (int y = -(rect.width - 1) / 2; y <= (rect.width - 1) / 2; ++y)
 		{
-			pose.translation() = Eigen::Vector2d((float)x, (float)y);
+			const common::Pose2d poseNew(
+				pose.log().z(),
+				Eigen::Vector2d(
+					static_cast<float>(x) + pose.matrix2x3()(0, 2),
+					static_cast<float>(y) + pose.matrix2x3()(1, 2)));
 			cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
-			(*c)(pose.data(), &flowDir, (double*)image.data);
+			(*c)(poseNew.data(), &flowDir, (double*)image.data);
 			double sum = 0;
 			for (int xx = 0; xx < rect.width; ++xx)
 			{
@@ -59,8 +63,8 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 
 void Optimizer::optimize(Patch& patch)
 {
-	const auto rect = patch.getPatch();
-	int size = rect.height * rect.width;
+	const cv::Rect2i initRect = patch.getInitPatch();
+	int size = initRect.height * initRect.width;
 
 	const cv::Mat normalizedIntegratedNabla =
 		patch.getNormalizedIntegratedNabla();
@@ -74,8 +78,8 @@ void Optimizer::optimize(Patch& patch)
 							  new Sophus::test::LocalParameterizationSE2());
 	problem.AddParameterBlock(&flowDir, 1);
 
-	auto* c = new tracker::OptimizerCostFunctor(normalizedIntegratedNabla,
-												gradInterpolator_, rect);
+	auto* c = new tracker::OptimizerCostFunctor(
+		normalizedIntegratedNabla, gradInterpolator_.get(), initRect);
 
 	ceres::CostFunction* cost_function =
 		new ceres::AutoDiffCostFunction<tracker::OptimizerCostFunctor,
@@ -87,8 +91,10 @@ void Optimizer::optimize(Patch& patch)
 
 	if (params_.drawCostMap)
 	{
+		// it is too slow
 		drawCostMap(patch, c);
 	}
+
 	// Set solver options (precision / method)
 	ceres::Solver::Options options;
 
@@ -98,21 +104,34 @@ void Optimizer::optimize(Patch& patch)
 
 	options.linear_solver_type = ceres::DENSE_QR;
 	options.use_nonmonotonic_steps = true;
-	options.max_num_consecutive_invalid_steps = 15;
 	options.max_num_iterations = params_.maxNumIterations;
-	options.function_tolerance = 1e-12;
-	options.gradient_tolerance = 1e-12;
-
 	// Solve
 	ceres::Solver::Summary summary;
 	Solve(options, &problem, &summary);
-
 	consoleLog_->debug(summary.BriefReport());
+
+	if (summary.final_cost > 0.9)
+	{
+		patch.setLost();
+		return;
+	}
 
 	flowDir = fmod(flowDir, 2 * M_PI);
 
 	// !!! Update patch params !!!
+	consoleLog_->debug(
+		"New warp is (" + std::to_string(warp.translation().x()) + ", " +
+		std::to_string(warp.translation().y()) + ", " +
+		std::to_string(warp.log().z()) + ") vs (" +
+		std::to_string(patch.getWarp().translation().x()) + ", " +
+		std::to_string(patch.getWarp().translation().y()) + ", " +
+		std::to_string(patch.getWarp().log().z()) + ")");
+
+	consoleLog_->debug("New flow is " + std::to_string(flowDir) + " vs " +
+					   std::to_string(patch.getFlow()));
+
 	patch.setFlowDir(flowDir);
 	patch.setWarp(warp);
+	patch.updatePatchRect(warp);
 }
 }  // namespace tracker

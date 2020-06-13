@@ -102,7 +102,14 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
+	cv::Mat grayImage = convertImageToGray(cvImage);
+	cv::Mat imColor;
+	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+
+	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
+								GL_RGB, GL_UNSIGNED_BYTE);
+	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
+	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -132,12 +139,15 @@ void Visualizer::drawImageOverlay(pangolin::View& /*view*/, size_t idx)
 		case static_cast<size_t>(ImageViews::INTEGRATED_NABLA):
 			drawIntegratedNablaOverlay();
 			break;
+		case static_cast<size_t>(ImageViews::COST_MAP):
+			drawCostMapOverlay();
+			break;
 	}
 }
 
 void Visualizer::drawOriginalOverlay()
 {
-	const float radius = 3.0;
+	const float radius = 2.0;
 	pangolin::GlFont::I().Text("TS: %d", currentTimestamp_.count()).Draw(5, 5);
 	pangolin::GlFont::I()
 		.Text("Detected %d corners", patches_.size())
@@ -145,9 +155,16 @@ void Visualizer::drawOriginalOverlay()
 
 	for (const auto& patch : patches_)
 	{
-		const auto& point = patch.toCorner();
-		pangolin::glDrawCirclePerimeter(point.x, point.y, radius);
-		drawTrajectory(patch);
+		if (!patch.isLost())
+		{
+			const auto& point = patch.toCorner();
+			glColor3f(0.0, 1.0, 0.0);  // green
+			pangolin::glDrawCirclePerimeter(point.x, point.y, radius);
+			pangolin::GlFont::I()
+				.Text("%d", patch.getTrackId())
+				.Draw(point.x, point.y);
+			drawTrajectory(patch);
+		}
 	}
 
 	// Control mouse click
@@ -164,6 +181,10 @@ void Visualizer::drawOriginalOverlay()
 			{
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
+				costMap_ = patch.getCostMap();
+				flow_ = patch.getFlow();
+				newPatch_ = patch.getPatch();
+				initPatch_ = patch.getInitPatch();
 				break;
 			}
 		}
@@ -175,6 +196,10 @@ void Visualizer::drawOriginalOverlay()
 		{
 			integratedNabla_ = patches_.front().getIntegratedNabla();
 			predictedNabla_ = patches_.front().getPredictedNabla();
+			costMap_ = patches_.front().getCostMap();
+			flow_ = patches_.front().getFlow();
+			newPatch_ = patches_.front().getPatch();
+			initPatch_ = patches_.front().getInitPatch();
 		}
 	}
 
@@ -203,7 +228,7 @@ void Visualizer::drawOriginalOverlay()
 
 	drawIntegratedNabla(integratedNabla_);
 	drawPredictedNabla(predictedNabla_);
-	drawCostMap(predictedNabla_);
+	drawCostMap(costMap_);
 }
 
 void Visualizer::drawScene()
@@ -217,15 +242,15 @@ void Visualizer::drawScene()
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
 {
 	const auto& trajectory = patch.getTrajectory();
-	std::vector<Eigen::Vector2d> trajectoryToDraw;
-	trajectoryToDraw.reserve(trajectory.size());
-	for (const auto& point : trajectory)
+	glColor3f(0.5, 0.0, 0.5);  // green
+	for (int i = static_cast<int>(trajectory.size()) - 1;
+		 i > static_cast<int>(trajectory.size()) - 7 && i >= 1; --i)
 	{
-		trajectoryToDraw.push_back(
-			Eigen::Vector2d(point.value.x, point.value.y));
+		pangolin::glDrawLine(
+			Eigen::Vector2d(trajectory[i].value.x, trajectory[i].value.y),
+			Eigen::Vector2d(trajectory[i - 1].value.x,
+							trajectory[i - 1].value.y));
 	}
-	glColor3f(0.0, 1.0, 0.0);  // green
-	pangolin::glDrawPoints(trajectoryToDraw);
 }
 
 void Visualizer::eventCallback(const common::EventSample& sample)
@@ -260,11 +285,44 @@ void Visualizer::imageCallback(const common::ImageSample& sample)
 void Visualizer::drawPredictedNablaOverlay()
 {
 	pangolin::GlFont::I().Text("Predicted nabla").Draw(5, 5);
+	const auto start =
+		Eigen::Vector2d(17 - 5 * std::sin(flow_), 17 - 5 * std::cos(flow_));
+	const auto end =
+		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
+	const auto arrow1Start =
+		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
+	const auto arrow1End = Eigen::Vector2d(17 + 2 * std::sin(flow_ + 0.1),
+										   17 + 2 * std::cos(flow_ + 0.1));
+	const auto arrow2Start =
+		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
+	const auto arrow2End = Eigen::Vector2d(17 + 2 * std::sin(flow_ - 0.1),
+										   17 + 2 * std::cos(flow_ - 0.1));
+	glColor3f(0.5f, 0.f, 0.2f);
+	pangolin::glDrawLine(start, end);
+	pangolin::glDrawLine(arrow1Start, arrow1End);
+	pangolin::glDrawLine(arrow2Start, arrow2End);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
 }
 
 void Visualizer::drawIntegratedNablaOverlay()
 {
 	pangolin::GlFont::I().Text("Integrated nabla").Draw(5, 5);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
+}
+
+void Visualizer::drawCostMapOverlay()
+{
+	glColor3f(1.0f, 0.0f, 0.0f);
+	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+	const auto x = initPatch_.x - newPatch_.x;
+	const auto y = initPatch_.y - newPatch_.y;	
+	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_ - x, *patchExtent_ - y),
+						  2);
 }
 
 void Visualizer::wait() const
@@ -300,10 +358,12 @@ void Visualizer::reset()
 	integratedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(1, 1, CV_64F);
 	originalImage_ = cv::Mat::zeros(1, 1, CV_64F);
+	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
 	quit_ = false;
 	nextPressed_ = false;
 	nextIntervalPressed_ = false;
 	nextImagePressed_ = false;
+	flow_ = 0;
 
 	stopPlayButton_ = std::unique_ptr<pangolin::Var<bool>>(
 		new pangolin::Var<bool>("ui.stopPlay", true, true));

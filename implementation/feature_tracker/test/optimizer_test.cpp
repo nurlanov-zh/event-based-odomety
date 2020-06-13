@@ -29,9 +29,9 @@ void saveImage(cv::Mat image, std::string name, bool isCostMap = false)
 					-minVal * 255.0 / (maxVal - minVal));
 	if (isCostMap)
 	{
-		cv::Mat im_color;
-		applyColorMap(grayImage, im_color, cv::COLORMAP_JET);
-		grayImage = im_color;
+		cv::Mat imColor;
+		applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+		grayImage = imColor;
 	}
 	cv::imwrite("/tmp/" +
 					std::string(::testing::UnitTest::GetInstance()

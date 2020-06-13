@@ -13,7 +13,7 @@ set(SPDLOG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-spdlog")
 # Set default build type if not specified otherwise.
 # See https://cmake.org/pipermail/cmake/2012-May/050243.html
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
   message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}' as none was specified.")
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"

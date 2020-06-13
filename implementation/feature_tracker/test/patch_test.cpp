@@ -7,8 +7,8 @@ std::string TEST_DATA_PATH = "test/test_data";
 TEST(Patch, addEventsTest)
 {
 	tracker::Patch patch({10, 10}, 5);
-	patch.setNumOfEvents(2);
-	for (size_t i = 0; i < 2; ++i)
+	patch.setNumOfEvents(20);
+	for (size_t i = 0; i < 20; ++i)
 	{
 		common::EventSample event;
 		event.timestamp = common::timestamp_t(i);
@@ -23,9 +23,9 @@ TEST(Patch, addEventsTest)
 
 	const auto& events = patch.getEvents();
 
-	ASSERT_EQ(events.size(), 2);
+	ASSERT_EQ(events.size(), 20);
 	EXPECT_EQ(events.front().timestamp.count(), 0);
-	EXPECT_EQ(events.back().timestamp.count(), 1);
+	EXPECT_EQ(events.back().timestamp.count(), 19);
 
 	patch.resetBatch();
 
@@ -61,14 +61,13 @@ TEST(Patch, integrateEventsTest)
 
 TEST(Patch, warpImageTest)
 {
-	tracker::Patch patch({10, 10}, 5);
+	tracker::Patch patch({5, 5}, 5);
 
 	cv::Mat gradX = cv::Mat::zeros(11, 11, CV_64F);
 	cv::Mat gradY = cv::Mat::zeros(11, 11, CV_64F);
 
 	cv::line(gradX, {5, 0}, {5, 10}, 1);
 	cv::line(gradY, {0, 5}, {10, 5}, 1);
-	patch.setGrad(gradX, gradY);
 
 	const float angle = M_PI / 4;
 	patch.setFlowDir(angle);
@@ -76,7 +75,7 @@ TEST(Patch, warpImageTest)
 	common::Pose2d warp = Sophus::SE2d::rot(M_PI / 4);
 	patch.setWarp(warp);
 
-	patch.warpImage();
+	patch.warpImage(gradX, gradY);
 
 	const auto image = patch.getPredictedNabla();
 
@@ -91,7 +90,7 @@ TEST(Patch, warpImageTest)
 		}
 	}
 
-#ifdef SAVE_IMAGE
+#ifdef SAVE_IMAGES
 	cv::Mat grayImage;
 
 	double minVal;

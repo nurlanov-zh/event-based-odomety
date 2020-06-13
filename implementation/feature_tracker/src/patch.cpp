@@ -24,19 +24,14 @@ Patch::Patch(const Corner& corner, int extent)
 
 void Patch::init()
 {
+	init_ = false;
+	lost_ = false;
 	trackId_ = -1;
 	numOfEvents_ = 50;
+	initPoint_ = toCorner();
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	gradX_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-	gradY_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
-}
-
-void Patch::updateNumOfEvents()
-{
-	size_t sumPatch = round(
-		sum(abs(gradX_ * std::cos(flowDir_) + gradY_ * std::sin(flowDir_)))[0]);
-	numOfEvents_ = std::max(minNumOfEvents_, sumPatch);
+	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
 }
 
 void Patch::addEvent(const common::EventSample& event)
@@ -44,34 +39,18 @@ void Patch::addEvent(const common::EventSample& event)
 	events_.emplace_back(event);
 }
 
-void Patch::optimizePatchParams()
-{
-	// optimize warping params and flow direction
-	// params:	warp_.data();	flowDir_;
-	integrateEvents();
-	// Optimizer opt;
-	// opt = Optimizer(integratedNabla_ / norm(integratedNabla_), gradX_,
-	// gradY_, 				warp_, flowDir_, patch_);
-
-	// opt.compute();
-	// warp_ = opt.getWarp();
-	// flowDir_ = opt.getFlowDir();
-
-	// after all reset everything
-	updatePatchRect(warp_);
-	resetBatch();
-	updateNumOfEvents();
-}
-
 void Patch::updatePatchRect(const common::Pose2d& warp)
 {
-	const auto center = Eigen::Vector2d(toCorner().x, toCorner().y);
-	const auto new_center = warp.inverse() * center;
+	const auto warpInv = warp.inverse().matrix2x3();
+	const auto newCenterX = warpInv(0, 0) * initPoint_.x +
+							warpInv(0, 1) * initPoint_.y + warpInv(0, 2);
+	const auto newCenterY = warpInv(1, 0) * initPoint_.x +
+							warpInv(1, 1) * initPoint_.y + warpInv(1, 2);
 
-	int extent_x = (patch_.width - 1) / 2;
-	int extent_y = (patch_.height - 1) / 2;
-	patch_ = cv::Rect2i(new_center.x() - extent_x, new_center.y() - extent_y,
-						2 * extent_x + 1, 2 * extent_y + 1);
+	int extentX = (patch_.width - 1) / 2;
+	int extentY = (patch_.height - 1) / 2;
+	patch_ = cv::Rect2i(newCenterX - extentX, newCenterY - extentY,
+						2 * extentX + 1, 2 * extentY + 1);
 }
 
 void Patch::integrateEvents()
@@ -88,7 +67,7 @@ void Patch::integrateEvents()
 	}
 }
 
-void Patch::warpImage()
+void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 {
 	cv::Mat warpedGradX;
 	cv::Mat warpedGradY;
@@ -96,19 +75,25 @@ void Patch::warpImage()
 	cv::Mat warpCv;
 	cv::eigen2cv(warp_.matrix2x3(), warpCv);
 
-	const auto center =
-		Eigen::Vector2d((patch_.width - 1) / 2, (patch_.height - 1) / 2);
+	const auto center = Eigen::Vector2d(patch_.x + (patch_.width - 1) / 2,
+										patch_.y + (patch_.height - 1) / 2);
 
 	const Eigen::Vector2d offsetToCenter =
 		-(warp_.rotationMatrix() * center) + center;
 	warpCv.at<double>(0, 2) += offsetToCenter.x();
 	warpCv.at<double>(1, 2) += offsetToCenter.y();
 
-	cv::warpAffine(gradX_, warpedGradX, warpCv, {patch_.width, patch_.height});
-	cv::warpAffine(gradY_, warpedGradY, warpCv, {patch_.width, patch_.height});
+	cv::warpAffine(gradX, warpedGradX, warpCv, {gradX.cols, gradX.rows});
+	cv::warpAffine(gradY, warpedGradY, warpCv, {gradY.cols, gradY.rows});
 
-	predictedNabla_ =
-		-warpedGradX * std::cos(flowDir_) - warpedGradY * std::sin(flowDir_);
+	if (patch_.x < 0 || patch_.y < 0 || patch_.x + patch_.width >= gradX.cols ||
+		patch_.y + patch_.height >= gradX.rows)
+	{
+		return;
+	}
+
+	predictedNabla_ = -warpedGradX(patch_) * std::cos(flowDir_) -
+					  warpedGradY(patch_) * std::sin(flowDir_);
 }
 
 cv::Mat Patch::getNormalizedIntegratedNabla() const
@@ -146,6 +131,51 @@ common::Point2i Patch::frameToPatchCoords(
 common::EventSequence const& Patch::getEvents() const
 {
 	return events_;
+}
+
+void Patch::setWarp(const common::Pose2d& warp)
+{
+	warp_ = warp;
+	init_ = true;
+}
+
+void Patch::setFlowDir(const double flowDir)
+{
+	flowDir_ = flowDir;
+	init_ = true;
+}
+
+void Patch::setNumOfEvents(size_t numOfEvents)
+{
+	numOfEvents_ = std::max(minNumOfEvents_, numOfEvents);
+	numOfEvents_ = std::min(numOfEvents_, maxNumOfEvents_);
+}
+
+void Patch::setIntegratedNabla(const cv::Mat& integratedNabla)
+{
+	integratedNabla_ = integratedNabla;
+}
+
+std::vector<common::Sample<common::Point2d>> const& Patch::getTrajectory() const
+{
+	return trajectory_;
+}
+
+void Patch::setCorner(const Corner& corner)
+{
+	patch_ = cv::Rect2i(corner.x - (patch_.width - 1) / 2,
+						corner.y - (patch_.height - 1) / 2, patch_.width,
+						patch_.height);
+	initPoint_ = toCorner();
+	init_ = false;
+	resetBatch();
+}
+
+cv::Rect2i Patch::getInitPatch() const
+{
+	return cv::Rect2i(initPoint_.x - (patch_.width - 1) / 2,
+					  initPoint_.y - (patch_.height - 1) / 2, patch_.width,
+					  patch_.height);
 }
 
 }  // namespace tracker

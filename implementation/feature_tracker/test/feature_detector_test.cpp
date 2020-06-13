@@ -64,7 +64,7 @@ TEST(FeatureDetector, updatePatchTest)
 							   : common::EventPolarity::NEGATIVE;
 		detector.updatePatches(event);
 
-		for (auto& patch: patches)
+		for (auto& patch : patches)
 		{
 			if (patch.isInPatch(event.value.point))
 			{
@@ -78,7 +78,8 @@ TEST(FeatureDetector, updatePatchTest)
 	ASSERT_EQ(detectorPatches.size(), patches.size());
 
 	auto detectorPatchesIt = detectorPatches.begin();
-	for (auto patchIt = patches.begin(); patchIt != patches.end(); ++patchIt, ++detectorPatchesIt)
+	for (auto patchIt = patches.begin(); patchIt != patches.end();
+		 ++patchIt, ++detectorPatchesIt)
 	{
 		const auto detectorEvents = detectorPatchesIt->getEvents();
 		const auto gtEvents = patchIt->getEvents();
@@ -116,7 +117,7 @@ TEST(FeatureDetector, associatedPatchesTest)
 								   tracker::Patch({0, 1, 11, 11}),
 								   tracker::Patch({18, 18, 11, 11})};
 
-	detector.associatePatches(newPatches);
+	detector.associatePatches(newPatches, common::timestamp_t(0));
 	const auto updatedPatches = detector.getPatches();
 	EXPECT_EQ(updatedPatches.size(), 4);
 }

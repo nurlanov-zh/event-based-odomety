@@ -11,7 +11,7 @@
 
 tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
-	std::chrono::microseconds(5000);
+	std::chrono::microseconds(500);
 
 int main(int argc, char** argv)
 {
@@ -50,7 +50,8 @@ int main(int argc, char** argv)
 
 	tools::Replayer replayer(reader);
 
-	const auto param = tools::EvaluatorParams();
+	tools::EvaluatorParams param;
+	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
 
 	replayer.addEventCallback(
@@ -109,7 +110,10 @@ int main(int argc, char** argv)
 				visualizer.setPatches(evaluator.getPatches());
 				visualizer.setTimestamp(timestamp);
 				visualizer.step();
-				evaluator.setTrackerParams(visualizer.getTrackerParams());
+
+				auto trackerParams = visualizer.getTrackerParams();
+				trackerParams.drawImages = true;
+				evaluator.setTrackerParams(trackerParams);
 			}
 		}
 	}

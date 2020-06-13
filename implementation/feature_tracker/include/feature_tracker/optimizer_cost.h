@@ -10,19 +10,17 @@ namespace tracker
 using Grid = ceres::Grid2D<double, 2>;
 using GridPtr = std::unique_ptr<Grid>;
 using Interpolator = ceres::BiCubicInterpolator<Grid>;
-using InterpolatorPtr = std::shared_ptr<Interpolator>;
+using InterpolatorPtr = std::unique_ptr<Interpolator>;
 
 struct OptimizerCostFunctor
 {
 	OptimizerCostFunctor(){};
 
 	OptimizerCostFunctor(const cv::Mat& normalizedIntegratedNabla,
-						 const std::shared_ptr<Interpolator> gradInterpolator,
-						 const cv::Rect2i& patch)
+						 Interpolator* interpolator, const cv::Rect2i& patch)
+		: normalizedIntegratedNabla_(normalizedIntegratedNabla), patch_(patch)
 	{
-		normalizedIntegratedNabla_ = normalizedIntegratedNabla;
-		interpolator_ = gradInterpolator;
-		patch_ = patch;
+		gradInterpolator_ = interpolator;
 	}
 
 	template <typename T>
@@ -53,12 +51,14 @@ struct OptimizerCostFunctor
 
 		auto transform = pose2D.matrix2x3();
 
-		const auto center =
-			Eigen::Vector2d(((patch_.br() + patch_.tl()) * 0.5).x,
-							((patch_.br() + patch_.tl()) * 0.5).y);
+		const auto center = (patch_.tl() + patch_.br()) * 0.5;
+		const auto centerEigen = Eigen::Vector2d(center.x, center.y);
+		const auto topLeftEigen = Eigen::Vector2d(patch_.tl().x, patch_.tl().y);
 
+		// rotate around patch center and get coords in global image frame
 		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-			-(pose2D.rotationMatrix() * center) + center;
+			-(pose2D.rotationMatrix() * centerEigen) + centerEigen +
+			topLeftEigen;
 
 		for (int y = 0; y < patch_.height; y++)
 		{
@@ -71,7 +71,7 @@ struct OptimizerCostFunctor
 
 				// evaluate interpolated gradients at warped points
 				T grads[2];
-				interpolator_->Evaluate(warpedY, warpedX, grads);
+				gradInterpolator_->Evaluate(warpedY, warpedX, grads);
 
 				// compute predicted nabla at this point
 				sResiduals[x + patch_.width * y] =
@@ -84,8 +84,8 @@ struct OptimizerCostFunctor
 		}
 	}
 
-	cv::Rect2i patch_;
-	std::shared_ptr<Interpolator> interpolator_;
 	cv::Mat normalizedIntegratedNabla_;
+	Interpolator* gradInterpolator_;
+	cv::Rect2i patch_;
 };
 }  // namespace tracker

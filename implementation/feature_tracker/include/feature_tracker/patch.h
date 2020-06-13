@@ -32,8 +32,6 @@ class Patch
 
 	void updateNumOfEvents();
 
-	void optimizePatchParams();
-
 	void updatePatchRect(const common::Pose2d& warp);
 
 	Corner toCorner() const;
@@ -42,7 +40,9 @@ class Patch
 
 	bool isReady() const { return events_.size() >= numOfEvents_; }
 
-	void warpImage();
+	bool isLost() const { return lost_; }
+
+	void warpImage(const cv::Mat& gradX, const cv::Mat& gradY);
 
 	void addTrajectoryPosition(const common::Point2d& pose,
 							   common::timestamp_t timestamp)
@@ -59,25 +59,19 @@ class Patch
 	float getFlow() const { return flowDir_; }
 	cv::Mat getNormalizedIntegratedNabla() const;
 	const cv::Mat& getCostMap() const { return costMap_; }
-	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
-	{
-		return trajectory_;
-	}
+	bool isInit() { return init_; }
+	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
+	size_t getNumOfEvents() const { return numOfEvents_; }
+	cv::Rect2i getInitPatch() const;
 
-	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
+	void setLost() { lost_ = true; }
+	void setNumOfEvents(size_t numOfEvents);
 	void setTrackId(TrackId trackId) { trackId_ = trackId; }
-	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
-	{
-		gradX_ = gradX;
-		gradY_ = gradY;
-	}
-	void setFlowDir(const double flowDir) { flowDir_ = flowDir; }
-	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
+	void setFlowDir(const double flowDir);
+	void setWarp(const common::Pose2d& warp);
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
-	void setIntegratedNabla(const cv::Mat& integratedNabla)
-	{
-		integratedNabla_ = integratedNabla;
-	}
+	void setIntegratedNabla(const cv::Mat& integratedNabla);
+	void setCorner(const Corner& corner);
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -87,16 +81,18 @@ class Patch
 		const common::Point2i& pointInFrame) const;
 
    private:
+	bool init_;
+	bool lost_;
 	size_t patchId_;
 	cv::Rect2i patch_;
+	common::Point2d initPoint_;
 	TrackId trackId_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
-	size_t minNumOfEvents_ = 20;
+	size_t minNumOfEvents_ = 5;
+	size_t maxNumOfEvents_ = 500;
 
-	cv::Mat gradX_;
-	cv::Mat gradY_;
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat costMap_;

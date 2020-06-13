@@ -2,8 +2,7 @@
 
 namespace tools
 {
-Evaluator::Evaluator(const EvaluatorParams& params)
-	: params_(params)
+Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
 {
 	reset();
 }
@@ -16,17 +15,6 @@ tracker::Patches const& Evaluator::getPatches() const
 void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->updatePatches(sample);
-
-	// TODO add logger trace which patch is integrated as soon as patch ids come
-	// up
-	for (auto& patch : tracker_->getPatches())
-	{
-		if (patch.isReady())
-		{
-			patch.integrateEvents();
-			patch.resetBatch();
-		}
-	}
 }
 
 void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
@@ -35,15 +23,14 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	tracker_->extractPatches(sample.value);
+	tracker_->extractPatches(sample);
 	corners_ = tracker_->getFeatures();
 
 	flowEstimator_->addImage(sample.value);
 	flowEstimator_->getFlowPatches(tracker_->getPatches());
-
 	for (auto& patch : tracker_->getPatches())
 	{
-		patch.warpImage();
+		tracker_->updateNumOfEvents(patch);
 	}
 }
 
@@ -54,6 +41,7 @@ void Evaluator::reset()
 
 	corners_.clear();
 	tracker::DetectorParams params;
+	params.drawImages = params_.drawImages;
 	params.imageSize = params_.imageSize;
 	tracker_.reset(new tracker::FeatureDetector(params));
 	flowEstimator_.reset(
