@@ -56,9 +56,11 @@ struct OptimizerCostFunctor
 		const auto topLeftEigen = Eigen::Vector2d(patch_.tl().x, patch_.tl().y);
 
 		// rotate around patch center and get coords in global image frame
-		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-			-(pose2D.rotationMatrix() * centerEigen) + centerEigen +
-			topLeftEigen;
+//		const Eigen::Matrix<T, 2, 1> offsetToCenter =
+//			-(pose2D.rotationMatrix() * centerEigen) + centerEigen +
+//			topLeftEigen;
+
+		const Eigen::Matrix<T, 2, 1> offsetToCenter = pose2D.rotationMatrix() * topLeftEigen;
 
 		for (int y = 0; y < patch_.height; y++)
 		{

@@ -27,7 +27,7 @@ void Patch::init()
 	init_ = false;
 	lost_ = false;
 	trackId_ = -1;
-	numOfEvents_ = 50;
+	numOfEvents_ = 150;
 	initPoint_ = toCorner();
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -42,13 +42,32 @@ void Patch::addEvent(const common::EventSample& event)
 
 void Patch::updatePatchRect(const common::Pose2d& warp)
 {
+//	const auto center = (patch_.tl() + patch_.br()) * 0.5;
+//	const auto centerEigen = Eigen::Vector2d(center.x, center.y);
+//	const auto topLeftEigen = Eigen::Vector2d(patch_.tl().x, patch_.tl().y);
+//
+//	// rotate around patch center and get coords in global image frame
+//	const Eigen::Vector2d offsetToCenter =
+//		-(warp.rotationMatrix() * centerEigen) + centerEigen +
+//		topLeftEigen;
+
+
 	std::cout << "Init " << initPoint_.x << " " << initPoint_.y << std::endl;
 	std::cout << "Before " << toCorner().x << " " << toCorner().y << std::endl;
-	const auto warpInv = warp.inverse().matrix2x3();
-	const auto newCenterX = warpInv(0, 0) * initPoint_.x +
-							warpInv(0, 1) * initPoint_.y + warpInv(0, 2);
-	const auto newCenterY = warpInv(1, 0) * initPoint_.x +
-							warpInv(1, 1) * initPoint_.y + warpInv(1, 2);
+	auto warpInv = warp.inverse().matrix2x3();
+//	auto newCenterX = warpInv(0, 0) * (initPoint_.x - patch_.tl().x) +
+//							warpInv(0, 1) * (initPoint_.y - patch_.tl().y) + warpInv(0, 2);
+//	auto newCenterY = warpInv(1, 0) * (initPoint_.x  - patch_.tl().x) +
+//							warpInv(1, 1) * (initPoint_.y - patch_.tl().y) + warpInv(1, 2);
+
+
+	auto newCenterX = warpInv(0, 0) * (initPoint_.x) +
+					  warpInv(0, 1) * (initPoint_.y) + warpInv(0, 2);
+	auto newCenterY = warpInv(1, 0) * (initPoint_.x) +
+					  warpInv(1, 1) * (initPoint_.y) + warpInv(1, 2);
+
+//	newCenterX += offsetToCenter.x();
+//	newCenterY += offsetToCenter.y();
 
 	int extentX = (patch_.width - 1) / 2;
 	int extentY = (patch_.height - 1) / 2;
@@ -77,14 +96,14 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	cv::Mat warpedGradY;
 
 	cv::Mat warpCv;
-	cv::eigen2cv(warp_.inverse().matrix2x3(), warpCv);
+	cv::eigen2cv(warp_.matrix2x3(), warpCv);
 
 	const auto center = Eigen::Vector2d(initPoint_.x, initPoint_.y);
 
-	const Eigen::Vector2d offsetToCenter =
-		-(warp_.inverse().rotationMatrix() * center) + center;
-	warpCv.at<double>(0, 2) += offsetToCenter.x();
-	warpCv.at<double>(1, 2) += offsetToCenter.y();
+//	const Eigen::Vector2d offsetToCenter =
+//		-(warp_.inverse().rotationMatrix() * center) + center;
+//	warpCv.at<double>(0, 2) += offsetToCenter.x();
+//	warpCv.at<double>(1, 2) += offsetToCenter.y();
 
 	cv::warpAffine(gradX, warpedGradX, warpCv, {gradX.cols, gradX.rows});
 	cv::warpAffine(gradY, warpedGradY, warpCv, {gradY.cols, gradY.rows});

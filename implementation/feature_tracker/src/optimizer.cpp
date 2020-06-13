@@ -97,11 +97,11 @@ void Optimizer::optimize(Patch& patch)
 
 	problem.AddResidualBlock(cost_function, NULL, warp.data(), &flowDir);
 
-	if (params_.drawCostMap)
-	{
-		// it is too slow
-		drawCostMap(patch, c, true);
-	}
+//	if (params_.drawCostMap)
+//	{
+//		// it is too slow
+//		drawCostMap(patch, c, true);
+//	}
 
 	// Set solver options (precision / method)
 	ceres::Solver::Options options;
@@ -141,10 +141,10 @@ void Optimizer::optimize(Patch& patch)
 	patch.setWarp(warp);
 	patch.updatePatchRect(warp);
 
-	if (params_.drawCostMap)
-	{
-		// it is too slow
-		drawCostMap(patch, c, false);
-	}
+//	if (params_.drawCostMap)
+//	{
+//		// it is too slow
+//		drawCostMap(patch, c, false);
+//	}
 }
 }  // namespace tracker
