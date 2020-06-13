@@ -49,10 +49,10 @@ struct OptimizerCostFunctor
 		T vx = ceres::cos(sFlowDir[0]);
 		T vy = ceres::sin(sFlowDir[0]);
 
-		auto transform = pose2D.matrix2x3();
+		const auto transform = pose2D.matrix2x3();
 
-		const auto center = (patch_.tl() + patch_.br()) * 0.5;
-		const auto centerEigen = Eigen::Vector2d(center.x, center.y);
+		// const auto center = (patch_.tl() + patch_.br()) * 0.5;
+		// const auto centerEigen = Eigen::Vector2d(center.x, center.y);
 		const auto topLeftEigen = Eigen::Vector2d(patch_.tl().x, patch_.tl().y);
 
 		// rotate around patch center and get coords in global image frame

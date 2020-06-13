@@ -61,11 +61,16 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
 	}
 	if (first)
 	{
-		patch.setCostMap(costMap);
+		cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
+		(*c)(pose.data(), &flowDir, (double*)image.data);
+		patch.setCostMap(image);
+		// patch.setCostMap(costMap);
 	}
 	else
 	{
-		patch.setCostMap2(costMap);
+		cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
+		(*c)(pose.data(), &flowDir, (double*)image.data);
+		patch.setCostMap2(image);
 	}
 }
 
@@ -97,11 +102,11 @@ void Optimizer::optimize(Patch& patch)
 
 	problem.AddResidualBlock(cost_function, NULL, warp.data(), &flowDir);
 
-//	if (params_.drawCostMap)
-//	{
-//		// it is too slow
-//		drawCostMap(patch, c, true);
-//	}
+	// if (params_.drawCostMap)
+	// {
+	// 	// it is too slow
+	// 	drawCostMap(patch, c, true);
+	// }
 
 	// Set solver options (precision / method)
 	ceres::Solver::Options options;
@@ -141,10 +146,10 @@ void Optimizer::optimize(Patch& patch)
 	patch.setWarp(warp);
 	patch.updatePatchRect(warp);
 
-//	if (params_.drawCostMap)
-//	{
-//		// it is too slow
-//		drawCostMap(patch, c, false);
-//	}
+	// if (params_.drawCostMap)
+	// {
+	// 	// it is too slow
+	// 	drawCostMap(patch, c, false);
+	// }
 }
 }  // namespace tracker

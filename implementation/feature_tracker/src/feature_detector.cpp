@@ -36,8 +36,12 @@ void FeatureDetector::reset()
 
 void FeatureDetector::extractPatches(const common::ImageSample& image)
 {
-	corners_ = detectFeatures(image.value);
 
+static int id = 0;
+if (id < 2)
+{
+	corners_ = detectFeatures(image.value);
+	id++;
 	Patches newPatches;
 	for (const auto& corner : corners_)
 	{
@@ -61,6 +65,7 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 			patch.warpImage(gradX_, gradY_);
 		}
 	}
+}
 }
 
 Corners FeatureDetector::detectFeatures(const cv::Mat& image)

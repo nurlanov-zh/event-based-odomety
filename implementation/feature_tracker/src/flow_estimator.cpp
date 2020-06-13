@@ -53,11 +53,10 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		const auto dirY = nextPoint.value().y - corner.y;
 		const auto flowDir = std::atan2(dirY, dirX);
 
-		patchIt->setFlowDir(flowDir);
-
 		common::Pose2d warp;
 		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
 		patchIt->setWarp(warp);
+		patchIt->setFlowDir(flowDir);
 		patchIt->updatePatchRect(warp);
 		patchIt->addTrajectoryPosition(patchIt->toCorner(), common::timestamp_t(0));
 
