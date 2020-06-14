@@ -15,13 +15,15 @@ struct EvaluatorParams
 	cv::Size2i imageSize = {240, 180};
 	std::string outputDir = "/tmp";
 	bool drawImages = false;
-	bool experiment = false;
+	bool experiment = true;
 };
 
 class Evaluator
 {
    public:
 	Evaluator(const EvaluatorParams& params);
+
+	~Evaluator();
 
 	void eventCallback(const common::EventSample& sample);
 

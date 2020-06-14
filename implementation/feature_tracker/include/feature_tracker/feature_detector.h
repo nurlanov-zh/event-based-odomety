@@ -44,6 +44,7 @@ class FeatureDetector
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }
 	Corners const& getFeatures() const { return corners_; }
+	Patches const& getArchivedPatches() const { return archivedPatches_; }
 
    private:
 	cv::Mat getLogImage(const cv::Mat& image);
@@ -64,6 +65,7 @@ class FeatureDetector
 	Patches patches_;
 	Corners corners_;
 	size_t nextTrackId_;
+	Patches archivedPatches_;
 
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;

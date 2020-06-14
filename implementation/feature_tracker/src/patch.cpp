@@ -64,7 +64,8 @@ void Patch::integrateEvents()
 			}
 		}
 		currentTimestamp_ = common::timestamp_t(static_cast<int32_t>(
-			(events_.front().timestamp + events_.back().timestamp).count() * 0.5));
+			(events_.front().timestamp + events_.back().timestamp).count() *
+			0.5));
 	}
 }
 
@@ -103,8 +104,8 @@ void Patch::resetBatch()
 
 Corner Patch::toCorner() const
 {
-	return Corner(patch_.x + (patch_.width - 1) / 2,
-				  patch_.y + (patch_.height - 1) / 2);
+	return cv::Point2d(patch_.x + (patch_.width - 1) / 2,
+					   patch_.y + (patch_.height - 1) / 2);
 }
 
 bool Patch::isInPatch(const common::Point2i& point) const
@@ -115,13 +116,15 @@ bool Patch::isInPatch(const common::Point2i& point) const
 common::Point2i Patch::patchToFrameCoords(
 	const common::Point2i& pointInPatch) const
 {
-	return pointInPatch + patch_.tl();
+	return common::Point2i(pointInPatch.x + patch_.tl().x,
+						   pointInPatch.y + patch_.tl().y);
 }
 
 common::Point2i Patch::frameToPatchCoords(
 	const common::Point2i& pointInFrame) const
 {
-	return pointInFrame - patch_.tl();
+	return common::Point2i(pointInFrame.x - patch_.tl().x,
+						   pointInFrame.y - patch_.tl().y);
 }
 
 common::EventSequence const& Patch::getEvents() const
@@ -165,7 +168,7 @@ void Patch::addTrajectoryPosition()
 void Patch::setCorner(const Corner& corner,
 					  const common::timestamp_t& timestamp)
 {
-	patch_ = cv::Rect2i(corner.x - (patch_.width - 1) / 2,
+	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2,
 						corner.y - (patch_.height - 1) / 2, patch_.width,
 						patch_.height);
 	initPoint_ = toCorner();
@@ -175,9 +178,9 @@ void Patch::setCorner(const Corner& corner,
 	resetBatch();
 }
 
-cv::Rect2i Patch::getInitPatch() const
+cv::Rect2d Patch::getInitPatch() const
 {
-	return cv::Rect2i(initPoint_.x - (patch_.width - 1) / 2,
+	return cv::Rect2d(initPoint_.x - (patch_.width - 1) / 2,
 					  initPoint_.y - (patch_.height - 1) / 2, patch_.width,
 					  patch_.height);
 }

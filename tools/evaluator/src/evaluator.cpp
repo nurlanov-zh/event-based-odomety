@@ -7,6 +7,11 @@ Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
 	reset();
 }
 
+Evaluator::~Evaluator()
+{
+	saveTrajectory(tracker_->getArchivedPatches());
+}
+
 tracker::Patches const& Evaluator::getPatches() const
 {
 	return tracker_->getPatches();
@@ -23,6 +28,7 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
+	consoleLog_->info("New image at timestamp " + std::to_string(sample.timestamp.count()));
 	imageNum_++;
 	if (params_.experiment)
 	{

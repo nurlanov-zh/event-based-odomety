@@ -44,7 +44,7 @@ class Patch
 	common::EventSequence const& getEvents() const;
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
-	cv::Rect2i const& getPatch() const { return patch_; }
+	cv::Rect2d const& getPatch() const { return patch_; }
 	TrackId getTrackId() const { return trackId_; }
 	const common::Pose2d& getWarp() const { return warp_; }
 	float getFlow() const { return flowDir_; }
@@ -53,7 +53,7 @@ class Patch
 	bool isInit() { return init_; }
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
 	size_t getNumOfEvents() const { return numOfEvents_; }
-	cv::Rect2i getInitPatch() const;
+	cv::Rect2d getInitPatch() const;
 	common::timestamp_t getCurrentTimestamp() const { return currentTimestamp_; }
 
 	void setLost() { lost_ = true; }
@@ -77,7 +77,7 @@ class Patch
 	bool init_;
 	bool lost_;
 	size_t patchId_;
-	cv::Rect2i patch_;
+	cv::Rect2d patch_;
 	common::Point2d initPoint_;
 	TrackId trackId_;
 

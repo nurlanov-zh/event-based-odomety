@@ -57,6 +57,18 @@ void FeatureDetector::newImage(const common::ImageSample& image)
 			patch.warpImage(gradX_, gradY_);
 		}
 	}
+
+	for (auto patchIt = patches_.begin(); patchIt != patches_.end();)
+	{
+		if (patchIt->isLost())
+		{
+			archivedPatches_.push_back(*patchIt);
+			patchIt = patches_.erase(patchIt);
+			continue;
+		}
+		++patchIt;
+	}
+	consoleLog_->info("Optimizig over " + std::to_string(patches_.size()) + " patches");
 }
 
 void FeatureDetector::extractPatches(const common::ImageSample& image)

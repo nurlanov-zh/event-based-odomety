@@ -37,14 +37,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 
 		if (!nextPoint.has_value())
 		{
-			patchIt = patches.erase(patchIt);
-			continue;
-		}
-
-		// check if patch is lost
-		if (!patchIt->isInPatch(nextPoint.value()) || patchIt->isLost())
-		{
-			patchIt = patches.erase(patchIt);
+			patchIt->setLost();
+			++patchIt;
 			continue;
 		}
 
@@ -57,6 +51,18 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
 		patchIt->setWarp(warp);
 		patchIt->setFlowDir(flowDir);
+
+		const auto newCorner = patchIt->toCorner();
+
+		// check if patch is lost
+		if (newCorner.x + dirX < 0 || newCorner.y + dirY < 0 ||
+			newCorner.x + dirX >= currentImage_.cols ||
+			newCorner.y + dirY >= currentImage_.rows)
+		{
+			patchIt->setLost();
+			++patchIt;
+			continue;
+		}
 
 		++patchIt;
 	}

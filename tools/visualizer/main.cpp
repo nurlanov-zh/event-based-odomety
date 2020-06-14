@@ -15,7 +15,7 @@ const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 
 int main(int argc, char** argv)
 {
-	spdlog::set_level(spdlog::level::from_str("debug"));
+	spdlog::set_level(spdlog::level::from_str("info"));
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
