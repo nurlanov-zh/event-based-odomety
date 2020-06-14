@@ -11,14 +11,14 @@
 #include <spdlog/spdlog.h>
 #include <tbb/task_scheduler_init.h>
 
-
 namespace tracker
 {
 struct OptimizerParams
 {
 	bool drawCostMap = false;
 	int maxNumIterations = 50;
-	int numThreads = tbb::task_scheduler_init::default_num_threads();;
+	int numThreads = tbb::task_scheduler_init::default_num_threads();
+	;
 };
 
 class Optimizer
@@ -31,7 +31,8 @@ class Optimizer
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
 
    private:
-	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c, bool first);
+	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
+					 bool first);
 
    private:
 	OptimizerParams params_;

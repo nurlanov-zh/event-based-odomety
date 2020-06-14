@@ -32,7 +32,7 @@ class Patch
 
 	void updateNumOfEvents();
 
-	void updatePatchRect(const common::Pose2d& warp);
+	void updatePatchRect();
 
 	Corner toCorner() const;
 
@@ -92,7 +92,7 @@ class Patch
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
-	size_t minNumOfEvents_ = 100;
+	size_t minNumOfEvents_ = 30;
 	size_t maxNumOfEvents_ = 500;
 
 	cv::Mat integratedNabla_;

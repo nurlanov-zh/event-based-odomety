@@ -104,7 +104,8 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
 								GL_RGB, GL_UNSIGNED_BYTE);
 	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	imgView_[static_cast<size_t>(ImageViews::INTEGRATED_NABLA)]->SetImage(texture);
+	imgView_[static_cast<size_t>(ImageViews::INTEGRATED_NABLA)]->SetImage(
+		texture);
 	drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
 }
 
@@ -249,9 +250,8 @@ void Visualizer::drawScene()
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
 {
 	const auto& trajectory = patch.getTrajectory();
-	glColor3f(0.5, 0.0, 0.5); // purple
-	for (int i = static_cast<int>(trajectory.size()) - 1;
-		 i > static_cast<int>(trajectory.size()) - 7 && i >= 1; --i)
+	glColor3f(0.5, 0.0, 0.5);  // purple
+	for (int i = static_cast<int>(trajectory.size()) - 1; i > i >= 1; --i)
 	{
 		pangolin::glDrawLine(
 			Eigen::Vector2d(trajectory[i].value.x, trajectory[i].value.y),
@@ -327,7 +327,7 @@ void Visualizer::drawCostMapOverlay()
 
 	glColor3f(1.0f, 0.0f, 0.0f);
 	const auto x = initPatch_.x - newPatch_.x;
-	const auto y = initPatch_.y - newPatch_.y;	
+	const auto y = initPatch_.y - newPatch_.y;
 	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_ - x, *patchExtent_ - y),
 						  2);
 }

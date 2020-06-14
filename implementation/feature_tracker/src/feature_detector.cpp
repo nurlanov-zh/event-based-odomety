@@ -38,36 +38,35 @@ void FeatureDetector::reset()
 
 void FeatureDetector::extractPatches(const common::ImageSample& image)
 {
-
-static int id = 0;
-if (id < 2)
-{
-	corners_ = detectFeatures(image.value);
-	id++;
-	Patches newPatches;
-	for (const auto& corner : corners_)
+	static int id = 0;
+	if (id < 2)
 	{
-		auto patch = Patch(corner, params_.patchExtent);
-		patch.addTrajectoryPosition(corner, image.timestamp);
-		newPatches.emplace_back(patch);
-	}
-	// patches_ = newPatches;
-
-	const auto& logImage = getLogImage(image.value);
-
-	gradX_ = getGradients(logImage, true);
-	gradY_ = getGradients(logImage, false);
-	optimizer_->setGrad(gradX_, gradY_);
-
-	associatePatches(newPatches, image.timestamp);
-	if (params_.drawImages)
-	{
-		for (auto& patch : patches_)
+		corners_ = detectFeatures(image.value);
+		id++;
+		Patches newPatches;
+		for (const auto& corner : corners_)
 		{
-			patch.warpImage(gradX_, gradY_);
+			auto patch = Patch(corner, params_.patchExtent);
+			patch.addTrajectoryPosition(corner, image.timestamp);
+			newPatches.emplace_back(patch);
+		}
+		// patches_ = newPatches;
+
+		const auto& logImage = getLogImage(image.value);
+
+		gradX_ = getGradients(logImage, true);
+		gradY_ = getGradients(logImage, false);
+		optimizer_->setGrad(gradX_, gradY_);
+
+		associatePatches(newPatches, image.timestamp);
+		if (params_.drawImages)
+		{
+			for (auto& patch : patches_)
+			{
+				patch.warpImage(gradX_, gradY_);
+			}
 		}
 	}
-}
 }
 
 Corners FeatureDetector::detectFeatures(const cv::Mat& image)
@@ -150,6 +149,9 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
 		rect.y + rect.height >= gradX_.rows)
 	{
+		consoleLog_->debug("Lost patch number " +
+						   std::to_string(patch.getTrackId()));
+		patch.setLost();
 		return;
 	}
 
@@ -159,15 +161,19 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	cv::Mat warpCv;
 	cv::eigen2cv(patch.getWarp().matrix2x3(), warpCv);
 
-	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows});
-	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows});
+	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows},
+				   cv::WARP_INVERSE_MAP);
+	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows},
+				   cv::WARP_INVERSE_MAP);
 
 	const auto gradX = warpedGradX(rect);
 	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	size_t sumPatch =
 		cv::norm(gradX * std::cos(flow) + gradY * std::sin(flow), cv::NORM_L1);
+
 	patch.setNumOfEvents(sumPatch);
+
 	consoleLog_->debug(std::to_string(patch.getNumOfEvents()) +
 					   " events are required for patch in track " +
 					   std::to_string(patch.getTrackId()));

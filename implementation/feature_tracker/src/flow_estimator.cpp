@@ -57,8 +57,9 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
 		patchIt->setWarp(warp);
 		patchIt->setFlowDir(flowDir);
-		patchIt->updatePatchRect(warp);
-		patchIt->addTrajectoryPosition(patchIt->toCorner(), common::timestamp_t(0));
+		patchIt->updatePatchRect();
+		patchIt->addTrajectoryPosition(patchIt->toCorner(),
+									   common::timestamp_t(0));
 
 		++patchIt;
 	}
