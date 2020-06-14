@@ -76,8 +76,7 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
 
 void Optimizer::optimize(Patch& patch)
 {
-	consoleLog_->debug("\n");
-	consoleLog_->debug("Optimizing... patch number " +
+	consoleLog_->debug("\nOptimizing... patch number " +
 					   std::to_string(patch.getTrackId()));
 	std::chrono::steady_clock::time_point begin =
 		std::chrono::steady_clock::now();
@@ -97,8 +96,9 @@ void Optimizer::optimize(Patch& patch)
 							  new Sophus::test::LocalParameterizationSE2());
 	problem.AddParameterBlock(&flowDir, 1);
 
-	auto* c = new tracker::OptimizerCostFunctor(
-		normalizedIntegratedNabla, gradInterpolator_.get(), currentRect);
+	auto* c = new tracker::OptimizerCostFunctor(normalizedIntegratedNabla,
+												gradInterpolator_.get(),
+												currentRect, imageSize_);
 
 	ceres::CostFunction* cost_function =
 		new ceres::AutoDiffCostFunction<tracker::OptimizerCostFunctor,

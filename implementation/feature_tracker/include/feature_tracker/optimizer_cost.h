@@ -16,9 +16,12 @@ struct OptimizerCostFunctor
 {
 	OptimizerCostFunctor(){};
 
-	OptimizerCostFunctor(const cv::Mat& normalizedIntegratedNabla,
-						 Interpolator* interpolator, const cv::Rect2i& patch)
-		: normalizedIntegratedNabla_(normalizedIntegratedNabla), patch_(patch)
+	OptimizerCostFunctor(const cv::Mat normalizedIntegratedNabla,
+						 Interpolator* interpolator, const cv::Rect2i& patch,
+						 const cv::Size2i& imageSize)
+		: normalizedIntegratedNabla_(normalizedIntegratedNabla),
+		  patch_(patch),
+		  imageSize_(imageSize)
 	{
 		gradInterpolator_ = interpolator;
 	}
@@ -50,18 +53,7 @@ struct OptimizerCostFunctor
 		T vy = ceres::sin(sFlowDir[0]);
 
 		const auto transform = pose2D.matrix2x3();
-
-		// const auto center = (patch_.tl() + patch_.br()) * 0.5;
-		// const auto centerEigen = Eigen::Vector2d(center.x, center.y);
 		const auto topLeftEigen = Eigen::Vector2d(patch_.tl().x, patch_.tl().y);
-
-		// rotate around patch center and get coords in global image frame
-		//		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-		//			-(pose2D.rotationMatrix() * centerEigen) + centerEigen +
-		//			topLeftEigen;
-		//
-		//		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-		// pose2D.rotationMatrix() * topLeftEigen;
 
 		for (int y = 0; y < patch_.height; y++)
 		{
@@ -75,16 +67,24 @@ struct OptimizerCostFunctor
 							transform(1, 2);
 
 				// evaluate interpolated gradients at warped points
-				T grads[2];
-				gradInterpolator_->Evaluate(warpedY, warpedX, grads);
+				if (warpedX >= T(imageSize_.width) or
+					warpedY >= T(imageSize_.height) or warpedX < T(0.0) or warpedY < T(0.0))
+				{
+					sResiduals[x + patch_.width * y] = T(0.0);
+				}
+				else
+				{
+					T grads[2];
+					gradInterpolator_->Evaluate(warpedY, warpedX, grads);
 
-				// compute predicted nabla at this point
-				sResiduals[x + patch_.width * y] =
-					grads[0] * vx + grads[1] * vy;
+					// compute predicted nabla at this point
+					sResiduals[x + patch_.width * y] =
+						grads[0] * vx + grads[1] * vy;
 
-				// accumulate norm of predicted nabla
-				normPredictedNabla +=
-					ceres::pow(sResiduals[x + patch_.width * y], 2);
+					// accumulate norm of predicted nabla
+					normPredictedNabla +=
+						ceres::pow(sResiduals[x + patch_.width * y], 2);
+				}
 			}
 		}
 	}
@@ -92,5 +92,6 @@ struct OptimizerCostFunctor
 	cv::Mat normalizedIntegratedNabla_;
 	Interpolator* gradInterpolator_;
 	cv::Rect2i patch_;
+	cv::Size2i imageSize_;
 };
 }  // namespace tracker
