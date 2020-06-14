@@ -54,7 +54,7 @@ void Patch::updatePatchRect(const common::Pose2d& warp)
 
 	// std::cout << "Init " << initPoint_.x << " " << initPoint_.y << std::endl;
 	// std::cout << "Before " << toCorner().x << " " << toCorner().y << std::endl;
-	auto warpInv = warp.matrix2x3();
+	auto warpInv = warp.inverse().matrix2x3();
 //	auto newCenterX = warpInv(0, 0) * (initPoint_.x - patch_.tl().x) +
 //							warpInv(0, 1) * (initPoint_.y - patch_.tl().y) + warpInv(0, 2);
 //	auto newCenterY = warpInv(1, 0) * (initPoint_.x  - patch_.tl().x) +
@@ -96,7 +96,7 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	cv::Mat warpedGradY;
 
 	cv::Mat warpCv;
-	cv::eigen2cv(warp_.matrix2x3(), warpCv);
+	cv::eigen2cv(warp_.inverse().matrix2x3(), warpCv);
 
 	// const auto center = Eigen::Vector2d(initPoint_.x, initPoint_.y);
 

@@ -23,14 +23,19 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	tracker_->extractPatches(sample);
-	corners_ = tracker_->getFeatures();
-
-	flowEstimator_->addImage(sample.value);
-	flowEstimator_->getFlowPatches(tracker_->getPatches());
-	for (auto& patch : tracker_->getPatches())
+	static int id = 0;
+	if (id < 2)
 	{
-		tracker_->updateNumOfEvents(patch);
+		id++;
+		tracker_->extractPatches(sample);
+		corners_ = tracker_->getFeatures();
+
+		flowEstimator_->addImage(sample.value);
+		flowEstimator_->getFlowPatches(tracker_->getPatches());
+		for (auto& patch : tracker_->getPatches())
+		{
+			tracker_->updateNumOfEvents(patch);
+		}
 	}
 }
 

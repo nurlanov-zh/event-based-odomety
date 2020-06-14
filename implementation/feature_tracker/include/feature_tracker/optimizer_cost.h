@@ -59,17 +59,17 @@ struct OptimizerCostFunctor
 //		const Eigen::Matrix<T, 2, 1> offsetToCenter =
 //			-(pose2D.rotationMatrix() * centerEigen) + centerEigen +
 //			topLeftEigen;
-
-		const Eigen::Matrix<T, 2, 1> offsetToCenter = pose2D.rotationMatrix() * topLeftEigen;
+//
+//		const Eigen::Matrix<T, 2, 1> offsetToCenter = pose2D.rotationMatrix() * topLeftEigen;
 
 		for (int y = 0; y < patch_.height; y++)
 		{
 			for (int x = 0; x < patch_.width; x++)
 			{
-				T warpedX = transform(0, 0) * T(x) + transform(0, 1) * T(y) +
-							transform(0, 2) + offsetToCenter.x();
-				T warpedY = transform(1, 0) * T(x) + transform(1, 1) * T(y) +
-							transform(1, 2) + offsetToCenter.y();
+				T warpedX = transform(0, 0) * T(x + topLeftEigen.x()) + transform(0, 1) * T(y + topLeftEigen.y()) +
+							transform(0, 2);
+				T warpedY = transform(1, 0) * T(x + topLeftEigen.x()) + transform(1, 1) * T(y + topLeftEigen.y()) +
+							transform(1, 2);
 
 				// evaluate interpolated gradients at warped points
 				T grads[2];

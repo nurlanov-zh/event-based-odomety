@@ -100,7 +100,7 @@ void Optimizer::optimize(Patch& patch)
 										Sophus::SE2d::num_parameters, 1>(c,
 																		 size);
 
-	problem.AddResidualBlock(cost_function, NULL, warp.data(), &flowDir);
+	problem.AddResidualBlock(cost_function, new ceres::CauchyLoss(0.5), warp.data(), &flowDir);
 
 	// if (params_.drawCostMap)
 	// {
