@@ -18,7 +18,8 @@ struct OptimizerParams
 	bool drawCostMap = false;
 	int maxNumIterations = 50;
 	int numThreads = tbb::task_scheduler_init::default_num_threads();
-	;
+	double optimizerThreshold = 0.8;
+	double huberLoss = 1.0;
 };
 
 class Optimizer
@@ -31,8 +32,7 @@ class Optimizer
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
 
    private:
-	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
-					 bool first);
+	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);
 
    private:
 	OptimizerParams params_;

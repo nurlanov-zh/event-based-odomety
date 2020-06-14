@@ -2,6 +2,7 @@
 
 #include <common/data_types.h>
 #include "feature_tracker/optimizer.h"
+#include "feature_tracker/flow_estimator.h"
 #include "feature_tracker/patch.h"
 
 namespace tracker
@@ -15,12 +16,15 @@ struct DetectorParams
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
 	bool drawImages = false;
+	OptimizerParams optimizerParams = {};
 };
 
 class FeatureDetector
 {
    public:
 	FeatureDetector(const DetectorParams& params);
+
+	void newImage(const common::ImageSample& image);
 
 	void extractPatches(const common::ImageSample& image);
 
@@ -52,6 +56,7 @@ class FeatureDetector
 	cv::Mat gradY_;
 
 	std::unique_ptr<Optimizer> optimizer_;
+	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
 
 	DetectorParams params_;
 	size_t maxCorners_;

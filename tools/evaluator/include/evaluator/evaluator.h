@@ -2,7 +2,6 @@
 
 #include <common/data_types.h>
 #include <feature_tracker/feature_detector.h>
-#include <feature_tracker/flow_estimator.h>
 
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -16,6 +15,7 @@ struct EvaluatorParams
 	cv::Size2i imageSize = {240, 180};
 	std::string outputDir = "/tmp";
 	bool drawImages = false;
+	bool experiment = false;
 };
 
 class Evaluator
@@ -44,10 +44,9 @@ class Evaluator
 	EvaluatorParams params_;
 
 	std::unique_ptr<tracker::FeatureDetector> tracker_;
-	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
 
 	tracker::Corners corners_;
 
-	size_t num_patches_;
+	size_t imageNum_;
 };
 }  // namespace tools

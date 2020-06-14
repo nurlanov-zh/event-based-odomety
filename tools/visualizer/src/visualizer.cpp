@@ -97,15 +97,6 @@ void Visualizer::drawPredictedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage = convertImageToGray(cvImage);
-	cv::Mat imColor;
-	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
-
-	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
-								GL_RGB, GL_UNSIGNED_BYTE);
-	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	imgView_[static_cast<size_t>(ImageViews::INTEGRATED_NABLA)]->SetImage(
-		texture);
 	drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
 }
 
@@ -251,7 +242,8 @@ void Visualizer::drawTrajectory(const tracker::Patch& patch)
 {
 	const auto& trajectory = patch.getTrajectory();
 	glColor3f(0.5, 0.0, 0.5);  // purple
-	for (int i = static_cast<int>(trajectory.size()) - 1; i >= 1; --i)
+	for (int i = static_cast<int>(trajectory.size()) - 1;
+		 i > static_cast<int>(trajectory.size()) - 15 && i >= 1; --i)
 	{
 		pangolin::glDrawLine(
 			Eigen::Vector2d(trajectory[i].value.x, trajectory[i].value.y),
@@ -293,17 +285,17 @@ void Visualizer::drawPredictedNablaOverlay()
 {
 	pangolin::GlFont::I().Text("Predicted nabla").Draw(5, 5);
 	const auto start =
-		Eigen::Vector2d(17 - 5 * std::sin(flow_), 17 - 5 * std::cos(flow_));
+		Eigen::Vector2d(17 - 5 * std::cos(flow_), 17 - 5 * std::sin(flow_));
 	const auto end =
-		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
+		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
 	const auto arrow1Start =
-		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
-	const auto arrow1End = Eigen::Vector2d(17 + 2 * std::sin(flow_ + 0.1),
-										   17 + 2 * std::cos(flow_ + 0.1));
+		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
+	const auto arrow1End = Eigen::Vector2d(17 + 2 * std::cos(flow_ + 0.1),
+										   17 + 2 * std::sin(flow_ + 0.1));
 	const auto arrow2Start =
-		Eigen::Vector2d(17 + 5 * std::sin(flow_), 17 + 5 * std::cos(flow_));
-	const auto arrow2End = Eigen::Vector2d(17 + 2 * std::sin(flow_ - 0.1),
-										   17 + 2 * std::cos(flow_ - 0.1));
+		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
+	const auto arrow2End = Eigen::Vector2d(17 + 2 * std::cos(flow_ - 0.1),
+										   17 + 2 * std::sin(flow_ - 0.1));
 	glColor3f(0.5f, 0.f, 0.2f);
 	pangolin::glDrawLine(start, end);
 	pangolin::glDrawLine(arrow1Start, arrow1End);
@@ -341,10 +333,6 @@ void Visualizer::step()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// wait();
-	if (resetPressed())
-	{
-		reset();
-	}
 
 	drawOriginalImage(originalImage_);
 	drawScene();
@@ -370,6 +358,7 @@ void Visualizer::reset()
 	nextPressed_ = false;
 	nextIntervalPressed_ = false;
 	nextImagePressed_ = false;
+	trackerParamsChanged_ = false;
 	flow_ = 0;
 
 	stopPlayButton_ = std::unique_ptr<pangolin::Var<bool>>(
@@ -382,8 +371,6 @@ void Visualizer::reset()
 		new pangolin::Var<int>("ui.stepInterval", 1000, 0, 10000));
 	nextImageButton_ = std::unique_ptr<pangolin::Var<bool>>(
 		new pangolin::Var<bool>("ui.stepImage", false, false));
-	resetButton_ = std::unique_ptr<pangolin::Var<bool>>(
-		new pangolin::Var<bool>("ui.reset", false, false));
 	showSettingsPanel_ = std::unique_ptr<pangolin::Var<bool>>(
 		new pangolin::Var<bool>("ui.showSettings", false, true));
 
@@ -392,6 +379,17 @@ void Visualizer::reset()
 	minDistance_ =
 		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
 			"settings.minDistance", trackerParams_.minDistance, 1, 10));
+	drawCostMap_ = std::unique_ptr<pangolin::Var<bool>>(new pangolin::Var<bool>(
+		"settings.drawCostMap", trackerParams_.optimizerParams.drawCostMap,
+		true));
+	optimizerThreshold_ =
+		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
+			"settings.optimizerThreshold",
+			trackerParams_.optimizerParams.optimizerThreshold, 0, 2));
+	huberLoss_ =
+		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
+			"settings.huberLoss", trackerParams_.optimizerParams.huberLoss, 0,
+			2));
 }
 
 bool Visualizer::stopPressed() const
@@ -407,11 +405,6 @@ bool Visualizer::nextPressed() const
 bool Visualizer::nextIntervalPressed() const
 {
 	return nextIntervalPressed_;
-}
-
-bool Visualizer::resetPressed() const
-{
-	return pangolin::Pushed(*resetButton_);
 }
 
 bool Visualizer::nextImagePressed() const
@@ -439,6 +432,29 @@ void Visualizer::finishVisualizerIteration()
 
 	trackerParams_.patchExtent = (*patchExtent_);
 	trackerParams_.minDistance = (*minDistance_);
+}
+
+void Visualizer::updateTrackerParams()
+{
+	const auto patchExtent = (*patchExtent_);
+	const auto minDistance = (*minDistance_);
+	const auto drawCostMap = (*drawCostMap_);
+	const auto optimizerThreshold = (*optimizerThreshold_);
+	const auto huberLoss = (*huberLoss_);
+	if (trackerParams_.patchExtent != patchExtent ||
+		trackerParams_.minDistance != minDistance ||
+		trackerParams_.optimizerParams.drawCostMap != drawCostMap ||
+		trackerParams_.optimizerParams.optimizerThreshold !=
+			optimizerThreshold ||
+		trackerParams_.optimizerParams.huberLoss != huberLoss)
+	{
+		trackerParams_.patchExtent = patchExtent;
+		trackerParams_.minDistance = minDistance;
+		trackerParams_.optimizerParams.drawCostMap = drawCostMap;
+		trackerParams_.optimizerParams.optimizerThreshold = optimizerThreshold;
+		trackerParams_.optimizerParams.huberLoss = huberLoss;
+		trackerParamsChanged_ = true;
+	}
 }
 
 }  // namespace tools

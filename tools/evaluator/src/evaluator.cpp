@@ -23,20 +23,17 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	static int id = 0;
-	if (id < 2)
+	imageNum_++;
+	if (params_.experiment)
 	{
-		id++;
-		tracker_->extractPatches(sample);
-		corners_ = tracker_->getFeatures();
-
-		flowEstimator_->addImage(sample.value);
-		flowEstimator_->getFlowPatches(tracker_->getPatches());
-		for (auto& patch : tracker_->getPatches())
+		if (imageNum_ > 3)
 		{
-			tracker_->updateNumOfEvents(patch);
+			return;
 		}
 	}
+
+	tracker_->newImage(sample);
+	corners_ = tracker_->getFeatures();
 }
 
 void Evaluator::reset()
@@ -49,8 +46,7 @@ void Evaluator::reset()
 	params.drawImages = params_.drawImages;
 	params.imageSize = params_.imageSize;
 	tracker_.reset(new tracker::FeatureDetector(params));
-	flowEstimator_.reset(
-		new tracker::FlowEstimator(tracker::FlowEstimatorParams()));
+	imageNum_ = 0;
 
 	consoleLog_->info("Evaluator is reset");
 }

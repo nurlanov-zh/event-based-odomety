@@ -92,12 +92,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-		if (visualizer.resetPressed())
-		{
-			replayer.reset();
-			evaluator.reset();
-		}
-
 		if (showGui)
 		{
 			const auto timestamp = replayer.getLastTimestamp();
@@ -111,9 +105,12 @@ int main(int argc, char** argv)
 				visualizer.setTimestamp(timestamp);
 				visualizer.step();
 
-				auto trackerParams = visualizer.getTrackerParams();
-				trackerParams.drawImages = true;
-				evaluator.setTrackerParams(trackerParams);
+				if (visualizer.isTrackerParamsChanged())
+				{
+					auto trackerParams = visualizer.getTrackerParams();
+					trackerParams.drawImages = true;
+					evaluator.setTrackerParams(trackerParams);
+				}
 			}
 		}
 	}

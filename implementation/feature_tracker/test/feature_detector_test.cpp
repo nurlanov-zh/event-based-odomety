@@ -45,10 +45,11 @@ TEST(FeatureDetector, updatePatchTest)
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
 	tracker::FeatureDetector detector(params);
+	const common::timestamp_t timestamp(0);
 
-	tracker::Patches patches = {tracker::Patch({0, 0, 11, 11}),
-								tracker::Patch({5, 5, 11, 11}),
-								tracker::Patch({20, 20, 11, 11})};
+	tracker::Patches patches = {tracker::Patch({0, 0}, 11, timestamp),
+								tracker::Patch({5, 5}, 11, timestamp),
+								tracker::Patch({20, 20}, 11, timestamp)};
 
 	detector.setPatches(patches);
 
@@ -100,10 +101,11 @@ TEST(FeatureDetector, associatedPatchesTest)
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
 	tracker::FeatureDetector detector(params);
+	const common::timestamp_t timestamp(0);
 
-	tracker::Patches patches = {tracker::Patch({0, 0, 11, 11}),
-								tracker::Patch({5, 5, 11, 11}),
-								tracker::Patch({20, 20, 11, 11})};
+	tracker::Patches patches = {tracker::Patch({0, 0}, 11, timestamp),
+								tracker::Patch({5, 5}, 11, timestamp),
+								tracker::Patch({20, 20}, 11, timestamp)};
 
 	tracker::TrackId trackId = 0;
 	for (auto& patch : patches)
@@ -113,9 +115,9 @@ TEST(FeatureDetector, associatedPatchesTest)
 	detector.setPatches(patches);
 	detector.setTrackId(trackId);
 
-	tracker::Patches newPatches = {tracker::Patch({3, 0, 11, 11}),
-								   tracker::Patch({0, 1, 11, 11}),
-								   tracker::Patch({18, 18, 11, 11})};
+	tracker::Patches newPatches = {tracker::Patch({3, 0}, 11, timestamp),
+								   tracker::Patch({0, 1}, 11, timestamp),
+								   tracker::Patch({18, 18}, 11, timestamp)};
 
 	detector.associatePatches(newPatches, common::timestamp_t(0));
 	const auto updatedPatches = detector.getPatches();
