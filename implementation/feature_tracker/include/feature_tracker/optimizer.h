@@ -9,6 +9,8 @@
 #include <ceres/cubic_interpolation.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <tbb/task_scheduler_init.h>
+
 
 namespace tracker
 {
@@ -16,7 +18,7 @@ struct OptimizerParams
 {
 	bool drawCostMap = false;
 	int maxNumIterations = 50;
-	int numThreads = 1;
+	int numThreads = tbb::task_scheduler_init::default_num_threads();;
 };
 
 class Optimizer

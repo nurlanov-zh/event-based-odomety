@@ -34,31 +34,31 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
 	const auto rect = patch.getPatch();
 	const common::Pose2d pose = patch.getWarp();
 	double flowDir = patch.getFlow();
-
-	cv::Mat costMap = cv::Mat::zeros(rect.height, rect.width, CV_64F);
-	for (int x = -(rect.width - 1) / 2; x <= (rect.width - 1) / 2; ++x)
-	{
-		for (int y = -(rect.width - 1) / 2; y <= (rect.width - 1) / 2; ++y)
-		{
-			const common::Pose2d poseNew(
-				pose.log().z(),
-				Eigen::Vector2d(
-					static_cast<float>(x) + pose.matrix2x3()(0, 2),
-					static_cast<float>(y) + pose.matrix2x3()(1, 2)));
-			cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
-			(*c)(poseNew.data(), &flowDir, (double*)image.data);
-			double sum = 0;
-			for (int xx = 0; xx < rect.width; ++xx)
-			{
-				for (int yy = 0; yy < rect.width; ++yy)
-				{
-					sum += std::pow(image.at<double>(yy, xx), 2);
-				}
-			}
-			costMap.at<double>(y + (rect.width - 1) / 2,
-							   x + (rect.width - 1) / 2) = sum;
-		}
-	}
+//
+//	cv::Mat costMap = cv::Mat::zeros(rect.height, rect.width, CV_64F);
+//	for (int x = -(rect.width - 1) / 2; x <= (rect.width - 1) / 2; ++x)
+//	{
+//		for (int y = -(rect.width - 1) / 2; y <= (rect.width - 1) / 2; ++y)
+//		{
+//			const common::Pose2d poseNew(
+//				pose.log().z(),
+//				Eigen::Vector2d(
+//					static_cast<float>(x) + pose.matrix2x3()(0, 2),
+//					static_cast<float>(y) + pose.matrix2x3()(1, 2)));
+//			cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
+//			(*c)(poseNew.data(), &flowDir, (double*)image.data);
+//			double sum = 0;
+//			for (int xx = 0; xx < rect.width; ++xx)
+//			{
+//				for (int yy = 0; yy < rect.width; ++yy)
+//				{
+//					sum += std::pow(image.at<double>(yy, xx), 2);
+//				}
+//			}
+//			costMap.at<double>(y + (rect.width - 1) / 2,
+//							   x + (rect.width - 1) / 2) = sum;
+//		}
+//	}
 	if (first)
 	{
 		cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
@@ -100,7 +100,7 @@ void Optimizer::optimize(Patch& patch)
 										Sophus::SE2d::num_parameters, 1>(c,
 																		 size);
 
-	problem.AddResidualBlock(cost_function, new ceres::CauchyLoss(0.5), warp.data(), &flowDir);
+	problem.AddResidualBlock(cost_function, new ceres::HuberLoss(0.1), warp.data(), &flowDir);
 
 	// if (params_.drawCostMap)
 	// {
@@ -112,7 +112,7 @@ void Optimizer::optimize(Patch& patch)
 	ceres::Solver::Options options;
 
 	options.minimizer_progress_to_stdout = false;
-	options.num_threads = params_.numThreads;
+	options.num_threads = 4;
 	options.logging_type = ceres::SILENT;
 
 	options.linear_solver_type = ceres::DENSE_QR;
@@ -121,6 +121,7 @@ void Optimizer::optimize(Patch& patch)
 	// Solve
 	ceres::Solver::Summary summary;
 	Solve(options, &problem, &summary);
+
 	consoleLog_->debug(summary.BriefReport());
 
 	if (summary.final_cost > 0.9)
@@ -146,10 +147,10 @@ void Optimizer::optimize(Patch& patch)
 	patch.setWarp(warp);
 	patch.updatePatchRect(warp);
 
-	// if (params_.drawCostMap)
-	// {
-	// 	// it is too slow
-	// 	drawCostMap(patch, c, false);
-	// }
+	 if (params_.drawCostMap)
+	 {
+	 	// it is too slow
+	 	drawCostMap(patch, c, true);
+	 }
 }
 }  // namespace tracker

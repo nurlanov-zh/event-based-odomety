@@ -1,5 +1,7 @@
 #include "feature_tracker/feature_detector.h"
 
+#include <opencv2/core/eigen.hpp>
+
 namespace tracker
 {
 FeatureDetector::FeatureDetector(const DetectorParams& params) : params_(params)
@@ -151,8 +153,17 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 		return;
 	}
 
-	const auto gradX = gradX_(rect);
-	const auto gradY = gradY_(rect);
+	cv::Mat warpedGradX;
+	cv::Mat warpedGradY;
+
+	cv::Mat warpCv;
+	cv::eigen2cv(patch.getWarp().matrix2x3(), warpCv);
+
+	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows});
+	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows});
+
+	const auto gradX = warpedGradX(rect);
+	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	size_t sumPatch =
 		cv::norm(gradX * std::cos(flow) + gradY * std::sin(flow), cv::NORM_L1);

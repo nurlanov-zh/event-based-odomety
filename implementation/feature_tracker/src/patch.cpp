@@ -61,10 +61,16 @@ void Patch::updatePatchRect(const common::Pose2d& warp)
 //							warpInv(1, 1) * (initPoint_.y - patch_.tl().y) + warpInv(1, 2);
 
 
-	auto newCenterX = warpInv(0, 0) * (initPoint_.x) +
-					  warpInv(0, 1) * (initPoint_.y) + warpInv(0, 2);
-	auto newCenterY = warpInv(1, 0) * (initPoint_.x) +
-					  warpInv(1, 1) * (initPoint_.y) + warpInv(1, 2);
+//	auto newCenterX = warpInv(0, 0) * (initPoint_.x) +
+//					  warpInv(0, 1) * (initPoint_.y) + warpInv(0, 2);
+//	auto newCenterY = warpInv(1, 0) * (initPoint_.x) +
+//					  warpInv(1, 1) * (initPoint_.y) + warpInv(1, 2);
+
+
+	auto newCenterX = warpInv(0, 0) * (toCorner().x) +
+					  warpInv(0, 1) * (toCorner().y) + warpInv(0, 2);
+	auto newCenterY = warpInv(1, 0) * (toCorner().x) +
+					  warpInv(1, 1) * (toCorner().y) + warpInv(1, 2);
 
 //	newCenterX += offsetToCenter.x();
 //	newCenterY += offsetToCenter.y();
@@ -96,7 +102,7 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	cv::Mat warpedGradY;
 
 	cv::Mat warpCv;
-	cv::eigen2cv(warp_.inverse().matrix2x3(), warpCv);
+	cv::eigen2cv(warp_.matrix2x3(), warpCv);
 
 	// const auto center = Eigen::Vector2d(initPoint_.x, initPoint_.y);
 

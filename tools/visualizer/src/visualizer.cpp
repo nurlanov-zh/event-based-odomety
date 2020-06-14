@@ -105,7 +105,7 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 								GL_RGB, GL_UNSIGNED_BYTE);
 	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
 	imgView_[static_cast<size_t>(ImageViews::INTEGRATED_NABLA)]->SetImage(texture);
-	//drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
+	drawImage(convertImageToGray(cvImage), ImageViews::INTEGRATED_NABLA);
 }
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
@@ -186,7 +186,7 @@ void Visualizer::drawOriginalOverlay()
 			if (std::abs(point.x - selection.x.min) <= radius &&
 				std::abs(point.y - selection.y.min) <= radius)
 			{
-				integratedNabla_ = patch.getCostMap2();
+				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
 				costMap_ = patch.getCostMap();
 				flow_ = patch.getFlow();
@@ -201,7 +201,7 @@ void Visualizer::drawOriginalOverlay()
 	{
 		if (patches_.size() > 0)
 		{
-			integratedNabla_ = patches_.front().getCostMap2();
+			integratedNabla_ = patches_.front().getIntegratedNabla();
 			predictedNabla_ = patches_.front().getPredictedNabla();
 			costMap_ = patches_.front().getCostMap();
 			flow_ = patches_.front().getFlow();
