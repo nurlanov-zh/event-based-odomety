@@ -86,7 +86,7 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	if (patch_.x < 0 || patch_.y < 0 || patch_.x + patch_.width >= gradX.cols ||
 		patch_.y + patch_.height >= gradX.rows)
 	{
-		setLost();
+		//		setLost();
 		return;
 	}
 

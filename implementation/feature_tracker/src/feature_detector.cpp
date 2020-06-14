@@ -149,9 +149,9 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
 		rect.y + rect.height >= gradX_.rows)
 	{
-		consoleLog_->debug("Lost patch number " +
-						   std::to_string(patch.getTrackId()));
-		patch.setLost();
+		//		consoleLog_->debug("Lost patch number " +
+		//						   std::to_string(patch.getTrackId()));
+		//		patch.setLost();
 		return;
 	}
 

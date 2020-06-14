@@ -251,7 +251,7 @@ void Visualizer::drawTrajectory(const tracker::Patch& patch)
 {
 	const auto& trajectory = patch.getTrajectory();
 	glColor3f(0.5, 0.0, 0.5);  // purple
-	for (int i = static_cast<int>(trajectory.size()) - 1; i > i >= 1; --i)
+	for (int i = static_cast<int>(trajectory.size()) - 1; i >= 1; --i)
 	{
 		pangolin::glDrawLine(
 			Eigen::Vector2d(trajectory[i].value.x, trajectory[i].value.y),

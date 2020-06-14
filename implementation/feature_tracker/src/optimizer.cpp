@@ -76,6 +76,12 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c,
 
 void Optimizer::optimize(Patch& patch)
 {
+	consoleLog_->debug("\n");
+	consoleLog_->debug("Optimizing... patch number " +
+					   std::to_string(patch.getTrackId()));
+	std::chrono::steady_clock::time_point begin =
+		std::chrono::steady_clock::now();
+
 	const cv::Rect2i currentRect = patch.getPatch();
 	int size = currentRect.height * currentRect.width;
 
@@ -125,6 +131,15 @@ void Optimizer::optimize(Patch& patch)
 
 	consoleLog_->debug(summary.BriefReport());
 
+	std::chrono::steady_clock::time_point end =
+		std::chrono::steady_clock::now();
+	consoleLog_->debug(
+		"Optimiztion elapsed TIME: " +
+		std::to_string(
+			std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+				.count()) +
+		" [ms]\n");
+
 	//	if (summary.final_cost > 0.9)
 	//	{
 	//		patch.setLost();
@@ -132,26 +147,46 @@ void Optimizer::optimize(Patch& patch)
 	//	}
 
 	// !!! Update patch params !!!
-	consoleLog_->debug(
-		"New warp is (" + std::to_string(warp.translation().x()) + ", " +
-		std::to_string(warp.translation().y()) + ", " +
-		std::to_string(warp.log().z()) + ") vs (" +
-		std::to_string(patch.getWarp().translation().x()) + ", " +
-		std::to_string(patch.getWarp().translation().y()) + ", " +
-		std::to_string(patch.getWarp().log().z()) + ")");
-
-	consoleLog_->debug("New flow is " + std::to_string(flowDir) + " vs " +
-					   std::to_string(patch.getFlow()));
+	consoleLog_->debug("Updating patch: " + std::to_string(patch.getTrackId()));
+	//	consoleLog_->debug(
+	//		"New warp is (" + std::to_string(warp.translation().x()) + ", " +
+	//		std::to_string(warp.translation().y()) + ", " +
+	//		std::to_string(warp.log().z()) + ") vs (" +
+	//		std::to_string(patch.getWarp().translation().x()) + ", " +
+	//		std::to_string(patch.getWarp().translation().y()) + ", " +
+	//		std::to_string(patch.getWarp().log().z()) + ")");
+	//
+	//	consoleLog_->debug("New flow is " + std::to_string(flowDir) + " vs " +
+	//					   std::to_string(patch.getFlow()));
 
 	flowDir = fmod(flowDir, 2 * M_PI);
 	patch.setFlowDir(flowDir);
 	patch.setWarp(warp);
+
+	consoleLog_->debug("Old center: (" +
+					   std::to_string(int(patch.toCorner().x)) + ", " +
+					   std::to_string(int(patch.toCorner().y)) + ")");
+
 	patch.updatePatchRect();
+
+	consoleLog_->debug("New center: (" +
+					   std::to_string(int(patch.toCorner().x)) + ", " +
+					   std::to_string(int(patch.toCorner().y)) + ")");
 
 	if (params_.drawCostMap)
 	{
+		consoleLog_->debug("Drawing costmap...");
+		begin = std::chrono::steady_clock::now();
 		// it is too slow
 		drawCostMap(patch, c, true);
+		end = std::chrono::steady_clock::now();
+		consoleLog_->debug(
+			"Costmap drawing finished in " +
+			std::to_string(
+				std::chrono::duration_cast<std::chrono::milliseconds>(end -
+																	  begin)
+					.count()) +
+			"[ms]");
 	}
 }
 }  // namespace tracker

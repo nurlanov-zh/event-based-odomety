@@ -61,7 +61,7 @@ struct OptimizerCostFunctor
 		//			topLeftEigen;
 		//
 		//		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-		//pose2D.rotationMatrix() * topLeftEigen;
+		// pose2D.rotationMatrix() * topLeftEigen;
 
 		for (int y = 0; y < patch_.height; y++)
 		{
