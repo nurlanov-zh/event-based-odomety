@@ -31,6 +31,10 @@ class Optimizer
 
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
 
+	OptimizerParams getParams() { return params_; }
+
+	void setParams(OptimizerParams params) { params_ = params; }
+
    private:
 	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <common/data_types.h>
-#include "feature_tracker/optimizer.h"
 #include "feature_tracker/flow_estimator.h"
+#include "feature_tracker/optimizer.h"
 #include "feature_tracker/patch.h"
 
 namespace tracker
@@ -17,6 +17,7 @@ struct DetectorParams
 	cv::Size imageSize = {240, 180};
 	bool drawImages = false;
 	OptimizerParams optimizerParams = {};
+	int initNumEvents = 75;
 };
 
 class FeatureDetector

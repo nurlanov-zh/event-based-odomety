@@ -28,7 +28,7 @@ class Patch
 	void updateNumOfEvents();
 
 	void addTrajectoryPosition();
-	
+
 	void updatePatchRect();
 
 	Corner toCorner() const;
@@ -54,7 +54,10 @@ class Patch
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
 	size_t getNumOfEvents() const { return numOfEvents_; }
 	cv::Rect2d getInitPatch() const;
-	common::timestamp_t getCurrentTimestamp() const { return currentTimestamp_; }
+	common::timestamp_t getCurrentTimestamp() const
+	{
+		return currentTimestamp_;
+	}
 
 	void setLost() { lost_ = true; }
 	void setNumOfEvents(size_t numOfEvents);
@@ -66,7 +69,6 @@ class Patch
 	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
 
    private:
-
 	common::Point2i patchToFrameCoords(
 		const common::Point2i& pointInPatch) const;
 

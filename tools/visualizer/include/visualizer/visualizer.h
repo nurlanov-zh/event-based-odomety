@@ -120,8 +120,8 @@ class Visualizer
 	cv::Mat costMap_;
 	cv::Mat predictedNabla_;
 	cv::Mat originalImage_;
-	cv::Rect2i newPatch_;
-	cv::Rect2i initPatch_;
+	cv::Rect2d newPatch_;
+	cv::Rect2d initPatch_;
 
 	tracker::DetectorParams trackerParams_;
 

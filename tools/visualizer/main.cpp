@@ -32,10 +32,6 @@ int main(int argc, char** argv)
 	app.add_option("--show-gui", showGui, "Show GUI");
 	app.add_option("--dataset", dataset, "Dataset. Default: " + dataset);
 
-	console->info("Options passed are:");
-	console->info("\tshow-gui: {}", showGui);
-	console->info("\tdataset: {}", dataset);
-
 	try
 	{
 		app.parse(argc, argv);
@@ -44,6 +40,10 @@ int main(int argc, char** argv)
 	{
 		return app.exit(e);
 	}
+
+	console->info("Options passed are:");
+	console->info("\tshow-gui: {}", showGui);
+	console->info("\tdataset: {}", dataset);
 
 	std::shared_ptr<tools::DatasetReader> reader =
 		std::make_shared<tools::Davis240cReader>(dataset);
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 				if (visualizer.isTrackerParamsChanged())
 				{
 					auto trackerParams = visualizer.getTrackerParams();
-					trackerParams.drawImages = true;
+					trackerParams.drawImages = showGui;
 					evaluator.setTrackerParams(trackerParams);
 				}
 			}

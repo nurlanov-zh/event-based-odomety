@@ -55,9 +55,9 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		const auto newCorner = patchIt->toCorner();
 
 		// check if patch is lost
-		if (newCorner.x + dirX < 0 || newCorner.y + dirY < 0 ||
-			newCorner.x + dirX >= currentImage_.cols ||
-			newCorner.y + dirY >= currentImage_.rows)
+		if (newCorner.x <= 5 || newCorner.y <= 5 ||
+			newCorner.x >= currentImage_.cols - 5 ||
+			newCorner.y >= currentImage_.rows - 5)
 		{
 			patchIt->setLost();
 			++patchIt;

@@ -68,7 +68,8 @@ void FeatureDetector::newImage(const common::ImageSample& image)
 		}
 		++patchIt;
 	}
-	consoleLog_->info("Optimizig over " + std::to_string(patches_.size()) + " patches");
+	consoleLog_->info("Extracted " + std::to_string(patches_.size()) +
+					  " patches.");
 }
 
 void FeatureDetector::extractPatches(const common::ImageSample& image)
@@ -144,8 +145,7 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 			{
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
-				patch.setCorner(newPatch.toCorner(),
-								timestamp);
+				patch.setCorner(newPatch.toCorner(), timestamp);
 				break;
 			}
 		}
@@ -165,12 +165,23 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 void FeatureDetector::updateNumOfEvents(Patch& patch)
 {
 	const auto rect = patch.getPatch();
-	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
-		rect.y + rect.height >= gradX_.rows)
+	const auto center = (rect.tl() + rect.br()) * 0.5;
+	if (center.x <= 0 || center.y <= 0 || center.x >= gradX_.cols - 1 ||
+		center.y >= gradX_.rows - 1)
 	{
 		consoleLog_->debug("Lost patch number " +
 						   std::to_string(patch.getTrackId()));
 		patch.setLost();
+		return;
+	}
+
+	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
+		rect.y + rect.height >= gradX_.rows)
+	{
+		patch.setNumOfEvents(params_.initNumEvents);
+		consoleLog_->debug(std::to_string(patch.getNumOfEvents()) +
+						   " events are required for patch in track " +
+						   std::to_string(patch.getTrackId()));
 		return;
 	}
 

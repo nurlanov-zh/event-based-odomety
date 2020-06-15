@@ -64,14 +64,14 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 void Optimizer::optimize(Patch& patch)
 {
 	patch.integrateEvents();
-	
+
 	consoleLog_->debug("\n");
 	consoleLog_->debug("Optimizing... patch number " +
 					   std::to_string(patch.getTrackId()));
 	std::chrono::steady_clock::time_point begin =
 		std::chrono::steady_clock::now();
 
-	const cv::Rect2i currentRect = patch.getPatch();
+	const cv::Rect2d currentRect = patch.getPatch();
 	int size = currentRect.height * currentRect.width;
 
 	const cv::Mat normalizedIntegratedNabla =
@@ -96,7 +96,8 @@ void Optimizer::optimize(Patch& patch)
 										Sophus::SE2d::num_parameters, 1>(c,
 																		 size);
 
-	problem.AddResidualBlock(cost_function, new ceres::HuberLoss(params_.huberLoss),
+	problem.AddResidualBlock(cost_function,
+							 new ceres::HuberLoss(params_.huberLoss),
 							 warp.data(), &flowDir);
 
 	// Set solver options (precision / method)
