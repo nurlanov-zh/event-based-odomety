@@ -9,6 +9,7 @@ Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
 
 Evaluator::~Evaluator()
 {
+	tracker_->preExit();
 	saveTrajectory(tracker_->getArchivedPatches());
 }
 

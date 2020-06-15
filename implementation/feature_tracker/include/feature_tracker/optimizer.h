@@ -33,7 +33,7 @@ class Optimizer
 
 	OptimizerParams getParams() { return params_; }
 
-	void setParams(OptimizerParams params) { params_ = params; }
+	void setParams(const OptimizerParams& params) { params_ = params; }
 
    private:
 	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);

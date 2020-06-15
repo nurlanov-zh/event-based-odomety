@@ -44,8 +44,10 @@ void Patch::updatePatchRect()
 
 	int extentX = (patch_.width - 1) / 2;
 	int extentY = (patch_.height - 1) / 2;
-	patch_ = cv::Rect2d((newCenterX - extentX), (newCenterY - extentY),
-						2 * extentX + 1, 2 * extentY + 1);
+	
+	patch_ =
+		cv::Rect2d(newCenterX - extentX, newCenterY - extentY,
+				   2 * extentX + 1, 2 * extentY + 1);
 }
 
 void Patch::integrateEvents()

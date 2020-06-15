@@ -39,6 +39,15 @@ void FeatureDetector::reset()
 				  cvScalar(1), CV_FILLED);
 }
 
+void FeatureDetector::preExit()
+{
+	for (auto patchIt = patches_.begin(); patchIt != patches_.end();)
+	{
+		archivedPatches_.push_back(*patchIt);
+		++patchIt;
+	}
+}
+
 void FeatureDetector::newImage(const common::ImageSample& image)
 {
 	extractPatches(image);
@@ -232,6 +241,7 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 void FeatureDetector::setParams(const tracker::DetectorParams& params)
 {
 	params_ = params;
+	optimizer_->setParams(params_.optimizerParams);
 	reset();
 }
 
