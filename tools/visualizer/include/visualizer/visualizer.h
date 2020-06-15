@@ -122,6 +122,7 @@ class Visualizer
 	cv::Mat originalImage_;
 	cv::Rect2d newPatch_;
 	cv::Rect2d initPatch_;
+	tracker::TrackId track_id_;
 
 	tracker::DetectorParams trackerParams_;
 

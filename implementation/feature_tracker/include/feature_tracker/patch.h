@@ -84,6 +84,7 @@ class Patch
 	TrackId trackId_;
 
 	common::timestamp_t currentTimestamp_;
+	std::chrono::duration<double> timeWithoutUpdate_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;

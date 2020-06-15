@@ -19,7 +19,9 @@ struct OptimizerParams
 	int maxNumIterations = 50;
 	int numThreads = tbb::task_scheduler_init::default_num_threads();
 	double optimizerThreshold = 0.8;
-	double huberLoss = 1.0;
+	double huberLoss = 0.8;
+	int costMapWidth = 11;
+	int costMapHeight = 11;
 };
 
 class Optimizer

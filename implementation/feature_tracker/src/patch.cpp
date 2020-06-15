@@ -24,6 +24,7 @@ void Patch::init()
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
+	timeWithoutUpdate_ = std::chrono::duration<double>(100000.0);
 
 	addTrajectoryPosition();
 }
@@ -35,6 +36,7 @@ void Patch::addEvent(const common::EventSample& event)
 
 void Patch::updatePatchRect()
 {
+	auto oldCenter = toCorner();
 	auto warpInv = warp_.inverse().matrix2x3();
 
 	auto newCenterX = warpInv(0, 0) * (initPoint_.x) +
@@ -44,10 +46,12 @@ void Patch::updatePatchRect()
 
 	int extentX = (patch_.width - 1) / 2;
 	int extentY = (patch_.height - 1) / 2;
-	
-	patch_ =
-		cv::Rect2d(newCenterX - extentX, newCenterY - extentY,
-				   2 * extentX + 1, 2 * extentY + 1);
+
+	patch_ = cv::Rect2d(newCenterX - extentX, newCenterY - extentY,
+						2 * extentX + 1, 2 * extentY + 1);
+	auto newCenter = toCorner();
+	timeWithoutUpdate_ = std::chrono::duration<double>(
+		1 / fmax(1e-5, cv::norm(newCenter - oldCenter)));
 }
 
 void Patch::integrateEvents()

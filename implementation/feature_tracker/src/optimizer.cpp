@@ -34,10 +34,14 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 	const common::Pose2d pose = patch.getWarp();
 	double flowDir = patch.getFlow();
 
-	cv::Mat costMap = cv::Mat::zeros(rect.height, rect.width, CV_64F);
-	for (int x = -(rect.width - 1) / 2; x <= (rect.width - 1) / 2; ++x)
+	int costMapWidth = params_.costMapWidth;
+	int costMapHeight = params_.costMapHeight;
+
+	cv::Mat costMap = cv::Mat::zeros(costMapHeight, costMapWidth, CV_64F);
+	for (int x = -(costMapWidth - 1) / 2; x <= (costMapWidth - 1) / 2; ++x)
 	{
-		for (int y = -(rect.width - 1) / 2; y <= (rect.width - 1) / 2; ++y)
+		for (int y = -(costMapHeight - 1) / 2; y <= (costMapHeight - 1) / 2;
+			 ++y)
 		{
 			const common::Pose2d poseNew(
 				pose.log().z(),
@@ -46,16 +50,9 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 					static_cast<float>(y) + pose.matrix2x3()(1, 2)));
 			cv::Mat image = cv::Mat::zeros(rect.height, rect.width, CV_64F);
 			(*c)(poseNew.data(), &flowDir, (double*)image.data);
-			double sum = 0;
-			for (int xx = 0; xx < rect.width; ++xx)
-			{
-				for (int yy = 0; yy < rect.width; ++yy)
-				{
-					sum += std::pow(image.at<double>(yy, xx), 2);
-				}
-			}
-			costMap.at<double>(y + (rect.width - 1) / 2,
-							   x + (rect.width - 1) / 2) = sum;
+			double sum = cv::norm(image, cv::NORM_L2);
+			costMap.at<double>(y + (costMapHeight - 1) / 2,
+							   x + (costMapWidth - 1) / 2) = sum;
 		}
 	}
 	patch.setCostMap(costMap);

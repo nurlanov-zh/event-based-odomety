@@ -175,8 +175,8 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 {
 	const auto rect = patch.getPatch();
 	const auto center = (rect.tl() + rect.br()) * 0.5;
-	if (center.x <= 0 || center.y <= 0 || center.x >= gradX_.cols - 1 ||
-		center.y >= gradX_.rows - 1)
+	if (center.x <= 5 || center.y <= 5 || center.x >= gradX_.cols - 5 ||
+		center.y >= gradX_.rows - 5)
 	{
 		consoleLog_->debug("Lost patch number " +
 						   std::to_string(patch.getTrackId()));
