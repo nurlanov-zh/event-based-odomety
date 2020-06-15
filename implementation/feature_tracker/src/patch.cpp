@@ -9,7 +9,7 @@ Patch::Patch(const Corner& corner, int extent,
 			 const common::timestamp_t& timestamp)
 	: currentTimestamp_(timestamp)
 {
-	patch_ = cv::Rect2i(corner.x - extent, corner.y - extent, 2 * extent + 1,
+	patch_ = cv::Rect2d(corner.x - extent, corner.y - extent, 2 * extent + 1,
 						2 * extent + 1);
 	init();
 }
@@ -45,7 +45,7 @@ void Patch::updatePatchRect()
 	int extentX = (patch_.width - 1) / 2;
 	int extentY = (patch_.height - 1) / 2;
 	patch_ =
-		cv::Rect2i(round(newCenterX - extentX), round(newCenterY - extentY),
+		cv::Rect2d(newCenterX - extentX, newCenterY - extentY,
 				   2 * extentX + 1, 2 * extentY + 1);
 }
 

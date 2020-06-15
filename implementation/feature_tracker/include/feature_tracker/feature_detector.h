@@ -24,6 +24,8 @@ class FeatureDetector
    public:
 	FeatureDetector(const DetectorParams& params);
 
+	void preExit();
+
 	void newImage(const common::ImageSample& image);
 
 	void extractPatches(const common::ImageSample& image);

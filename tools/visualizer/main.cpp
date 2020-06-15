@@ -59,13 +59,12 @@ int main(int argc, char** argv)
 	replayer.addImageCallback(
 		REGISTER_CALLBACK(tools::Evaluator, imageCallback, evaluator));
 
-	replayer.addEventCallback(
-		REGISTER_CALLBACK(tools::Visualizer, eventCallback, visualizer));
-	replayer.addImageCallback(
-		REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
-
 	if (showGui)
 	{
+		replayer.addEventCallback(
+			REGISTER_CALLBACK(tools::Visualizer, eventCallback, visualizer));
+		replayer.addImageCallback(
+			REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
 		visualizer.createWindow();
 	}
 

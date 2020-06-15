@@ -430,8 +430,7 @@ void Visualizer::finishVisualizerIteration()
 		settingsPanel_->Show(*showSettingsPanel_);
 	}
 
-	trackerParams_.patchExtent = (*patchExtent_);
-	trackerParams_.minDistance = (*minDistance_);
+	updateTrackerParams();
 }
 
 void Visualizer::updateTrackerParams()
