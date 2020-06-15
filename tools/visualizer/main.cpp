@@ -11,11 +11,11 @@
 
 tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
-	std::chrono::microseconds(5000);
+	std::chrono::microseconds(500);
 
 int main(int argc, char** argv)
 {
-	spdlog::set_level(spdlog::level::from_str("debug"));
+	spdlog::set_level(spdlog::level::from_str("info"));
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
@@ -32,10 +32,6 @@ int main(int argc, char** argv)
 	app.add_option("--show-gui", showGui, "Show GUI");
 	app.add_option("--dataset", dataset, "Dataset. Default: " + dataset);
 
-	console->info("Options passed are:");
-	console->info("\tshow-gui: {}", showGui);
-	console->info("\tdataset: {}", dataset);
-
 	try
 	{
 		app.parse(argc, argv);
@@ -45,12 +41,17 @@ int main(int argc, char** argv)
 		return app.exit(e);
 	}
 
+	console->info("Options passed are:");
+	console->info("\tshow-gui: {}", showGui);
+	console->info("\tdataset: {}", dataset);
+
 	std::shared_ptr<tools::DatasetReader> reader =
 		std::make_shared<tools::Davis240cReader>(dataset);
 
 	tools::Replayer replayer(reader);
 
-	const auto param = tools::EvaluatorParams();
+	tools::EvaluatorParams param;
+	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
 
 	replayer.addEventCallback(
@@ -58,13 +59,12 @@ int main(int argc, char** argv)
 	replayer.addImageCallback(
 		REGISTER_CALLBACK(tools::Evaluator, imageCallback, evaluator));
 
-	replayer.addEventCallback(
-		REGISTER_CALLBACK(tools::Visualizer, eventCallback, visualizer));
-	replayer.addImageCallback(
-		REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
-
 	if (showGui)
 	{
+		replayer.addEventCallback(
+			REGISTER_CALLBACK(tools::Visualizer, eventCallback, visualizer));
+		replayer.addImageCallback(
+			REGISTER_CALLBACK(tools::Visualizer, imageCallback, visualizer));
 		visualizer.createWindow();
 	}
 
@@ -91,12 +91,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-		if (visualizer.resetPressed())
-		{
-			replayer.reset();
-			evaluator.reset();
-		}
-
 		if (showGui)
 		{
 			const auto timestamp = replayer.getLastTimestamp();
@@ -109,7 +103,13 @@ int main(int argc, char** argv)
 				visualizer.setPatches(evaluator.getPatches());
 				visualizer.setTimestamp(timestamp);
 				visualizer.step();
-				evaluator.setTrackerParams(visualizer.getTrackerParams());
+
+				if (visualizer.isTrackerParamsChanged())
+				{
+					auto trackerParams = visualizer.getTrackerParams();
+					trackerParams.drawImages = showGui;
+					evaluator.setTrackerParams(trackerParams);
+				}
 			}
 		}
 	}

@@ -9,14 +9,19 @@
 #include <ceres/cubic_interpolation.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <tbb/task_scheduler_init.h>
 
 namespace tracker
 {
 struct OptimizerParams
 {
 	bool drawCostMap = false;
-	int maxNumIterations = 30;
-	int numThreads = 1;
+	int maxNumIterations = 50;
+	int numThreads = tbb::task_scheduler_init::default_num_threads();
+	double optimizerThreshold = 0.8;
+	double huberLoss = 0.8;
+	int costMapWidth = 11;
+	int costMapHeight = 11;
 };
 
 class Optimizer
@@ -27,6 +32,10 @@ class Optimizer
 	void optimize(Patch& patch);
 
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
+
+	OptimizerParams getParams() { return params_; }
+
+	void setParams(const OptimizerParams& params) { params_ = params; }
 
    private:
 	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);

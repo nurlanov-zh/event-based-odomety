@@ -45,10 +45,11 @@ TEST(FeatureDetector, updatePatchTest)
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
 	tracker::FeatureDetector detector(params);
+	const common::timestamp_t timestamp(0);
 
-	tracker::Patches patches = {tracker::Patch({0, 0, 11, 11}),
-								tracker::Patch({5, 5, 11, 11}),
-								tracker::Patch({20, 20, 11, 11})};
+	tracker::Patches patches = {tracker::Patch({0, 0}, 11, timestamp),
+								tracker::Patch({5, 5}, 11, timestamp),
+								tracker::Patch({20, 20}, 11, timestamp)};
 
 	detector.setPatches(patches);
 
@@ -64,11 +65,11 @@ TEST(FeatureDetector, updatePatchTest)
 							   : common::EventPolarity::NEGATIVE;
 		detector.updatePatches(event);
 
-		for (size_t j = 0; j < patches.size(); ++j)
+		for (auto& patch : patches)
 		{
-			if (patches[j].isInPatch(event.value.point))
+			if (patch.isInPatch(event.value.point))
 			{
-				patches[j].addEvent(event);
+				patch.addEvent(event);
 			}
 		}
 	}
@@ -77,10 +78,12 @@ TEST(FeatureDetector, updatePatchTest)
 
 	ASSERT_EQ(detectorPatches.size(), patches.size());
 
-	for (size_t i = 0; i < patches.size(); ++i)
+	auto detectorPatchesIt = detectorPatches.begin();
+	for (auto patchIt = patches.begin(); patchIt != patches.end();
+		 ++patchIt, ++detectorPatchesIt)
 	{
-		const auto detectorEvents = detectorPatches[i].getEvents();
-		const auto gtEvents = patches[i].getEvents();
+		const auto detectorEvents = detectorPatchesIt->getEvents();
+		const auto gtEvents = patchIt->getEvents();
 		ASSERT_EQ(detectorEvents.size(), gtEvents.size());
 
 		auto detectorIt = detectorEvents.begin();
@@ -91,4 +94,32 @@ TEST(FeatureDetector, updatePatchTest)
 			EXPECT_EQ(detectorIt->timestamp, gtIt->timestamp);
 		}
 	}
+}
+
+TEST(FeatureDetector, associatedPatchesTest)
+{
+	tracker::DetectorParams params;
+	params.patchExtent = 5;
+	tracker::FeatureDetector detector(params);
+	const common::timestamp_t timestamp(0);
+
+	tracker::Patches patches = {tracker::Patch({0, 0}, 11, timestamp),
+								tracker::Patch({5, 5}, 11, timestamp),
+								tracker::Patch({20, 20}, 11, timestamp)};
+
+	tracker::TrackId trackId = 0;
+	for (auto& patch : patches)
+	{
+		patch.setTrackId(trackId++);
+	}
+	detector.setPatches(patches);
+	detector.setTrackId(trackId);
+
+	tracker::Patches newPatches = {tracker::Patch({3, 0}, 11, timestamp),
+								   tracker::Patch({0, 1}, 11, timestamp),
+								   tracker::Patch({18, 18}, 11, timestamp)};
+
+	detector.associatePatches(newPatches, common::timestamp_t(0));
+	const auto updatedPatches = detector.getPatches();
+	EXPECT_EQ(updatedPatches.size(), 4);
 }

@@ -10,19 +10,20 @@ namespace tracker
 using Grid = ceres::Grid2D<double, 2>;
 using GridPtr = std::unique_ptr<Grid>;
 using Interpolator = ceres::BiCubicInterpolator<Grid>;
-using InterpolatorPtr = std::shared_ptr<Interpolator>;
+using InterpolatorPtr = std::unique_ptr<Interpolator>;
 
 struct OptimizerCostFunctor
 {
 	OptimizerCostFunctor(){};
 
-	OptimizerCostFunctor(const cv::Mat& normalizedIntegratedNabla,
-						 const std::shared_ptr<Interpolator>& gradInterpolator,
-						 const cv::Rect2i& patch)
+	OptimizerCostFunctor(const cv::Mat normalizedIntegratedNabla,
+						 Interpolator* interpolator, const cv::Rect2d& patch,
+						 const cv::Size2i& imageSize)
+		: normalizedIntegratedNabla_(normalizedIntegratedNabla),
+		  patch_(patch),
+		  imageSize_(imageSize)
 	{
-		normalizedIntegratedNabla_ = normalizedIntegratedNabla;
-		interpolator_ = gradInterpolator;
-		patch_ = patch;
+		gradInterpolator_ = interpolator;
 	}
 
 	template <typename T>
@@ -30,12 +31,12 @@ struct OptimizerCostFunctor
 	{
 		T normPredictedNabla(1e-5);
 		warp(sPose2D, sFlowDir, sResiduals, normPredictedNabla);
-		for (int y = 0; y < patch_.height; y++)
+		for (int y = 0; y < static_cast<int>(patch_.height); y++)
 		{
-			for (int x = 0; x < patch_.width; x++)
+			for (int x = 0; x < static_cast<int>(patch_.width); x++)
 			{
-				sResiduals[x + y * patch_.width] =
-					sResiduals[x + y * patch_.width] /
+				sResiduals[x + y * static_cast<int>(patch_.width)] =
+					sResiduals[x + y * static_cast<int>(patch_.width)] /
 						ceres::sqrt(normPredictedNabla) +
 					T(normalizedIntegratedNabla_.at<double>(y, x));
 			}
@@ -51,41 +52,46 @@ struct OptimizerCostFunctor
 		T vx = ceres::cos(sFlowDir[0]);
 		T vy = ceres::sin(sFlowDir[0]);
 
-		auto transform = pose2D.matrix2x3();
+		const auto transform = pose2D.matrix2x3();
 
-		const auto center =
-			Eigen::Vector2d(((patch_.br() + patch_.tl()) * 0.5).x,
-							((patch_.br() + patch_.tl()) * 0.5).y);
-
-		const Eigen::Matrix<T, 2, 1> offsetToCenter =
-			-(pose2D.rotationMatrix() * center) + center;
-
-		for (int y = 0; y < patch_.height; y++)
+		for (int y = 0; y < static_cast<int>(patch_.height); y++)
 		{
-			for (int x = 0; x < patch_.width; x++)
+			for (int x = 0; x < static_cast<int>(patch_.width); x++)
 			{
-				T warpedX = transform(0, 0) * T(x) + transform(0, 1) * T(y) +
-							transform(0, 2) + offsetToCenter.x();
-				T warpedY = transform(1, 0) * T(x) + transform(1, 1) * T(y) +
-							transform(1, 2) + offsetToCenter.y();
+				T warpedX = transform(0, 0) * T(x + patch_.tl().x) +
+							transform(0, 1) * T(y + patch_.tl().y) +
+							transform(0, 2);
+				T warpedY = transform(1, 0) * T(x + patch_.tl().x) +
+							transform(1, 1) * T(y + patch_.tl().y) +
+							transform(1, 2);
 
 				// evaluate interpolated gradients at warped points
-				T grads[2];
-				interpolator_->Evaluate(warpedY, warpedX, grads);
+				if (warpedX >= T(imageSize_.width) or
+					warpedY >= T(imageSize_.height) or warpedX < T(0.0) or
+					warpedY < T(0.0))
+				{
+					sResiduals[x + static_cast<int>(patch_.width) * y] = T(0.0);
+				}
+				else
+				{
+					T grads[2];
+					gradInterpolator_->Evaluate(warpedY, warpedX, grads);
 
-				// compute predicted nabla at this point
-				sResiduals[x + patch_.width * y] =
-					grads[0] * vx + grads[1] * vy;
+					// compute predicted nabla at this point
+					sResiduals[x + static_cast<int>(patch_.width) * y] =
+						grads[0] * vx + grads[1] * vy;
 
-				// accumulate norm of predicted nabla
-				normPredictedNabla +=
-					ceres::pow(sResiduals[x + patch_.width * y], 2);
+					// accumulate norm of predicted nabla
+					normPredictedNabla += ceres::pow(
+						sResiduals[x + static_cast<int>(patch_.width) * y], 2);
+				}
 			}
 		}
 	}
 
-	cv::Rect2i patch_;
-	std::shared_ptr<Interpolator> interpolator_;
 	cv::Mat normalizedIntegratedNabla_;
+	Interpolator* gradInterpolator_;
+	cv::Rect2d patch_;
+	cv::Size2i imageSize_;
 };
 }  // namespace tracker

@@ -29,9 +29,9 @@ void saveImage(cv::Mat image, std::string name, bool isCostMap = false)
 					-minVal * 255.0 / (maxVal - minVal));
 	if (isCostMap)
 	{
-		cv::Mat im_color;
-		applyColorMap(grayImage, im_color, cv::COLORMAP_JET);
-		grayImage = im_color;
+		cv::Mat imColor;
+		applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+		grayImage = imColor;
 	}
 	cv::imwrite("/tmp/" +
 					std::string(::testing::UnitTest::GetInstance()
@@ -100,7 +100,7 @@ TEST(Optimizer, optimizerSimpleTest)
 
 		// Center of the patch is important! Because the warping is done around
 		// it.
-		tracker::Patch patch({17, 17}, 17);
+		tracker::Patch patch({17, 17}, 17, common::timestamp_t(0));
 		patch.setWarp(warpInit);
 		patch.setFlowDir(flowDir);
 

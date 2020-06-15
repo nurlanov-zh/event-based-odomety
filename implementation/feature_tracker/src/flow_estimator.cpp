@@ -29,30 +29,42 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		return false;
 	}
 
-	for (auto& patch : patches)
+	for (auto patchIt = patches.begin(); patchIt != patches.end();)
 	{
-		const auto& corner = patch.toCorner();
+		const auto& corner = patchIt->toCorner();
 
 		const auto nextPoint = getFlow(corner);
 
 		if (!nextPoint.has_value())
 		{
+			patchIt->setLost();
+			++patchIt;
 			continue;
 		}
-
-		// TODO check if patch is lost
-		// TODO set initialized value
 
 		// Since the velocity is normalized we need to store only angle
 		const auto dirX = nextPoint.value().x - corner.x;
 		const auto dirY = nextPoint.value().y - corner.y;
 		const auto flowDir = std::atan2(dirY, dirX);
 
-		patch.setFlowDir(flowDir);
-
 		common::Pose2d warp;
-		warp.translation() = Eigen::Vector2d(dirX, dirY);
-		patch.setWarp(warp);
+		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
+		patchIt->setWarp(warp);
+		patchIt->setFlowDir(flowDir);
+
+		const auto newCorner = patchIt->toCorner();
+
+		// check if patch is lost
+		if (newCorner.x <= 5 || newCorner.y <= 5 ||
+			newCorner.x >= currentImage_.cols - 5 ||
+			newCorner.y >= currentImage_.rows - 5)
+		{
+			patchIt->setLost();
+			++patchIt;
+			continue;
+		}
+
+		++patchIt;
 	}
 	return true;
 }
@@ -64,7 +76,6 @@ std::optional<cv::Point2f> FlowEstimator::getFlow(const cv::Point2f& curPoint)
 	std::vector<uint8_t> status;
 	std::vector<float> error;
 
-	// TODO what about using NN here to estimate flow
 	cv::calcOpticalFlowPyrLK(previousImage_, currentImage_, curPoints,
 							 nextPoints, status, error, params_.window,
 							 params_.numLevels);

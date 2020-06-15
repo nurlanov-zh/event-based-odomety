@@ -36,7 +36,6 @@ class Visualizer
 	bool stopPressed() const;
 	bool nextPressed() const;
 	bool nextIntervalPressed() const;
-	bool resetPressed() const;
 	bool nextImagePressed() const;
 
 	void setTimestamp(const common::timestamp_t& timestamp)
@@ -50,10 +49,13 @@ class Visualizer
 	void eventCallback(const common::EventSample& sample);
 	void imageCallback(const common::ImageSample& sample);
 
-	tracker::DetectorParams const& getTrackerParams() const
+	tracker::DetectorParams const& getTrackerParams()
 	{
+		trackerParamsChanged_ = false;
 		return trackerParams_;
 	}
+
+	bool isTrackerParamsChanged() const { return trackerParamsChanged_; }
 
    private:
 	void wait() const;
@@ -71,6 +73,7 @@ class Visualizer
 	void drawOriginalOverlay();
 	void drawPredictedNablaOverlay();
 	void drawIntegratedNablaOverlay();
+	void drawCostMapOverlay();
 	void drawTrajectory(const tracker::Patch& patch);
 
 	cv::Mat convertImageToGray(const cv::Mat& cvImage);
@@ -78,6 +81,8 @@ class Visualizer
 	void drawScene();
 
 	void reset();
+
+	void updateTrackerParams();
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
@@ -87,6 +92,7 @@ class Visualizer
 	bool nextPressed_;
 	bool nextIntervalPressed_;
 	bool nextImagePressed_;
+	bool trackerParamsChanged_;
 
 	std::unique_ptr<pangolin::Panel> settingsPanel_;
 	std::unique_ptr<pangolin::View> sceneView_;
@@ -97,10 +103,12 @@ class Visualizer
 	std::unique_ptr<pangolin::Var<bool>> nextIntervalStepButton_;
 	std::unique_ptr<pangolin::Var<int>> stepInterval_;
 	std::unique_ptr<pangolin::Var<bool>> nextImageButton_;
-	std::unique_ptr<pangolin::Var<bool>> resetButton_;
 	std::unique_ptr<pangolin::Var<bool>> showSettingsPanel_;
 	std::unique_ptr<pangolin::Var<int>> patchExtent_;
 	std::unique_ptr<pangolin::Var<double>> minDistance_;
+	std::unique_ptr<pangolin::Var<bool>> drawCostMap_;
+	std::unique_ptr<pangolin::Var<double>> optimizerThreshold_;
+	std::unique_ptr<pangolin::Var<double>> huberLoss_;
 
 	common::timestamp_t currentTimestamp_;
 	std::vector<std::shared_ptr<pangolin::ImageView>> imgView_;
@@ -109,10 +117,16 @@ class Visualizer
 	std::list<common::EventSample> integratedEvents_;
 
 	cv::Mat integratedNabla_;
+	cv::Mat costMap_;
 	cv::Mat predictedNabla_;
 	cv::Mat originalImage_;
+	cv::Rect2d newPatch_;
+	cv::Rect2d initPatch_;
+	tracker::TrackId track_id_;
 
 	tracker::DetectorParams trackerParams_;
+
+	float flow_;
 };
 
 }  // namespace tools

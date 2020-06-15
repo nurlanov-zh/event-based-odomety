@@ -6,9 +6,9 @@ std::string TEST_DATA_PATH = "test/test_data";
 
 TEST(Patch, addEventsTest)
 {
-	tracker::Patch patch({10, 10}, 5);
-	patch.setNumOfEvents(2);
-	for (size_t i = 0; i < 2; ++i)
+	tracker::Patch patch({10, 10}, 5, common::timestamp_t(0));
+	patch.setNumOfEvents(30);
+	for (size_t i = 0; i < 30; ++i)
 	{
 		common::EventSample event;
 		event.timestamp = common::timestamp_t(i);
@@ -23,9 +23,9 @@ TEST(Patch, addEventsTest)
 
 	const auto& events = patch.getEvents();
 
-	ASSERT_EQ(events.size(), 2);
+	ASSERT_EQ(events.size(), 30);
 	EXPECT_EQ(events.front().timestamp.count(), 0);
-	EXPECT_EQ(events.back().timestamp.count(), 1);
+	EXPECT_EQ(events.back().timestamp.count(), 29);
 
 	patch.resetBatch();
 
@@ -34,14 +34,14 @@ TEST(Patch, addEventsTest)
 
 TEST(Patch, integrateEventsTest)
 {
-	tracker::Patch patch({10, 10}, 2);
-	patch.setNumOfEvents(5);
+	tracker::Patch patch({10, 10}, 3, common::timestamp_t(0));
+	patch.setNumOfEvents(30);
 
-	for (int32_t i = 0; i < 5; ++i)
+	for (int32_t i = 0; i < 30; ++i)
 	{
 		common::EventSample event;
 		event.timestamp = common::timestamp_t(i);
-		event.value.point = {8 + i, 8 + i};
+		event.value.point = {7 + i / 7, 7 + i % 7};
 		event.value.sign = i % 2 == 0 ? common::EventPolarity::POSITIVE
 									  : common::EventPolarity::NEGATIVE;
 		patch.addEvent(event);
@@ -49,11 +49,11 @@ TEST(Patch, integrateEventsTest)
 
 	patch.integrateEvents();
 
-	const auto& flow = patch.getIntegratedNabla();
+	const auto& nabla = patch.getIntegratedNabla();
 
-	for (int32_t i = 0; i < 5; ++i)
+	for (int32_t i = 0; i < 30; ++i)
 	{
-		EXPECT_FLOAT_EQ(flow.at<double>(i, i),
+		EXPECT_FLOAT_EQ(nabla.at<double>(i % 7, i / 7),
 						i % 2 == 0 ? common::EventPolarity::POSITIVE
 								   : common::EventPolarity::NEGATIVE);
 	}
@@ -61,14 +61,13 @@ TEST(Patch, integrateEventsTest)
 
 TEST(Patch, warpImageTest)
 {
-	tracker::Patch patch({10, 10}, 5);
+	tracker::Patch patch({5, 5}, 5, common::timestamp_t(0));
 
 	cv::Mat gradX = cv::Mat::zeros(11, 11, CV_64F);
 	cv::Mat gradY = cv::Mat::zeros(11, 11, CV_64F);
 
 	cv::line(gradX, {5, 0}, {5, 10}, 1);
 	cv::line(gradY, {0, 5}, {10, 5}, 1);
-	patch.setGrad(gradX, gradY);
 
 	const float angle = M_PI / 4;
 	patch.setFlowDir(angle);
@@ -76,7 +75,7 @@ TEST(Patch, warpImageTest)
 	common::Pose2d warp = Sophus::SE2d::rot(M_PI / 4);
 	patch.setWarp(warp);
 
-	patch.warpImage();
+	patch.warpImage(gradX, gradY);
 
 	const auto image = patch.getPredictedNabla();
 
@@ -91,7 +90,7 @@ TEST(Patch, warpImageTest)
 		}
 	}
 
-#ifdef SAVE_IMAGE
+#ifdef SAVE_IMAGES
 	cv::Mat grayImage;
 
 	double minVal;

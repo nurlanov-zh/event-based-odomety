@@ -9,17 +9,13 @@ namespace tracker
 {
 using Corner = cv::Point2d;
 using Corners = std::vector<Corner>;
+using TrackId = int32_t;
 
 class Patch
 {
    public:
-	Patch();
-
-	Patch(const cv::Rect2i& rect);
-
-	Patch(const Corner& corner, int extent);
-
-	Patch(const Corner& corner, int extent, const size_t num_patches);
+	Patch(const Corner& corner, int extent,
+		  const common::timestamp_t& timestamp);
 
 	void init();
 
@@ -31,9 +27,9 @@ class Patch
 
 	void updateNumOfEvents();
 
-	void optimizePatchParams();
+	void addTrajectoryPosition();
 
-	void updatePatchRect(const common::Pose2d& warp);
+	void updatePatchRect();
 
 	Corner toCorner() const;
 
@@ -41,60 +37,34 @@ class Patch
 
 	bool isReady() const { return events_.size() >= numOfEvents_; }
 
-	void warpImage();
+	bool isLost() const { return lost_; }
 
-	void addTrajectoryPosition(const common::Point2d& pose,
-							   common::timestamp_t timestamp)
-	{
-		trajectory_.push_back({pose, timestamp});
-	}
+	void warpImage(const cv::Mat& gradX, const cv::Mat& gradY);
 
 	common::EventSequence const& getEvents() const;
-
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
-
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
-
-	cv::Rect2i const& getPatch() const { return patch_; }
-
-	size_t getTrackId() const { return trackId_; }
-
-	size_t getPatchId() const { return patchId_; }
-
-	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const
-	{
-		return trajectory_;
-	}
-
-	cv::Mat getNormalizedIntegratedNabla() const;
-
+	cv::Rect2d const& getPatch() const { return patch_; }
+	TrackId getTrackId() const { return trackId_; }
 	const common::Pose2d& getWarp() const { return warp_; }
+	float getFlow() const { return flowDir_; }
+	cv::Mat getNormalizedIntegratedNabla() const;
 	const cv::Mat& getCostMap() const { return costMap_; }
-
-	double getFlow() const { return flowDir_; }
-
-	void setNumOfEvents(size_t numOfEvents) { numOfEvents_ = numOfEvents; }
-
-	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
-	{
-		gradX_ = gradX;
-		gradY_ = gradY;
-	}
-
-	void setFlowDir(const double flowDir) { flowDir_ = flowDir; }
-
-	void setWarp(const common::Pose2d& warp) { warp_ = warp; }
-
-	void setTrackId(const size_t trackId) { trackId_ = trackId; }
+	bool isInit() { return init_; }
+	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
+	size_t getNumOfEvents() const { return numOfEvents_; }
+	cv::Rect2d getInitPatch() const;
+	common::timestamp_t getCurrentTimestamp() const;
+	std::chrono::duration<double> getTimeWithoutUpdate() const;
 
 	void setLost() { lost_ = true; }
-
-	void setIntegratedNabla(const cv::Mat& integratedNabla)
-	{
-		integratedNabla_ = integratedNabla;
-	}
-
+	void setNumOfEvents(size_t numOfEvents);
+	void setTrackId(TrackId trackId) { trackId_ = trackId; }
+	void setFlowDir(const double flowDir);
+	void setWarp(const common::Pose2d& warp);
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
+	void setIntegratedNabla(const cv::Mat& integratedNabla);
+	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -104,18 +74,21 @@ class Patch
 		const common::Point2i& pointInFrame) const;
 
    private:
+	bool init_;
+	bool lost_;
 	size_t patchId_;
-	size_t trackId_;
-	cv::Rect2i patch_;
+	cv::Rect2d patch_;
+	common::Point2d initPoint_;
+	TrackId trackId_;
+
+	common::timestamp_t currentTimestamp_;
+	std::chrono::duration<double> timeWithoutUpdate_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
-	size_t minNumOfEvents_ = 20;
+	size_t minNumOfEvents_ = 30;
+	size_t maxNumOfEvents_ = 500;
 
-	bool lost_;
-
-	cv::Mat gradX_;
-	cv::Mat gradY_;
 	cv::Mat integratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat costMap_;
@@ -125,6 +98,6 @@ class Patch
 	std::vector<common::Sample<common::Point2d>> trajectory_;
 };
 
-using Patches = std::vector<Patch>;
+using Patches = std::list<Patch>;
 
 }  // namespace tracker
