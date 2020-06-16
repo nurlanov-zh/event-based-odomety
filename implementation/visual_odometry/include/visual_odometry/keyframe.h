@@ -1,29 +1,24 @@
 #pragma once
 
 #include <common/data_types.h>
+#include <feature_tracker/patch.h>
 
 #include <vector>
 
 namespace visual_odometry
 {
-struct Landmark
-{
-	common::Point2d point2d;
-	common::Point3d point3d;
-};
-
-using Landmarks = std::unordered_map<size_t, Landmark>;
+using MapLandmarks = std::unordered_map<tracker::TrackId, Eigen::Vector3d>;
+using Landmarks = std::unordered_map<tracker::TrackId, Eigen::Vector2d>;
 
 class Keyframe
 {
    public:
-	Keyframe();
+	Keyframe(const tracker::Patches& patches,
+			 const common::timestamp_t& timestamp);
 
 	const Landmarks& getLandmarks() const { return landmarks_; }
 
-	std::vector<size_t> getSharedTracks(Keyframe& frame) const;
-
-	//const std::vector<Landmark>& getSharedLandmarks(Keyframe& frame) const;
+	std::vector<tracker::TrackId> getSharedTracks(const Keyframe& frame) const;
 
    public:
 	common::Pose3d pose;

@@ -2,8 +2,6 @@
 
 #include <visual_odometry/triangulation.h>
 
-#include <sophus/interpolate.hpp>
-
 namespace vo = visual_odometry;
 
 namespace tools
@@ -48,65 +46,9 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 
 	tracker_->newImage(sample);
 	corners_ = tracker_->getFeatures();
-	
-	imageTimestamps_.push_back(sample.timestamp);
 
-	/**********************************/
-	if (imageTimestamps_.size() < 2)
-	{
-		return;
-	}
-
-	const auto firstImagePose = syncGtAndImage(imageTimestamps_[0]);
-	const auto secondImagePose = syncGtAndImage(imageTimestamps_[1]);
-
-	if (!firstImagePose.has_value() || !secondImagePose.has_value())
-	{
-		return;
-	}
-
-	// const auto& sharedLandmarks = vo::getSharedLandmarks(imageTimestamps_[0],
-	// imageTimestamps_[1]);
-	vo::triangulateLandmarks(firstImagePose.value(), secondImagePose.value(),
-							 {}, {});
-
-	imageTimestamps_.erase(imageTimestamps_.begin());
-}
-
-std::optional<common::Pose3d> Evaluator::syncGtAndImage(
-	const common::timestamp_t& timestamp)
-{
-	auto lowerBoundIt =
-		std::lower_bound(groundTruthSamples_.begin(), groundTruthSamples_.end(),
-						 common::GroundTruthSample({}, timestamp),
-						 [](const common::GroundTruthSample& a,
-							const common::GroundTruthSample& b) {
-							 return a.timestamp < b.timestamp;
-						 });
-	if (lowerBoundIt == groundTruthSamples_.end())
-	{
-		return {};
-	}
-	const auto prevPose = lowerBoundIt->value;
-
-	auto nextIt = (++lowerBoundIt);
-	if (nextIt == groundTruthSamples_.end())
-	{
-		return {};
-	}
-	const auto nextPose = nextIt->value;
-
-	const auto interploatedPose = Sophus::interpolate(
-		prevPose, nextPose,
-		static_cast<float>((timestamp - lowerBoundIt->timestamp).count()) /
-			(nextIt->timestamp - lowerBoundIt->timestamp).count());
-
-	// auto itErase = groundTruthSamples_.begin();
-	// while (nextIt != itErase)
-	// {
-	// 	itErase = groundTruthSamples_.erase(itErase);
-	// }
-	return std::make_optional(interploatedPose);
+	visualOdometry_->newKeyframeCandidate(
+		visual_odometry::Keyframe(tracker_->getPatches(), sample.timestamp));
 }
 
 void Evaluator::reset()
@@ -119,6 +61,8 @@ void Evaluator::reset()
 	params.drawImages = params_.drawImages;
 	params.imageSize = params_.imageSize;
 	tracker_.reset(new tracker::FeatureDetector(params));
+	visualOdometry_.reset(
+		new visual_odometry::VisualOdometryFrontEnd(params_.cameraModelParams));
 	imageNum_ = 0;
 
 	consoleLog_->info("Evaluator is reset");
@@ -150,5 +94,26 @@ void Evaluator::saveTrajectory(const tracker::Patches& patches)
 	}
 	trajFile.close();
 	consoleLog_->info("Saved!");
+}
+
+void Evaluator::setGroundTruthSamples(
+	const common::GroundTruth& groundTruthSamples)
+{
+	visualOdometry_->setGroundTruthSamples(groundTruthSamples);
+}
+
+visual_odometry::MapLandmarks const& Evaluator::getMapLandmarks()
+{
+	return visualOdometry_->getMapLandmarks();
+}
+
+std::list<visual_odometry::Keyframe> const& Evaluator::getActiveFrames() const
+{
+	return visualOdometry_->getActiveFrames();
+}
+
+std::list<visual_odometry::Keyframe> const& Evaluator::getStoredFrames() const
+{
+	return visualOdometry_->getStoredFrames();
 }
 }  // namespace tools

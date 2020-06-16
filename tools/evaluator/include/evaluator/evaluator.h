@@ -2,6 +2,7 @@
 
 #include <common/data_types.h>
 #include <feature_tracker/feature_detector.h>
+#include <visual_odometry/visual_odometry.h>
 
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -14,8 +15,9 @@ struct EvaluatorParams
 {
 	cv::Size2i imageSize = {240, 180};
 	std::string outputDir = "/tmp";
+	common::CameraModelParams cameraModelParams = {};
 	bool drawImages = false;
-	bool experiment = true;
+	bool experiment = false;
 };
 
 class Evaluator
@@ -33,31 +35,25 @@ class Evaluator
 
 	void reset();
 
-	tracker::Patches const& getPatches() const;
-
 	void setTrackerParams(const tracker::DetectorParams& params);
 
 	void saveTrajectory(const tracker::Patches& patches);
-	
-	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples)
-	{
-		groundTruthSamples_ = groundTruthSamples;
-	}
 
-   private:
-	std::optional<common::Pose3d> syncGtAndImage(
-		const common::timestamp_t& timestamp);
+	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
+
+	tracker::Patches const& getPatches() const;
+	visual_odometry::MapLandmarks const& getMapLandmarks();
+	std::list<visual_odometry::Keyframe> const& getActiveFrames() const;
+	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
 
-	std::vector<common::GroundTruthSample> groundTruthSamples_;
-	std::deque<common::timestamp_t> imageTimestamps_;
-
 	EvaluatorParams params_;
 
 	std::unique_ptr<tracker::FeatureDetector> tracker_;
+	std::unique_ptr<visual_odometry::VisualOdometryFrontEnd> visualOdometry_;
 
 	tracker::Corners corners_;
 

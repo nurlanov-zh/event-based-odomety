@@ -2,11 +2,21 @@
 
 namespace visual_odometry
 {
-Keyframe::Keyframe() {}
-
-std::vector<size_t> Keyframe::getSharedTracks(Keyframe& frame) const
+Keyframe::Keyframe(const tracker::Patches& patches,
+				   const common::timestamp_t& timestamp)
+	: timestamp(timestamp)
 {
-	std::vector<size_t> tracks;
+	for (const auto& patch : patches)
+	{
+		const auto corner = patch.toCorner();
+		landmarks_[patch.getTrackId()] = Eigen::Vector2d(corner.x, corner.y);
+	}
+}
+
+std::vector<tracker::TrackId> Keyframe::getSharedTracks(
+	const Keyframe& frame) const
+{
+	std::vector<tracker::TrackId> tracks;
 	const auto& frameLandmarks = frame.getLandmarks();
 	for (auto it = landmarks_.begin(); it != landmarks_.end(); ++it)
 	{

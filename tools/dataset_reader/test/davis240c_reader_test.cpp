@@ -104,3 +104,19 @@ TEST(Davis240cReader, groundTruthTest)
 		EXPECT_EQ(groundTruth[i].timestamp.count(), timestamps[i].count());
 	}
 }
+
+TEST(Davis240cReader, calibrationTest)
+{
+	tools::Davis240cReader reader(TEST_DATA_PATH);
+	const auto calibration = reader.getCalibration();
+
+	EXPECT_FLOAT_EQ(calibration.fx, 501);
+	EXPECT_FLOAT_EQ(calibration.fy, 499);
+	EXPECT_FLOAT_EQ(calibration.cx, 249);
+	EXPECT_FLOAT_EQ(calibration.cy, 251);
+	EXPECT_FLOAT_EQ(calibration.k1, 0.11);
+	EXPECT_FLOAT_EQ(calibration.k2, 0.011);
+	EXPECT_FLOAT_EQ(calibration.k3, 0.0011);
+	EXPECT_FLOAT_EQ(calibration.p1, 0.123);
+	EXPECT_FLOAT_EQ(calibration.p2, 0.321);
+}

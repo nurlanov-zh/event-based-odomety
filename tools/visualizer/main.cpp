@@ -51,6 +51,7 @@ int main(int argc, char** argv)
 	tools::Replayer replayer(reader);
 
 	tools::EvaluatorParams param;
+	param.cameraModelParams = reader->getCalibration();
 	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
 
@@ -104,6 +105,9 @@ int main(int argc, char** argv)
 			{
 				visualizer.setPatches(evaluator.getPatches());
 				visualizer.setTimestamp(timestamp);
+				visualizer.setActiveFrames(evaluator.getActiveFrames());
+				visualizer.setStoredFrames(evaluator.getStoredFrames());
+				visualizer.setLandmarks(evaluator.getMapLandmarks());
 				visualizer.step();
 
 				if (visualizer.isTrackerParamsChanged())

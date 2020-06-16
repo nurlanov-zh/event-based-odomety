@@ -1,6 +1,7 @@
 #pragma once
 
-#include "common/data_types.h"
+#include <common/data_types.h>
+#include <common/camera_model.h>
 #include "dataset_reader/mapped_file.h"
 
 #include <spdlog/sinks/stdout_sinks.h>
@@ -22,6 +23,8 @@ class DatasetReader
 	virtual common::ImageSequence getImages() const = 0;
 
 	virtual common::GroundTruth getGroundTruth() const = 0;
+
+	virtual common::CameraModelParams getCalibration() const = 0;
 
    protected:
 	template <typename T, typename D>

@@ -4,7 +4,6 @@
 
 namespace visual_odometry
 {
-// void findCommonTrajectories
 std::vector<Eigen::Vector3d> triangulateLandmarks(
 	const common::Pose3d& cam1Pose, const common::Pose3d& cam2Pose,
 	const opengv::bearingVectors_t& bearingVectors1,
@@ -27,12 +26,6 @@ std::vector<Eigen::Vector3d> triangulateLandmarks(
 			cam1Pose * opengv::triangulation::triangulate2(adapter, i);
 	}
 	return triangulatedLandmarks;
-}
-
-std::vector<common::Point2d, common::Point2d> getSharedLandmarks(
-	const common::timestamp_t& time1, const common::timestamp_t& time2)
-{
-	// keyframes_[time1]
 }
 
 }  // namespace visual_odometry
