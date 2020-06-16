@@ -29,16 +29,20 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		return false;
 	}
 
-	for (auto patchIt = patches.begin(); patchIt != patches.end();)
+	for (auto& patch : patches)
 	{
-		const auto& corner = patchIt->toCorner();
+		if (patch.isInit())
+		{
+			continue;
+		}
+
+		const auto& corner = patch.toCorner();
 
 		const auto nextPoint = getFlow(corner);
 
 		if (!nextPoint.has_value())
 		{
-			patchIt->setLost();
-			++patchIt;
+			patch.setLost();
 			continue;
 		}
 
@@ -49,22 +53,19 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 
 		common::Pose2d warp;
 		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
-		patchIt->setWarp(warp);
-		patchIt->setFlowDir(flowDir);
+		patch.setWarp(warp);
+		patch.setFlowDir(flowDir);
 
-		const auto newCorner = patchIt->toCorner();
+		const auto newCorner = patch.toCorner();
 
 		// check if patch is lost
 		if (newCorner.x <= 5 || newCorner.y <= 5 ||
 			newCorner.x >= currentImage_.cols - 5 ||
 			newCorner.y >= currentImage_.rows - 5)
 		{
-			patchIt->setLost();
-			++patchIt;
+			patch.setLost();
 			continue;
 		}
-
-		++patchIt;
 	}
 	return true;
 }

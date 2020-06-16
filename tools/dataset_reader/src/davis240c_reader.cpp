@@ -41,15 +41,15 @@ CameraModelParams Davis240cReader::getCalibrationLine(std::string& line) const
 	line = line.substr(pos + 1);
 
 	pos = line.find(' ');
-	params.k3 = std::stod(line.substr(0, pos));
-	line = line.substr(pos + 1);
-
-	pos = line.find(' ');
 	params.p1 = std::stod(line.substr(0, pos));
 	line = line.substr(pos + 1);
 
 	pos = line.find(' ');
 	params.p2 = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.k3 = std::stod(line.substr(0, pos));
 
 	return params;
 }

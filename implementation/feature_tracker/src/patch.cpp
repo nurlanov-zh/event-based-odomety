@@ -183,13 +183,13 @@ void Patch::addTrajectoryPosition()
 void Patch::setCorner(const Corner& corner,
 					  const common::timestamp_t& timestamp)
 {
-	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2,
-						corner.y - (patch_.height - 1) / 2, patch_.width,
-						patch_.height);
-	initPoint_ = toCorner();
+	// patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2,
+	// 					corner.y - (patch_.height - 1) / 2, patch_.width,
+	// 					patch_.height);
+	// initPoint_ = toCorner();
 	init_ = false;
 	currentTimestamp_ = timestamp;
-	addTrajectoryPosition();
+	// addTrajectoryPosition();
 	resetBatch();
 }
 

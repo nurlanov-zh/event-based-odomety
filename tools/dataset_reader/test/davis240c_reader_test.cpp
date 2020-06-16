@@ -116,7 +116,7 @@ TEST(Davis240cReader, calibrationTest)
 	EXPECT_FLOAT_EQ(calibration.cy, 251);
 	EXPECT_FLOAT_EQ(calibration.k1, 0.11);
 	EXPECT_FLOAT_EQ(calibration.k2, 0.011);
-	EXPECT_FLOAT_EQ(calibration.k3, 0.0011);
-	EXPECT_FLOAT_EQ(calibration.p1, 0.123);
-	EXPECT_FLOAT_EQ(calibration.p2, 0.321);
+	EXPECT_FLOAT_EQ(calibration.k3, 0.321);
+	EXPECT_FLOAT_EQ(calibration.p1, 0.0011);
+	EXPECT_FLOAT_EQ(calibration.p2, 0.123);
 }

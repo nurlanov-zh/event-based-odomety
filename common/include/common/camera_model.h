@@ -7,16 +7,16 @@ namespace common
 {
 struct CameraModelParams
 {
-	double fx;
-	double fy;
-	double cx;
-	double cy;
-	double k1;
-	double k2;
-	double k3;
-	double k4;
-	double p1;
-	double p2;
+	double fx = 0;
+	double fy = 0;
+	double cx = 0;
+	double cy = 0;
+	double k1 = 0;
+	double k2 = 0;
+	double k3 = 0;
+	double k4 = 0;
+	double p1 = 0;
+	double p2 = 0;
 };
 
 // KannalaBrandt4Camera
