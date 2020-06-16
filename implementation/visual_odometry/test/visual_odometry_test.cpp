@@ -22,6 +22,7 @@ TEST(VisualOdometryTest, syncGtAndImageTest)
 	const auto syncPoseEvaluator = [&visualOdometry](int value,
 												bool hasValue) -> void {
 		const auto pose = visualOdometry.syncGtAndImage(common::timestamp_t(value));
+        std::cout << value << std::endl;
 		ASSERT_EQ(pose.has_value(), hasValue);
 		if (!hasValue)
 		{

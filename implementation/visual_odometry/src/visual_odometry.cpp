@@ -18,13 +18,6 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 
 void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 {
-	activeFrames_.push_back(keyframe);
-
-	if (activeFrames_.size() > 5)
-	{
-		storedFrames_.push_back(activeFrames_.front());
-		activeFrames_.pop_front();
-	}
 
 	for (auto& frame : activeFrames_)
 	{
@@ -37,6 +30,11 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 		}
 
 		frame.pose = firstImagePose.value();
+
+        if ((firstImagePose.value().translation() - secondImagePose.value().translation()).norm() < 0.1)
+        {
+            continue;
+        }
 
 		opengv::bearingVectors_t bearingVectors1;
 		opengv::bearingVectors_t bearingVectors2;
@@ -55,9 +53,18 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 				!common::isnan(landmarks[i].y()) &&
 				!common::isnan(landmarks[i].z()))
 			{
-				mapLandmarks_[trackIds[i]] = landmarks[i];
+				mapLandmarks_[trackIds[i]] =
+					landmarks[i];
 			}
 		}
+	}
+
+	activeFrames_.push_back(keyframe);
+
+	if (activeFrames_.size() > 10)
+	{
+		storedFrames_.push_back(activeFrames_.front());
+		activeFrames_.pop_front();
 	}
 
 	consoleLog_->info("Map consist of " + std::to_string(mapLandmarks_.size()) +
@@ -101,12 +108,21 @@ std::optional<common::Pose3d> VisualOdometryFrontEnd::syncGtAndImage(
 							const common::GroundTruthSample& b) {
 							 return a.timestamp < b.timestamp;
 						 });
-	if (lowerBoundIt == groundTruthSamples_.end() ||
-		lowerBoundIt == groundTruthSamples_.begin())
+	if (lowerBoundIt == groundTruthSamples_.end())
 	{
 		return {};
 	}
 	const auto nextPose = *lowerBoundIt;
+
+	if (lowerBoundIt->timestamp == timestamp)
+	{
+		return std::make_optional(lowerBoundIt->value);
+	}
+
+    if (lowerBoundIt == groundTruthSamples_.begin())
+	{
+		return {};
+	}
 
 	--lowerBoundIt;
 	if (lowerBoundIt == groundTruthSamples_.end())
@@ -114,11 +130,6 @@ std::optional<common::Pose3d> VisualOdometryFrontEnd::syncGtAndImage(
 		return {};
 	}
 	const auto prevPose = *lowerBoundIt;
-
-	if (prevPose.timestamp == nextPose.timestamp)
-	{
-		return std::make_optional(prevPose.value);
-	}
 
 	const auto interploatedPose = Sophus::interpolate(
 		prevPose.value, nextPose.value,
