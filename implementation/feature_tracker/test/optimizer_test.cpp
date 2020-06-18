@@ -100,7 +100,7 @@ TEST(Optimizer, optimizerSimpleTest)
 
 		// Center of the patch is important! Because the warping is done around
 		// it.
-		tracker::Patch patch({17, 17}, 17);
+		tracker::Patch patch({17, 17}, 17, common::timestamp_t(0));
 		patch.setWarp(warpInit);
 		patch.setFlowDir(flowDir);
 

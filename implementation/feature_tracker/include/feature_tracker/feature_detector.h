@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/data_types.h>
+#include "feature_tracker/flow_estimator.h"
 #include "feature_tracker/optimizer.h"
 #include "feature_tracker/patch.h"
 
@@ -15,12 +16,18 @@ struct DetectorParams
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
 	bool drawImages = false;
+	OptimizerParams optimizerParams = {};
+	int initNumEvents = 75;
 };
 
 class FeatureDetector
 {
    public:
 	FeatureDetector(const DetectorParams& params);
+
+	void preExit();
+
+	void newImage(const common::ImageSample& image);
 
 	void extractPatches(const common::ImageSample& image);
 
@@ -40,6 +47,7 @@ class FeatureDetector
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }
 	Corners const& getFeatures() const { return corners_; }
+	Patches const& getArchivedPatches() const { return archivedPatches_; }
 
    private:
 	cv::Mat getLogImage(const cv::Mat& image);
@@ -52,6 +60,7 @@ class FeatureDetector
 	cv::Mat gradY_;
 
 	std::unique_ptr<Optimizer> optimizer_;
+	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
 
 	DetectorParams params_;
 	size_t maxCorners_;
@@ -59,6 +68,7 @@ class FeatureDetector
 	Patches patches_;
 	Corners corners_;
 	size_t nextTrackId_;
+	Patches archivedPatches_;
 
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;

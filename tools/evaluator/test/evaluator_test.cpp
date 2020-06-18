@@ -24,15 +24,18 @@ TEST(EvaluatorTest, saveTrajectoryTest)
 
 	for (size_t i = 0; i < 2; ++i)
 	{
-		tracker::Patch patch({0, 0}, 10);
+		tracker::Patch patch({0, 0}, 10, common::timestamp_t(0));
 		patch.setTrackId(i);
+		trajectories.push_back(std::make_pair(
+			patch.getTrackId(),
+			common::Sample<common::Point2d>({0, 0}, common::timestamp_t(0))));
 
 		for (size_t j = 0; j < 30; ++j)
 		{
 			common::Sample<common::Point2d> sample;
 			sample.value = cv::Point2d(j, j);
 			sample.timestamp = common::timestamp_t(j);
-			patch.addTrajectoryPosition(sample.value, sample.timestamp);
+			patch.setCorner(sample.value, sample.timestamp);
 			trajectories.push_back(std::make_pair(patch.getTrackId(), sample));
 		}
 		patches.push_back(patch);

@@ -37,14 +37,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 
 		if (!nextPoint.has_value())
 		{
-			patchIt = patches.erase(patchIt);
-			continue;
-		}
-
-		// check if patch is lost
-		if (!patchIt->isInPatch(nextPoint.value()) || patchIt->isLost())
-		{
-			patchIt = patches.erase(patchIt);
+			patchIt->setLost();
+			++patchIt;
 			continue;
 		}
 
@@ -53,11 +47,22 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		const auto dirY = nextPoint.value().y - corner.y;
 		const auto flowDir = std::atan2(dirY, dirX);
 
+		common::Pose2d warp;
+		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
+		patchIt->setWarp(warp);
 		patchIt->setFlowDir(flowDir);
 
-		common::Pose2d warp;
-		warp.translation() = Eigen::Vector2d(dirX, dirY);
-		patchIt->setWarp(warp);
+		const auto newCorner = patchIt->toCorner();
+
+		// check if patch is lost
+		if (newCorner.x <= 5 || newCorner.y <= 5 ||
+			newCorner.x >= currentImage_.cols - 5 ||
+			newCorner.y >= currentImage_.rows - 5)
+		{
+			patchIt->setLost();
+			++patchIt;
+			continue;
+		}
 
 		++patchIt;
 	}

@@ -1,5 +1,7 @@
 #include "feature_tracker/feature_detector.h"
 
+#include <opencv2/core/eigen.hpp>
+
 namespace tracker
 {
 FeatureDetector::FeatureDetector(const DetectorParams& params) : params_(params)
@@ -11,8 +13,11 @@ FeatureDetector::FeatureDetector(const DetectorParams& params) : params_(params)
 void FeatureDetector::init()
 {
 	OptimizerParams params;
-	params.drawCostMap = params_.drawImages;
+	params = params_.optimizerParams;
 	optimizer_.reset(new Optimizer(params, params_.imageSize));
+
+	flowEstimator_.reset(
+		new tracker::FlowEstimator(tracker::FlowEstimatorParams()));
 
 	nextTrackId_ = 0;
 
@@ -34,26 +39,25 @@ void FeatureDetector::reset()
 				  cvScalar(1), CV_FILLED);
 }
 
-void FeatureDetector::extractPatches(const common::ImageSample& image)
+void FeatureDetector::preExit()
 {
-	corners_ = detectFeatures(image.value);
-
-	Patches newPatches;
-	for (const auto& corner : corners_)
+	for (auto patchIt = patches_.begin(); patchIt != patches_.end();)
 	{
-		auto patch = Patch(corner, params_.patchExtent);
-		patch.addTrajectoryPosition(corner, image.timestamp);
-		newPatches.emplace_back(patch);
+		archivedPatches_.push_back(*patchIt);
+		++patchIt;
 	}
+}
 
-	// patches_ = newPatches;
-	associatePatches(newPatches, image.timestamp);
+void FeatureDetector::newImage(const common::ImageSample& image)
+{
+	extractPatches(image);
 
-	const auto& logImage = getLogImage(image.value);
-
-	gradX_ = getGradients(logImage, true);
-	gradY_ = getGradients(logImage, false);
-	optimizer_->setGrad(gradX_, gradY_);
+	flowEstimator_->addImage(image.value);
+	flowEstimator_->getFlowPatches(patches_);
+	for (auto& patch : patches_)
+	{
+		updateNumOfEvents(patch);
+	}
 
 	if (params_.drawImages)
 	{
@@ -62,6 +66,38 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 			patch.warpImage(gradX_, gradY_);
 		}
 	}
+
+	for (auto patchIt = patches_.begin(); patchIt != patches_.end();)
+	{
+		if (patchIt->isLost())
+		{
+			archivedPatches_.push_back(*patchIt);
+			patchIt = patches_.erase(patchIt);
+			continue;
+		}
+		++patchIt;
+	}
+	consoleLog_->info("Extracted " + std::to_string(patches_.size()) +
+					  " patches.");
+}
+
+void FeatureDetector::extractPatches(const common::ImageSample& image)
+{
+	corners_ = detectFeatures(image.value);
+	Patches newPatches;
+	for (const auto& corner : corners_)
+	{
+		auto patch = Patch(corner, params_.patchExtent, image.timestamp);
+		newPatches.emplace_back(patch);
+	}
+
+	const auto& logImage = getLogImage(image.value);
+
+	gradX_ = getGradients(logImage, true);
+	gradY_ = getGradients(logImage, false);
+	optimizer_->setGrad(gradX_, gradY_);
+
+	associatePatches(newPatches, image.timestamp);
 }
 
 Corners FeatureDetector::detectFeatures(const cv::Mat& image)
@@ -90,14 +126,21 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 			patch.addEvent(event);
 		}
 
+		if (event.timestamp - patch.getCurrentTimestamp() >
+			patch.getTimeWithoutUpdate())
+		{
+			patch.setLost();
+		}
+
 		if (patch.isReady() && patch.isInit() && !patch.isLost())
 		{
-			patch.integrateEvents();
 			optimizer_->optimize(patch);
 			updateNumOfEvents(patch);
-			patch.warpImage(gradX_, gradY_);
-			patch.resetBatch();
-			patch.addTrajectoryPosition(patch.toCorner(), event.timestamp);
+
+			if (params_.drawImages)
+			{
+				patch.warpImage(gradX_, gradY_);
+			}
 		}
 	}
 }
@@ -117,9 +160,7 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 			{
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
-				patch.setCorner(newPatch.toCorner());
-				patch.warpImage(gradX_, gradY_);
-				patch.addTrajectoryPosition(patch.toCorner(), timestamp);
+				patch.setCorner(newPatch.toCorner(), timestamp);
 				break;
 			}
 		}
@@ -139,18 +180,45 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 void FeatureDetector::updateNumOfEvents(Patch& patch)
 {
 	const auto rect = patch.getPatch();
-	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
-		rect.y + rect.height >= gradX_.rows)
+	const auto center = (rect.tl() + rect.br()) * 0.5;
+	if (center.x <= 5 || center.y <= 5 || center.x >= gradX_.cols - 5 ||
+		center.y >= gradX_.rows - 5)
 	{
+		consoleLog_->debug("Lost patch number " +
+						   std::to_string(patch.getTrackId()));
+		patch.setLost();
 		return;
 	}
 
-	const auto gradX = gradX_(rect);
-	const auto gradY = gradY_(rect);
+	if (rect.x < 0 || rect.y < 0 || rect.x + rect.width >= gradX_.cols ||
+		rect.y + rect.height >= gradX_.rows)
+	{
+		patch.setNumOfEvents(params_.initNumEvents);
+		consoleLog_->debug(std::to_string(patch.getNumOfEvents()) +
+						   " events are required for patch in track " +
+						   std::to_string(patch.getTrackId()));
+		return;
+	}
+
+	cv::Mat warpedGradX;
+	cv::Mat warpedGradY;
+
+	cv::Mat warpCv;
+	cv::eigen2cv(patch.getWarp().matrix2x3(), warpCv);
+
+	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows},
+				   cv::WARP_INVERSE_MAP);
+	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows},
+				   cv::WARP_INVERSE_MAP);
+
+	const auto gradX = warpedGradX(rect);
+	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	size_t sumPatch =
 		cv::norm(gradX * std::cos(flow) + gradY * std::sin(flow), cv::NORM_L1);
+
 	patch.setNumOfEvents(sumPatch);
+
 	consoleLog_->debug(std::to_string(patch.getNumOfEvents()) +
 					   " events are required for patch in track " +
 					   std::to_string(patch.getTrackId()));
@@ -172,13 +240,14 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 	assert(image.type() == CV_64F);
 
 	cv::Mat grad;
-	cv::Sobel(image, grad, CV_64F, xDir, !xDir, 3);
+	cv::Sobel(image / 8, grad, CV_64F, xDir, !xDir, 3);
 	return grad;
 }
 
 void FeatureDetector::setParams(const tracker::DetectorParams& params)
 {
 	params_ = params;
+	optimizer_->setParams(params_.optimizerParams);
 	reset();
 }
 

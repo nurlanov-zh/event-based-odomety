@@ -14,13 +14,8 @@ using TrackId = int32_t;
 class Patch
 {
    public:
-	Patch();
-
-	Patch(const cv::Rect2i& rect);
-
-	Patch(const Corner& corner, int extent);
-
-	Patch(const Corner& corner, int extent, const size_t num_patches);
+	Patch(const Corner& corner, int extent,
+		  const common::timestamp_t& timestamp);
 
 	void init();
 
@@ -32,7 +27,9 @@ class Patch
 
 	void updateNumOfEvents();
 
-	void updatePatchRect(const common::Pose2d& warp);
+	void addTrajectoryPosition();
+
+	void updatePatchRect();
 
 	Corner toCorner() const;
 
@@ -44,16 +41,10 @@ class Patch
 
 	void warpImage(const cv::Mat& gradX, const cv::Mat& gradY);
 
-	void addTrajectoryPosition(const common::Point2d& pose,
-							   common::timestamp_t timestamp)
-	{
-		trajectory_.push_back({pose, timestamp});
-	}
-
 	common::EventSequence const& getEvents() const;
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
 	cv::Mat const& getPredictedNabla() const { return predictedNabla_; }
-	cv::Rect2i const& getPatch() const { return patch_; }
+	cv::Rect2d const& getPatch() const { return patch_; }
 	TrackId getTrackId() const { return trackId_; }
 	const common::Pose2d& getWarp() const { return warp_; }
 	float getFlow() const { return flowDir_; }
@@ -62,7 +53,9 @@ class Patch
 	bool isInit() { return init_; }
 	std::vector<common::Sample<common::Point2d>> const& getTrajectory() const;
 	size_t getNumOfEvents() const { return numOfEvents_; }
-	cv::Rect2i getInitPatch() const;
+	cv::Rect2d getInitPatch() const;
+	common::timestamp_t getCurrentTimestamp() const;
+	std::chrono::duration<double> getTimeWithoutUpdate() const;
 
 	void setLost() { lost_ = true; }
 	void setNumOfEvents(size_t numOfEvents);
@@ -71,7 +64,7 @@ class Patch
 	void setWarp(const common::Pose2d& warp);
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla);
-	void setCorner(const Corner& corner);
+	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -84,13 +77,16 @@ class Patch
 	bool init_;
 	bool lost_;
 	size_t patchId_;
-	cv::Rect2i patch_;
+	cv::Rect2d patch_;
 	common::Point2d initPoint_;
 	TrackId trackId_;
 
+	common::timestamp_t currentTimestamp_;
+	std::chrono::duration<double> timeWithoutUpdate_;
+
 	common::EventSequence events_;
 	size_t numOfEvents_;
-	size_t minNumOfEvents_ = 5;
+	size_t minNumOfEvents_ = 30;
 	size_t maxNumOfEvents_ = 500;
 
 	cv::Mat integratedNabla_;
