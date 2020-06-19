@@ -50,7 +50,7 @@ void Visualizer::createWindow()
 	sceneView_.reset(new pangolin::View());
 	camera_.reset(new pangolin::OpenGlRenderState(
 		pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
-		pangolin::ModelViewLookAt(-3.4, -3.7, -8.3, 2.1, 0.6, 0.2,
+		pangolin::ModelViewLookAt(0, 0, 0, 2.1, 0.6, 0.2,
 								  pangolin::AxisNegY)));
 
 	sceneView_->SetHandler(new pangolin::Handler3D(*(camera_.get())));
@@ -243,8 +243,31 @@ void Visualizer::drawScene()
 {
 	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
 	sceneView_->Activate(*(camera_.get()));
-	const u_int8_t colorCameraLeft[3]{0, 125, 0};
-	renderCamera(Eigen::Matrix4d::Identity(), 3.f, colorCameraLeft, 0.1f);
+	const u_int8_t colorCameraActive[3]{255, 0, 0};
+	//const u_int8_t colorCameraStored[3]{0, 0, 255};
+	const u_int8_t colorOldPoints[3]{0, 0, 0};
+
+	for (const auto& camera : activeFrames_)
+	{
+		renderCamera(camera.pose.matrix(), 3.f, colorCameraActive, 0.1f);
+	}
+
+	// for (const auto& camera : storedFrames_)
+	// {
+	// 	renderCamera(storedFrames_[i].pose.matrix(), 3.f, colorCameraStored,
+	// 				 0.1f);
+	// }
+
+	glPointSize(3.0);
+	glBegin(GL_POINTS);
+
+	for (const auto& trackLandmark : landmarks_)
+	{
+		glColor3ubv(colorOldPoints);
+		pangolin::glVertex(trackLandmark.second);
+	}
+	
+	glEnd();
 }
 
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
@@ -475,6 +498,23 @@ void Visualizer::updateTrackerParams()
 		trackerParams_.optimizerParams.huberLoss = huberLoss;
 		trackerParamsChanged_ = true;
 	}
+}
+
+void Visualizer::setLandmarks(const visual_odometry::MapLandmarks& landmarks)
+{
+	landmarks_ = landmarks;
+}
+
+void Visualizer::setActiveFrames(
+	const std::list<visual_odometry::Keyframe>& frames)
+{
+	activeFrames_ = frames;
+}
+
+void Visualizer::setStoredFrames(
+	const std::list<visual_odometry::Keyframe>& frames)
+{
+	storedFrames_ = frames;
 }
 
 }  // namespace tools

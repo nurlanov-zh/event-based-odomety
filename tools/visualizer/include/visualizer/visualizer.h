@@ -1,5 +1,6 @@
 #pragma once
 #include <common/data_types.h>
+#include <visual_odometry/visual_odometry.h>
 #include <feature_tracker/feature_detector.h>
 
 #include <pangolin/display/image_view.h>
@@ -57,6 +58,10 @@ class Visualizer
 
 	bool isTrackerParamsChanged() const { return trackerParamsChanged_; }
 
+	void setLandmarks(const visual_odometry::MapLandmarks&);
+	void setActiveFrames(const std::list<visual_odometry::Keyframe>&);
+	void setStoredFrames(const std::list<visual_odometry::Keyframe>&);
+
    private:
 	void wait() const;
 
@@ -109,6 +114,10 @@ class Visualizer
 	std::unique_ptr<pangolin::Var<bool>> drawCostMap_;
 	std::unique_ptr<pangolin::Var<double>> optimizerThreshold_;
 	std::unique_ptr<pangolin::Var<double>> huberLoss_;
+
+	std::list<visual_odometry::Keyframe> storedFrames_;
+	std::list<visual_odometry::Keyframe> activeFrames_;
+	visual_odometry::MapLandmarks landmarks_;
 
 	common::timestamp_t currentTimestamp_;
 	std::vector<std::shared_ptr<pangolin::ImageView>> imgView_;

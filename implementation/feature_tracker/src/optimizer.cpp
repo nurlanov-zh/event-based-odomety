@@ -141,6 +141,7 @@ void Optimizer::optimize(Patch& patch)
 	patch.setWarp(warp);
 	patch.updatePatchRect();
 	patch.addTrajectoryPosition();
+	patch.resetBatch();
 
 	consoleLog_->debug("New center: (" +
 					   std::to_string(int(patch.toCorner().x)) + ", " +
@@ -161,7 +162,5 @@ void Optimizer::optimize(Patch& patch)
 					.count()) +
 			"[ms]");
 	}
-
-	patch.resetBatch();
 }
 }  // namespace tracker
