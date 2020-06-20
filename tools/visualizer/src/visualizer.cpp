@@ -106,8 +106,8 @@ void Visualizer::drawCostMap(const cv::Mat& cvImage)
 	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
 	//
 	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
-	//0, 								GL_RGB, GL_UNSIGNED_BYTE); 	texture.Upload(imColor.data, GL_BGR,
-	//GL_UNSIGNED_BYTE);
+	// 0, 								GL_RGB, GL_UNSIGNED_BYTE);
+	// texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
 	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
 
 	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);

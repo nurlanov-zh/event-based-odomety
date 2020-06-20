@@ -46,6 +46,9 @@ class Evaluator
 	std::list<visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
 
+	void saveFinalCosts(
+		const std::vector<tracker::OptimizerFinalLoss>& vectorFinalCosts);
+
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;

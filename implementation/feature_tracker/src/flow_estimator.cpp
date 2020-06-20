@@ -53,8 +53,13 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 
 		common::Pose2d warp;
 		warp.translation() = Eigen::Vector2d(-dirX, -dirY);
+
 		patch.setWarp(warp);
 		patch.setFlowDir(flowDir);
+
+		cv::Point2d flow(dirX, dirY);
+		patch.setTimeWithoutUpdate(common::timestamp_t(static_cast<int64_t>(
+			params_.patchTimeWithoutUpdateScale / fmax(1e-1, cv::norm(flow)))));
 
 		const auto newCorner = patch.toCorner();
 
