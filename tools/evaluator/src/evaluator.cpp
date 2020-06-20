@@ -33,8 +33,6 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	consoleLog_->info("New image at timestamp " +
-					  std::to_string(sample.timestamp.count()));
 	imageNum_++;
 	if (params_.experiment)
 	{
@@ -43,6 +41,9 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 			return;
 		}
 	}
+
+	consoleLog_->info("New image at timestamp " +
+					  std::to_string(sample.timestamp.count()));
 
 	tracker_->newImage(sample);
 	corners_ = tracker_->getFeatures();

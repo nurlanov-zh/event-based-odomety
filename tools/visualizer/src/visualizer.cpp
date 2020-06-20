@@ -50,8 +50,7 @@ void Visualizer::createWindow()
 	sceneView_.reset(new pangolin::View());
 	camera_.reset(new pangolin::OpenGlRenderState(
 		pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
-		pangolin::ModelViewLookAt(0, 0, 0, 2.1, 0.6, 0.2,
-								  pangolin::AxisNegY)));
+		pangolin::ModelViewLookAt(0, 0, 0, 2.1, 0.6, 0.2, pangolin::AxisNegY)));
 
 	sceneView_->SetHandler(new pangolin::Handler3D(*(camera_.get())));
 	pangolin::context->named_managed_views[sceneName] = sceneView_.get();
@@ -102,14 +101,16 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage = convertImageToGray(cvImage);
-	cv::Mat imColor;
-	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//	cv::Mat grayImage = convertImageToGray(cvImage);
+	//	cv::Mat imColor;
+	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//
+	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
+	//0, 								GL_RGB, GL_UNSIGNED_BYTE); 	texture.Upload(imColor.data, GL_BGR,
+	//GL_UNSIGNED_BYTE);
+	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
 
-	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
-								GL_RGB, GL_UNSIGNED_BYTE);
-	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -182,7 +183,11 @@ void Visualizer::drawOriginalOverlay()
 				{
 					integratedNabla_ = patch.getIntegratedNabla();
 					predictedNabla_ = patch.getPredictedNabla();
-					costMap_ = patch.getCostMap();
+
+					//					costMap_ = patch.getCostMap();
+
+					costMap_ = patch.getCompenatedIntegratedNabla();
+
 					flow_ = patch.getFlow();
 					newPatch_ = patch.getPatch();
 					initPatch_ = patch.getInitPatch();
@@ -201,7 +206,11 @@ void Visualizer::drawOriginalOverlay()
 			{
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
-				costMap_ = patch.getCostMap();
+
+				//				costMap_ = patch.getCostMap();
+
+				costMap_ = patch.getCompenatedIntegratedNabla();
+
 				flow_ = patch.getFlow();
 				newPatch_ = patch.getPatch();
 				initPatch_ = patch.getInitPatch();
@@ -244,7 +253,7 @@ void Visualizer::drawScene()
 	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
 	sceneView_->Activate(*(camera_.get()));
 	const u_int8_t colorCameraActive[3]{255, 0, 0};
-	//const u_int8_t colorCameraStored[3]{0, 0, 255};
+	// const u_int8_t colorCameraStored[3]{0, 0, 255};
 	const u_int8_t colorOldPoints[3]{0, 0, 0};
 
 	for (const auto& camera : activeFrames_)
@@ -266,7 +275,7 @@ void Visualizer::drawScene()
 		glColor3ubv(colorOldPoints);
 		pangolin::glVertex(trackLandmark.second);
 	}
-	
+
 	glEnd();
 }
 
@@ -353,19 +362,18 @@ void Visualizer::drawIntegratedNablaOverlay()
 void Visualizer::drawCostMapOverlay()
 {
 	pangolin::GlFont::I().Text("Cost map").Draw(0, 0);
-
-	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(0, 1);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	pangolin::glDrawCross(Eigen::Vector2d(fmax(0.0, (costMap_.cols - 1) / 2),
-										  fmax(0.0, (costMap_.rows - 1) / 2)),
-						  0.5);
-
-	glColor3f(1.0f, 0.0f, 0.0f);
-	const auto x = initPatch_.x - newPatch_.x;
-	const auto y = initPatch_.y - newPatch_.y;
-	pangolin::glDrawCross(Eigen::Vector2d((costMap_.cols - 1) / 2 - x,
-										  (costMap_.rows - 1) / 2 - y),
-						  0.5);
+	//
+	//	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(0, 1);
+	//	glColor3f(1.0f, 0.0f, 0.0f);
+	//	pangolin::glDrawCross(Eigen::Vector2d(fmax(0.0, (costMap_.cols - 1) /
+	//2), 										  fmax(0.0, (costMap_.rows - 1) / 2)), 						  0.5);
+	//
+	//	glColor3f(1.0f, 0.0f, 0.0f);
+	//	const auto x = initPatch_.x - newPatch_.x;
+	//	const auto y = initPatch_.y - newPatch_.y;
+	//	pangolin::glDrawCross(Eigen::Vector2d((costMap_.cols - 1) / 2 - x,
+	//										  (costMap_.rows - 1) / 2 - y),
+	//						  0.5);
 }
 
 void Visualizer::wait() const

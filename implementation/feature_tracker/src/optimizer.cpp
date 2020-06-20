@@ -141,6 +141,11 @@ void Optimizer::optimize(Patch& patch)
 	patch.setWarp(warp);
 	patch.updatePatchRect();
 	patch.addTrajectoryPosition();
+
+	// Need events here!
+	patch.integrateMotionCompensatedEvents();
+
+	// Now can erase events.
 	patch.resetBatch();
 
 	consoleLog_->debug("New center: (" +

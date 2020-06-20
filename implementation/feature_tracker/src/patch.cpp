@@ -74,6 +74,46 @@ void Patch::integrateEvents()
 	}
 }
 
+void Patch::integrateMotionCompensatedEvents()
+{
+	if (trajectory_.size() >= 2 && !events_.empty())
+	{
+		common::Sample<common::Point2d> lastPoint = trajectory_.back();
+		common::Sample<common::Point2d> preLastPoint =
+			trajectory_[trajectory_.size() - 2];
+
+		common::timestamp_t midTime = getCurrentTimestamp();
+
+		if (lastPoint.timestamp >= midTime && preLastPoint.timestamp < midTime)
+		{
+			motionCompensatedIntegratedNabla_ =
+				cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
+
+			// Simple Motion Compensation formula:
+			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
+			common::Point2d dir = lastPoint.value - preLastPoint.value;
+			double t_dif =
+				lastPoint.timestamp.count() - preLastPoint.timestamp.count();
+			double t = midTime.count();
+
+			for (const auto& event : events_)
+			{
+				common::Point2d compEvent =
+					static_cast<common::Point2d>(event.value.point) +
+					(t - static_cast<double>(event.timestamp.count())) / t_dif *
+						dir;
+				if (patch_.contains(compEvent))
+				{
+					const auto& point = frameToPatchCoords(compEvent);
+					motionCompensatedIntegratedNabla_.at<double>(point.y,
+																 point.x) +=
+						static_cast<int32_t>(event.value.sign);
+				}
+			}
+		}
+	}
+}
+
 void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 {
 	cv::Mat warpedGradX;
@@ -121,15 +161,15 @@ bool Patch::isInPatch(const common::Point2i& point) const
 common::Point2i Patch::patchToFrameCoords(
 	const common::Point2i& pointInPatch) const
 {
-	return common::Point2i(pointInPatch.x + patch_.tl().x,
-						   pointInPatch.y + patch_.tl().y);
+	return common::Point2i(std::round(pointInPatch.x + patch_.tl().x),
+						   std::round(pointInPatch.y + patch_.tl().y));
 }
 
 common::Point2i Patch::frameToPatchCoords(
 	const common::Point2i& pointInFrame) const
 {
-	return common::Point2i(pointInFrame.x - patch_.tl().x,
-						   pointInFrame.y - patch_.tl().y);
+	return common::Point2i(std::round(pointInFrame.x - patch_.tl().x),
+						   std::round(pointInFrame.y - patch_.tl().y));
 }
 
 common::EventSequence const& Patch::getEvents() const
@@ -158,6 +198,12 @@ void Patch::setNumOfEvents(size_t numOfEvents)
 void Patch::setIntegratedNabla(const cv::Mat& integratedNabla)
 {
 	integratedNabla_ = integratedNabla;
+}
+
+void Patch::setMotionCompensatedIntegratedNabla(
+	const cv::Mat& motionCompensatedIntegratedNabla)
+{
+	motionCompensatedIntegratedNabla_ = motionCompensatedIntegratedNabla;
 }
 
 std::vector<common::Sample<common::Point2d>> const& Patch::getTrajectory() const

@@ -23,6 +23,8 @@ class Patch
 
 	void integrateEvents();
 
+	void integrateMotionCompensatedEvents();
+
 	void resetBatch();
 
 	void updateNumOfEvents();
@@ -57,6 +59,11 @@ class Patch
 	common::timestamp_t getCurrentTimestamp() const;
 	std::chrono::duration<double> getTimeWithoutUpdate() const;
 
+	const cv::Mat& getCompenatedIntegratedNabla() const
+	{
+		return motionCompensatedIntegratedNabla_;
+	}
+
 	void setLost() { lost_ = true; }
 	void setNumOfEvents(size_t numOfEvents);
 	void setTrackId(TrackId trackId) { trackId_ = trackId; }
@@ -65,6 +72,8 @@ class Patch
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla);
 	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
+	void setMotionCompensatedIntegratedNabla(
+		const cv::Mat& motionCompensatedIntegratedNabla);
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -96,6 +105,8 @@ class Patch
 	double flowDir_;
 	common::Pose2d warp_;
 	std::vector<common::Sample<common::Point2d>> trajectory_;
+
+	cv::Mat motionCompensatedIntegratedNabla_;
 };
 
 using Patches = std::list<Patch>;

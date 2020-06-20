@@ -17,7 +17,7 @@ struct EvaluatorParams
 	std::string outputDir = "/tmp";
 	common::CameraModelParams cameraModelParams = {};
 	bool drawImages = false;
-	bool experiment = false;
+	bool experiment = true;
 };
 
 class Evaluator

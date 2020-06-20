@@ -1,7 +1,7 @@
 #pragma once
 #include <common/data_types.h>
-#include <visual_odometry/visual_odometry.h>
 #include <feature_tracker/feature_detector.h>
+#include <visual_odometry/visual_odometry.h>
 
 #include <pangolin/display/image_view.h>
 #include <pangolin/gl/gldraw.h>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <common/data_types.h>
 #include <common/camera_model.h>
+#include <common/data_types.h>
 #include "dataset_reader/mapped_file.h"
 
 #include <spdlog/sinks/stdout_sinks.h>
