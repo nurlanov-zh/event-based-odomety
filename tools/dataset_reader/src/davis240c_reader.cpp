@@ -8,9 +8,51 @@ namespace tools
 std::string EVENT_FILE = "events.txt";
 std::string GROUND_TRUTH_FILE = "groundtruth.txt";
 std::string IMAGE_FILE = "images.txt";
+std::string CALIBRATION_FILE = "calib.txt";
 std::string SEPARATOR = "/";
 
 using namespace common;
+
+CameraModelParams Davis240cReader::getCalibrationLine(std::string& line) const
+{
+	CameraModelParams params;
+	size_t pos = line.find(' ');
+	params.fx = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.fy = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.cx = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.cy = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.k1 = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.k2 = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.p1 = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.p2 = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	params.k3 = std::stod(line.substr(0, pos));
+
+	return params;
+}
 
 EventSample Davis240cReader::getEventSample(std::string& line) const
 {
@@ -166,4 +208,21 @@ GroundTruth Davis240cReader::getGroundTruth() const
 	return groundTruth;
 }
 
+CameraModelParams Davis240cReader::getCalibration() const
+{
+	const std::string filePath = path_ + SEPARATOR + CALIBRATION_FILE;
+
+	const auto begin = std::chrono::high_resolution_clock::now();
+	const auto calibration = readFile<std::vector<CameraModelParams>, CameraModelParams>(
+		filePath, std::bind(&Davis240cReader::getCalibrationLine, this,
+							std::placeholders::_1));
+	const auto end = std::chrono::high_resolution_clock::now();
+
+	consoleLog_->info(
+		"Calibration is loaded in {} milliseconds",
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+			.count());
+
+	return calibration[0];
+}
 }  // namespace tools

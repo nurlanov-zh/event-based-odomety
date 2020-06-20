@@ -100,6 +100,7 @@ TEST(FeatureDetector, associatedPatchesTest)
 {
 	tracker::DetectorParams params;
 	params.patchExtent = 5;
+	params.associationDistance = 5;
 	tracker::FeatureDetector detector(params);
 	const common::timestamp_t timestamp(0);
 

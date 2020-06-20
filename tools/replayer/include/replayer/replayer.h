@@ -57,6 +57,8 @@ class Replayer
 
 	common::timestamp_t getLastTimestamp() { return lastTimestamp_; }
 
+	const common::GroundTruth& getGroundTruth() const { return groundTruth_; }
+
    private:
 	template <typename T>
 	void notify(const std::vector<std::function<void(const T&)>>& callbacks,

@@ -1,5 +1,9 @@
 #include "evaluator/evaluator.h"
 
+#include <visual_odometry/triangulation.h>
+
+namespace vo = visual_odometry;
+
 namespace tools
 {
 Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
@@ -42,6 +46,9 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 
 	tracker_->newImage(sample);
 	corners_ = tracker_->getFeatures();
+
+	visualOdometry_->newKeyframeCandidate(
+		visual_odometry::Keyframe(tracker_->getPatches(), sample.timestamp));
 }
 
 void Evaluator::reset()
@@ -54,6 +61,8 @@ void Evaluator::reset()
 	params.drawImages = params_.drawImages;
 	params.imageSize = params_.imageSize;
 	tracker_.reset(new tracker::FeatureDetector(params));
+	visualOdometry_.reset(
+		new visual_odometry::VisualOdometryFrontEnd(params_.cameraModelParams));
 	imageNum_ = 0;
 
 	consoleLog_->info("Evaluator is reset");
@@ -85,5 +94,26 @@ void Evaluator::saveTrajectory(const tracker::Patches& patches)
 	}
 	trajFile.close();
 	consoleLog_->info("Saved!");
+}
+
+void Evaluator::setGroundTruthSamples(
+	const common::GroundTruth& groundTruthSamples)
+{
+	visualOdometry_->setGroundTruthSamples(groundTruthSamples);
+}
+
+visual_odometry::MapLandmarks const& Evaluator::getMapLandmarks()
+{
+	return visualOdometry_->getMapLandmarks();
+}
+
+std::list<visual_odometry::Keyframe> const& Evaluator::getActiveFrames() const
+{
+	return visualOdometry_->getActiveFrames();
+}
+
+std::list<visual_odometry::Keyframe> const& Evaluator::getStoredFrames() const
+{
+	return visualOdometry_->getStoredFrames();
 }
 }  // namespace tools
