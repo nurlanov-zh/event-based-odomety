@@ -213,9 +213,10 @@ CameraModelParams Davis240cReader::getCalibration() const
 	const std::string filePath = path_ + SEPARATOR + CALIBRATION_FILE;
 
 	const auto begin = std::chrono::high_resolution_clock::now();
-	const auto calibration = readFile<std::vector<CameraModelParams>, CameraModelParams>(
-		filePath, std::bind(&Davis240cReader::getCalibrationLine, this,
-							std::placeholders::_1));
+	const auto calibration =
+		readFile<std::vector<CameraModelParams>, CameraModelParams>(
+			filePath, std::bind(&Davis240cReader::getCalibrationLine, this,
+								std::placeholders::_1));
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(

@@ -18,7 +18,6 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 
 void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 {
-
 	for (auto& frame : activeFrames_)
 	{
 		const auto firstImagePose = syncGtAndImage(frame.timestamp);
@@ -31,10 +30,12 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 
 		frame.pose = firstImagePose.value();
 
-        if ((firstImagePose.value().translation() - secondImagePose.value().translation()).norm() < 0.1)
-        {
-            continue;
-        }
+		if ((firstImagePose.value().translation() -
+			 secondImagePose.value().translation())
+				.norm() < 0.1)
+		{
+			continue;
+		}
 
 		opengv::bearingVectors_t bearingVectors1;
 		opengv::bearingVectors_t bearingVectors2;
@@ -50,11 +51,9 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(const Keyframe& keyframe)
 		for (size_t i = 0; i < trackIds.size(); ++i)
 		{
 			if (!std::isnan(landmarks[i].x()) &&
-				!std::isnan(landmarks[i].y()) &&
-				!std::isnan(landmarks[i].z()))
+				!std::isnan(landmarks[i].y()) && !std::isnan(landmarks[i].z()))
 			{
-				mapLandmarks_[trackIds[i]] =
-					landmarks[i];
+				mapLandmarks_[trackIds[i]] = landmarks[i];
 			}
 		}
 	}
@@ -119,7 +118,7 @@ std::optional<common::Pose3d> VisualOdometryFrontEnd::syncGtAndImage(
 		return std::make_optional(lowerBoundIt->value);
 	}
 
-    if (lowerBoundIt == groundTruthSamples_.begin())
+	if (lowerBoundIt == groundTruthSamples_.begin())
 	{
 		return {};
 	}
@@ -160,4 +159,4 @@ std::list<Keyframe> const& VisualOdometryFrontEnd::getStoredFrames() const
 	return storedFrames_;
 }
 
-}  // ns visual_odometry
+}  // namespace visual_odometry
