@@ -101,16 +101,16 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	//	cv::Mat grayImage = convertImageToGray(cvImage);
-	//	cv::Mat imColor;
-	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
-	//
-	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
-	//0, 								GL_RGB, GL_UNSIGNED_BYTE); 	texture.Upload(imColor.data, GL_BGR,
-	//GL_UNSIGNED_BYTE);
-	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+	cv::Mat grayImage = convertImageToGray(cvImage);
+	cv::Mat imColor;
+	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
 
-	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
+	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
+								GL_RGB, GL_UNSIGNED_BYTE);
+	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
+	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+
+	//	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -184,9 +184,10 @@ void Visualizer::drawOriginalOverlay()
 					integratedNabla_ = patch.getIntegratedNabla();
 					predictedNabla_ = patch.getPredictedNabla();
 
-					//					costMap_ = patch.getCostMap();
+					costMap_ = patch.getCostMap();
 
-					costMap_ = patch.getCompenatedIntegratedNabla();
+					//					costMap_ =
+					// patch.getCompenatedIntegratedNabla();
 
 					flow_ = patch.getFlow();
 					newPatch_ = patch.getPatch();
@@ -207,9 +208,9 @@ void Visualizer::drawOriginalOverlay()
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
 
-				//				costMap_ = patch.getCostMap();
+				costMap_ = patch.getCostMap();
 
-				costMap_ = patch.getCompenatedIntegratedNabla();
+				//				costMap_ = patch.getCompenatedIntegratedNabla();
 
 				flow_ = patch.getFlow();
 				newPatch_ = patch.getPatch();
@@ -362,18 +363,19 @@ void Visualizer::drawIntegratedNablaOverlay()
 void Visualizer::drawCostMapOverlay()
 {
 	pangolin::GlFont::I().Text("Cost map").Draw(0, 0);
-	//
-	//	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(0, 1);
-	//	glColor3f(1.0f, 0.0f, 0.0f);
-	//	pangolin::glDrawCross(Eigen::Vector2d(fmax(0.0, (costMap_.cols - 1) /
-	//2), 										  fmax(0.0, (costMap_.rows - 1) / 2)), 						  0.5);
-	//
-	//	glColor3f(1.0f, 0.0f, 0.0f);
-	//	const auto x = initPatch_.x - newPatch_.x;
-	//	const auto y = initPatch_.y - newPatch_.y;
-	//	pangolin::glDrawCross(Eigen::Vector2d((costMap_.cols - 1) / 2 - x,
-	//										  (costMap_.rows - 1) / 2 - y),
-	//						  0.5);
+
+	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(0, 1);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	pangolin::glDrawCross(Eigen::Vector2d(fmax(0.0, (costMap_.cols - 1) / 2),
+										  fmax(0.0, (costMap_.rows - 1) / 2)),
+						  0.5);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+	const auto x = initPatch_.x - newPatch_.x;
+	const auto y = initPatch_.y - newPatch_.y;
+	pangolin::glDrawCross(Eigen::Vector2d((costMap_.cols - 1) / 2 - x,
+										  (costMap_.rows - 1) / 2 - y),
+						  0.5);
 }
 
 void Visualizer::wait() const

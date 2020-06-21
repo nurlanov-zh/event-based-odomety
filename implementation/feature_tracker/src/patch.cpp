@@ -22,6 +22,8 @@ void Patch::init()
 	numOfEvents_ = 75;
 	initPoint_ = toCorner();
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
+	motionCompensatedIntegratedNabla_ =
+		cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	predictedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
 	timeWithoutUpdate_ = std::chrono::duration<double>(100000.0);
@@ -78,27 +80,30 @@ void Patch::integrateMotionCompensatedEvents()
 {
 	if (trajectory_.size() >= 2 && !events_.empty())
 	{
-		common::Sample<common::Point2d> lastPoint = trajectory_.back();
-		common::Sample<common::Point2d> preLastPoint =
-			trajectory_[trajectory_.size() - 2];
+		const auto& lastPoint = trajectory_.back();
+		const auto& preLastPoint = trajectory_[trajectory_.size() - 2];
 
-		common::timestamp_t midTime = getCurrentTimestamp();
+		const auto midTime = getCurrentTimestamp();
 
-		if (lastPoint.timestamp >= midTime && preLastPoint.timestamp < midTime)
+		const auto half = common::timestamp_t(static_cast<int64_t>(
+			(lastPoint.timestamp - preLastPoint.timestamp).count() * 0.5));
+
+		if (lastPoint.timestamp + half >= midTime &&
+			preLastPoint.timestamp < midTime)
 		{
 			motionCompensatedIntegratedNabla_ =
 				cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 
 			// Simple Motion Compensation formula:
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
-			common::Point2d dir = lastPoint.value - preLastPoint.value;
-			double t_dif =
-				lastPoint.timestamp.count() - preLastPoint.timestamp.count();
-			double t = midTime.count();
+			const common::Point2d dir = lastPoint.value - preLastPoint.value;
+			const auto t_dif = static_cast<double>(
+				(events_.back().timestamp - events_.front().timestamp).count());
+			const auto t = static_cast<double>(midTime.count());
 
 			for (const auto& event : events_)
 			{
-				common::Point2d compEvent =
+				const common::Point2d compEvent =
 					static_cast<common::Point2d>(event.value.point) +
 					(t - static_cast<double>(event.timestamp.count())) / t_dif *
 						dir;
@@ -159,14 +164,14 @@ bool Patch::isInPatch(const common::Point2i& point) const
 }
 
 common::Point2i Patch::patchToFrameCoords(
-	const common::Point2i& pointInPatch) const
+	const common::Point2d& pointInPatch) const
 {
 	return common::Point2i(std::round(pointInPatch.x + patch_.tl().x),
 						   std::round(pointInPatch.y + patch_.tl().y));
 }
 
 common::Point2i Patch::frameToPatchCoords(
-	const common::Point2i& pointInFrame) const
+	const common::Point2d& pointInFrame) const
 {
 	return common::Point2i(std::round(pointInFrame.x - patch_.tl().x),
 						   std::round(pointInFrame.y - patch_.tl().y));
@@ -204,6 +209,11 @@ void Patch::setMotionCompensatedIntegratedNabla(
 	const cv::Mat& motionCompensatedIntegratedNabla)
 {
 	motionCompensatedIntegratedNabla_ = motionCompensatedIntegratedNabla;
+}
+
+const cv::Mat& Patch::getCompenatedIntegratedNabla() const
+{
+	return motionCompensatedIntegratedNabla_;
 }
 
 std::vector<common::Sample<common::Point2d>> const& Patch::getTrajectory() const
