@@ -29,4 +29,4 @@ std::vector<tracker::TrackId> Keyframe::getSharedTracks(
 	}
 	return tracks;
 }
-}  // ns visual_odometry
+}  // namespace visual_odometry

@@ -20,7 +20,7 @@ struct hash<std::chrono::duration<_rep, ratio>>
 			static_cast<std::chrono::duration<_rep, std::micro>>(s).count());
 	}
 };
-}
+}  // namespace std
 
 namespace visual_odometry
 {
@@ -36,9 +36,9 @@ class VisualOdometryFrontEnd
 
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
-    MapLandmarks const& getMapLandmarks();
-    std::list<Keyframe> const& getActiveFrames() const;
-    std::list<Keyframe> const& getStoredFrames() const;
+	MapLandmarks const& getMapLandmarks();
+	std::list<Keyframe> const& getActiveFrames() const;
+	std::list<Keyframe> const& getStoredFrames() const;
 
    private:
 	void getCommonBearingVectors(const Keyframe& keyframe1,
@@ -48,7 +48,7 @@ class VisualOdometryFrontEnd
 								 opengv::bearingVectors_t& bearingVectors2);
 
    private:
-   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
 
 	std::list<Keyframe> activeFrames_;

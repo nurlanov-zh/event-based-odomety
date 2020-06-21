@@ -50,8 +50,7 @@ void Visualizer::createWindow()
 	sceneView_.reset(new pangolin::View());
 	camera_.reset(new pangolin::OpenGlRenderState(
 		pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
-		pangolin::ModelViewLookAt(0, 0, 0, 2.1, 0.6, 0.2,
-								  pangolin::AxisNegY)));
+		pangolin::ModelViewLookAt(0, 0, 0, 2.1, 0.6, 0.2, pangolin::AxisNegY)));
 
 	sceneView_->SetHandler(new pangolin::Handler3D(*(camera_.get())));
 	pangolin::context->named_managed_views[sceneName] = sceneView_.get();
@@ -102,14 +101,16 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage = convertImageToGray(cvImage);
-	cv::Mat imColor;
-	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//	cv::Mat grayImage = convertImageToGray(cvImage);
+	//	cv::Mat imColor;
+	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//
+	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
+	//0, 								GL_RGB, GL_UNSIGNED_BYTE); 	texture.Upload(imColor.data, GL_BGR,
+	//GL_UNSIGNED_BYTE);
+	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
 
-	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
-								GL_RGB, GL_UNSIGNED_BYTE);
-	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -182,7 +183,11 @@ void Visualizer::drawOriginalOverlay()
 				{
 					integratedNabla_ = patch.getIntegratedNabla();
 					predictedNabla_ = patch.getPredictedNabla();
-					costMap_ = patch.getCostMap();
+
+					//					costMap_ = patch.getCostMap();
+
+					costMap_ = patch.getCompenatedIntegratedNabla();
+
 					flow_ = patch.getFlow();
 					newPatch_ = patch.getPatch();
 					initPatch_ = patch.getInitPatch();
@@ -201,7 +206,11 @@ void Visualizer::drawOriginalOverlay()
 			{
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
-				costMap_ = patch.getCostMap();
+
+				//				costMap_ = patch.getCostMap();
+
+				costMap_ = patch.getCompenatedIntegratedNabla();
+
 				flow_ = patch.getFlow();
 				newPatch_ = patch.getPatch();
 				initPatch_ = patch.getInitPatch();
@@ -244,7 +253,7 @@ void Visualizer::drawScene()
 	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
 	sceneView_->Activate(*(camera_.get()));
 	const u_int8_t colorCameraActive[3]{255, 0, 0};
-	//const u_int8_t colorCameraStored[3]{0, 0, 255};
+	// const u_int8_t colorCameraStored[3]{0, 0, 255};
 	const u_int8_t colorOldPoints[3]{0, 0, 0};
 
 	for (const auto& camera : activeFrames_)
@@ -266,7 +275,7 @@ void Visualizer::drawScene()
 		glColor3ubv(colorOldPoints);
 		pangolin::glVertex(trackLandmark.second);
 	}
-	
+
 	glEnd();
 }
 
