@@ -80,7 +80,7 @@ void Patch::integrateMotionCompensatedEvents()
 {
 	if (trajectory_.size() >= 2 && !events_.empty())
 	{
-		const auto& lastPoint = trajectory_.back();
+		const auto& lastPoint = trajectory_[trajectory_.size() - 1];
 		const auto& preLastPoint = trajectory_[trajectory_.size() - 2];
 
 		const auto midTime = getCurrentTimestamp();
@@ -103,10 +103,12 @@ void Patch::integrateMotionCompensatedEvents()
 
 			for (const auto& event : events_)
 			{
-				const common::Point2d compEvent =
+				const common::Point2d compEventD =
 					static_cast<common::Point2d>(event.value.point) +
 					(t - static_cast<double>(event.timestamp.count())) / t_dif *
 						dir;
+				const common::Point2i compEvent =
+					static_cast<common::Point2i>(compEventD);
 				if (patch_.contains(compEvent))
 				{
 					const auto& point = frameToPatchCoords(compEvent);
@@ -164,17 +166,17 @@ bool Patch::isInPatch(const common::Point2i& point) const
 }
 
 common::Point2i Patch::patchToFrameCoords(
-	const common::Point2d& pointInPatch) const
+	const common::Point2i& pointInPatch) const
 {
-	return common::Point2i(std::round(pointInPatch.x + patch_.tl().x),
-						   std::round(pointInPatch.y + patch_.tl().y));
+	return common::Point2i(pointInPatch.x + patch_.tl().x,
+						   pointInPatch.y + patch_.tl().y);
 }
 
 common::Point2i Patch::frameToPatchCoords(
-	const common::Point2d& pointInFrame) const
+	const common::Point2i& pointInFrame) const
 {
-	return common::Point2i(std::round(pointInFrame.x - patch_.tl().x),
-						   std::round(pointInFrame.y - patch_.tl().y));
+	return common::Point2i(pointInFrame.x - patch_.tl().x,
+						   pointInFrame.y - patch_.tl().y);
 }
 
 common::EventSequence const& Patch::getEvents() const
@@ -211,7 +213,7 @@ void Patch::setMotionCompensatedIntegratedNabla(
 	motionCompensatedIntegratedNabla_ = motionCompensatedIntegratedNabla;
 }
 
-const cv::Mat& Patch::getCompenatedIntegratedNabla() const
+cv::Mat const& Patch::getCompenatedIntegratedNabla() const
 {
 	return motionCompensatedIntegratedNabla_;
 }

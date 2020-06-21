@@ -101,16 +101,16 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	cv::Mat grayImage = convertImageToGray(cvImage);
-	cv::Mat imColor;
-	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//	cv::Mat grayImage = convertImageToGray(cvImage);
+	//	cv::Mat imColor;
+	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	//
+	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
+	//0, 								GL_RGB, GL_UNSIGNED_BYTE); 	texture.Upload(imColor.data, GL_BGR,
+	//GL_UNSIGNED_BYTE);
+	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
 
-	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
-								GL_RGB, GL_UNSIGNED_BYTE);
-	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
-
-	//	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
+	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -184,10 +184,9 @@ void Visualizer::drawOriginalOverlay()
 					integratedNabla_ = patch.getIntegratedNabla();
 					predictedNabla_ = patch.getPredictedNabla();
 
-					costMap_ = patch.getCostMap();
+					//					costMap_ = patch.getCostMap();
 
-					//					costMap_ =
-					// patch.getCompenatedIntegratedNabla();
+					costMap_ = patch.getCompenatedIntegratedNabla();
 
 					flow_ = patch.getFlow();
 					newPatch_ = patch.getPatch();
@@ -208,9 +207,9 @@ void Visualizer::drawOriginalOverlay()
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
 
-				costMap_ = patch.getCostMap();
+				//				costMap_ = patch.getCostMap();
 
-				//				costMap_ = patch.getCompenatedIntegratedNabla();
+				costMap_ = patch.getCompenatedIntegratedNabla();
 
 				flow_ = patch.getFlow();
 				newPatch_ = patch.getPatch();

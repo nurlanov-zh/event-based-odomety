@@ -59,7 +59,7 @@ class Patch
 	common::timestamp_t getCurrentTimestamp() const;
 	std::chrono::duration<double> getTimeWithoutUpdate() const;
 
-	const cv::Mat& getCompenatedIntegratedNabla() const;
+	cv::Mat const& getCompenatedIntegratedNabla() const;
 
 	void setLost() { lost_ = true; }
 	void setNumOfEvents(size_t numOfEvents);
@@ -74,10 +74,10 @@ class Patch
 
    private:
 	common::Point2i patchToFrameCoords(
-		const common::Point2d& pointInPatch) const;
+		const common::Point2i& pointInPatch) const;
 
 	common::Point2i frameToPatchCoords(
-		const common::Point2d& pointInFrame) const;
+		const common::Point2i& pointInFrame) const;
 
    private:
 	bool init_;
