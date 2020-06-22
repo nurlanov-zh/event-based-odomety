@@ -64,7 +64,7 @@ void Patch::integrateEvents()
 			{
 				const auto& point = frameToPatchCoords(event.value.point);
 				integratedNabla_.at<double>(point.y, point.x) +=
-					static_cast<int32_t>(event.value.sign);
+					static_cast<double>(event.value.sign);
 			}
 		}
 		currentTimestamp_ = common::timestamp_t(static_cast<int32_t>(
@@ -85,7 +85,7 @@ void Patch::integrateMotionCompensatedEvents()
 
 		const auto midTime = getCurrentTimestamp();
 
-		const auto half = common::timestamp_t(static_cast<int64_t>(
+		const auto half = common::timestamp_t(static_cast<int32_t>(
 			(lastPoint.timestamp - preLastPoint.timestamp).count() * 0.5));
 
 		if (lastPoint.timestamp + half >= midTime &&
@@ -98,7 +98,7 @@ void Patch::integrateMotionCompensatedEvents()
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 			const common::Point2d dir = lastPoint.value - preLastPoint.value;
 			const auto t_dif = static_cast<double>(
-				(events_.back().timestamp - events_.front().timestamp).count());
+				(lastPoint.timestamp - preLastPoint.timestamp).count());
 			const auto t = static_cast<double>(midTime.count());
 
 			for (const auto& event : events_)
@@ -114,7 +114,7 @@ void Patch::integrateMotionCompensatedEvents()
 					const auto& point = frameToPatchCoords(compEvent);
 					motionCompensatedIntegratedNabla_.at<double>(point.y,
 																 point.x) +=
-						static_cast<int32_t>(event.value.sign);
+						static_cast<double>(event.value.sign);
 				}
 			}
 		}
