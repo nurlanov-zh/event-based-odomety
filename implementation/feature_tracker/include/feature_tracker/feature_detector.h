@@ -18,6 +18,7 @@ struct DetectorParams
 	bool drawImages = false;
 	OptimizerParams optimizerParams = {};
 	int initNumEvents = 75;
+	u_long maxNumEventsToStore = 15000;
 };
 
 class FeatureDetector
@@ -34,6 +35,10 @@ class FeatureDetector
 	Corners detectFeatures(const cv::Mat& image);
 
 	void updatePatches(const common::EventSample& event);
+
+	void addEvent(const common::EventSample& event);
+
+	void initMotionField(const common::timestamp_t timestamp);
 
 	void associatePatches(Patches& newPatches,
 						  const common::timestamp_t& timestamp);
@@ -64,6 +69,10 @@ class FeatureDetector
 	cv::Mat gradX_;
 	cv::Mat gradY_;
 
+	cv::Mat compensatedEventsImage_;
+
+	cv::Mat motionField_;
+
 	std::unique_ptr<Optimizer> optimizer_;
 	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
 
@@ -74,6 +83,8 @@ class FeatureDetector
 	Corners corners_;
 	size_t nextTrackId_;
 	Patches archivedPatches_;
+
+	std::list<common::EventSample> lastEvents_;
 
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;

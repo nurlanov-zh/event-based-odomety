@@ -98,7 +98,7 @@ void Patch::integrateMotionCompensatedEvents()
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 			const common::Point2d dir = lastPoint.value - preLastPoint.value;
 			const auto t_dif = static_cast<double>(
-				(events_.back().timestamp - events_.front().timestamp).count());
+				(lastPoint.timestamp - preLastPoint.timestamp).count());
 			const auto t = static_cast<double>(midTime.count());
 
 			for (const auto& event : events_)

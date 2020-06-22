@@ -26,6 +26,7 @@ tracker::Patches const& Evaluator::getPatches() const
 
 void Evaluator::eventCallback(const common::EventSample& sample)
 {
+	tracker_->addEvent(sample);
 	tracker_->updatePatches(sample);
 }
 

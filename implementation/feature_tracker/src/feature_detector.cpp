@@ -157,6 +157,15 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 	}
 }
 
+void FeatureDetector::addEvent(const common::EventSample& event)
+{
+	lastEvents_.push_back(event);
+	while (lastEvents_.size() > params_.maxNumEventsToStore)
+	{
+		lastEvents_.pop_front();
+	}
+}
+
 void FeatureDetector::associatePatches(Patches& newPatches,
 									   const common::timestamp_t& timestamp)
 {
