@@ -121,25 +121,37 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 {
 	for (auto& patch : patches_)
 	{
-		if (patch.isInPatch(event.value.point))
+		if (!patch.isLost())
 		{
-			patch.addEvent(event);
-		}
-
-		if (event.timestamp - patch.getCurrentTimestamp() >
-			patch.getTimeWithoutUpdate())
-		{
-			patch.setLost();
-		}
-
-		if (patch.isReady() && patch.isInit() && !patch.isLost())
-		{
-			optimizer_->optimize(patch);
-			updateNumOfEvents(patch);
-
-			if (params_.drawImages)
+			if (patch.isInPatch(event.value.point))
 			{
-				patch.warpImage(gradX_, gradY_);
+				patch.addEvent(event);
+			}
+
+			if (event.timestamp - patch.getTimeLastUpdate() >
+				patch.getTimeWithoutUpdate())
+			{
+				consoleLog_->info(
+					"Lost patch " + std::to_string(patch.getTrackId()) +
+					" because timeWithoutUpdate has been "
+					"reached:\ntime since last update: " +
+					std::to_string(
+						(event.timestamp - patch.getTimeLastUpdate()).count()) +
+					" microseconds vs timeWithoutUpdate: " +
+					std::to_string(patch.getTimeWithoutUpdate().count()) +
+					" microseconds.");
+				patch.setLost();
+			}
+
+			if (patch.isReady() && patch.isInit() && !patch.isLost())
+			{
+				optimizer_->optimize(patch);
+				updateNumOfEvents(patch);
+
+				if (params_.drawImages)
+				{
+					patch.warpImage(gradX_, gradY_);
+				}
 			}
 		}
 	}

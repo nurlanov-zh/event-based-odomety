@@ -31,6 +31,8 @@ class Patch
 
 	void addTrajectoryPosition();
 
+	void addFinalCost(double finalCost);
+
 	void updatePatchRect();
 
 	Corner toCorner() const;
@@ -57,7 +59,10 @@ class Patch
 	size_t getNumOfEvents() const { return numOfEvents_; }
 	cv::Rect2d getInitPatch() const;
 	common::timestamp_t getCurrentTimestamp() const;
-	std::chrono::duration<double> getTimeWithoutUpdate() const;
+	common::timestamp_t getTimeWithoutUpdate() const;
+
+	const std::vector<double>& getFinalCosts() const { return finalCosts_; }
+	common::timestamp_t getTimeLastUpdate() const;
 
 	cv::Mat const& getCompenatedIntegratedNabla() const;
 
@@ -69,8 +74,14 @@ class Patch
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla);
 	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
+
 	void setMotionCompensatedIntegratedNabla(
 		const cv::Mat& motionCompensatedIntegratedNabla);
+
+	void setTimeWithoutUpdate(const common::timestamp_t& timeWithoutUpdate)
+	{
+		timeWithoutUpdate_ = timeWithoutUpdate;
+	}
 
    private:
 	common::Point2i patchToFrameCoords(
@@ -88,7 +99,8 @@ class Patch
 	TrackId trackId_;
 
 	common::timestamp_t currentTimestamp_;
-	std::chrono::duration<double> timeWithoutUpdate_;
+	common::timestamp_t timeLastUpdate_;
+	common::timestamp_t timeWithoutUpdate_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
@@ -96,6 +108,7 @@ class Patch
 	size_t maxNumOfEvents_ = 500;
 
 	cv::Mat integratedNabla_;
+	cv::Mat motionCompensatedIntegratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat costMap_;
 
@@ -103,7 +116,7 @@ class Patch
 	common::Pose2d warp_;
 	std::vector<common::Sample<common::Point2d>> trajectory_;
 
-	cv::Mat motionCompensatedIntegratedNabla_;
+	std::vector<double> finalCosts_;
 };
 
 using Patches = std::list<Patch>;

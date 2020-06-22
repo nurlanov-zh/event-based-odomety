@@ -12,6 +12,8 @@ struct FlowEstimatorParams
 {
 	int32_t numLevels = 3;
 	cv::Size window = {21, 21};
+	// seconds in double to microseconds
+	double patchTimeWithoutUpdateScale = 1e6;
 };
 
 class FlowEstimator
