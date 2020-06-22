@@ -1,4 +1,5 @@
 #include "evaluator/evaluator.h"
+#include <fstream>
 
 #include <visual_odometry/triangulation.h>
 
@@ -15,6 +16,7 @@ Evaluator::~Evaluator()
 {
 	tracker_->preExit();
 	saveTrajectory(tracker_->getArchivedPatches());
+	saveFinalCosts(tracker_->getOptimizedFinalCosts());
 }
 
 tracker::Patches const& Evaluator::getPatches() const
@@ -33,7 +35,6 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	imageNum_++;
 	if (params_.experiment)
 	{
 		if (imageNum_ > 2)
@@ -41,6 +42,7 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 			return;
 		}
 	}
+	imageNum_++;
 
 	consoleLog_->info("New image at timestamp " +
 					  std::to_string(sample.timestamp.count()));
@@ -116,5 +118,23 @@ std::list<visual_odometry::Keyframe> const& Evaluator::getActiveFrames() const
 std::list<visual_odometry::Keyframe> const& Evaluator::getStoredFrames() const
 {
 	return visualOdometry_->getStoredFrames();
+}
+
+void Evaluator::saveFinalCosts(
+	const std::vector<tracker::OptimizerFinalLoss>& vectorFinalCosts)
+{
+	const std::string outputFilename = params_.outputDir + "/final_cost.txt";
+	consoleLog_->info("Saving final costs into " + outputFilename);
+	std::ofstream costFile;
+	costFile.open(outputFilename);
+
+	for (const auto& v : vectorFinalCosts)
+	{
+		costFile << v.trackId << " " << std::fixed << std::setprecision(8)
+				 << v.lossValue << " " << v.timeStampMicrosecond << std::endl;
+	}
+
+	costFile.close();
+	consoleLog_->info("Saved!");
 }
 }  // namespace tools

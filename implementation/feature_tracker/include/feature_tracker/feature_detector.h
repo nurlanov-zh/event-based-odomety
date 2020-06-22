@@ -49,6 +49,11 @@ class FeatureDetector
 	Corners const& getFeatures() const { return corners_; }
 	Patches const& getArchivedPatches() const { return archivedPatches_; }
 
+	std::vector<tracker::OptimizerFinalLoss> getOptimizedFinalCosts() const
+	{
+		return optimizer_->getFinalCosts();
+	}
+
    private:
 	cv::Mat getLogImage(const cv::Mat& image);
 	cv::Mat getGradients(const cv::Mat& image, bool xDir);

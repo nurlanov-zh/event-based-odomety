@@ -60,9 +60,9 @@ void Optimizer::drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c)
 
 void Optimizer::optimize(Patch& patch)
 {
+	// update currentTimestamp and timeLastUpdate inside
 	patch.integrateEvents();
 
-	consoleLog_->debug("\n");
 	consoleLog_->debug("Optimizing... patch number " +
 					   std::to_string(patch.getTrackId()));
 	std::chrono::steady_clock::time_point begin =
@@ -123,10 +123,36 @@ void Optimizer::optimize(Patch& patch)
 				.count()) +
 		" [ms]\n");
 
-	if (summary.final_cost > params_.optimizerThreshold)
+	patch.addFinalCost(summary.final_cost);
+
+	tracker::OptimizerFinalLoss finalLoss = {
+		patch.getTrackId(),
+		summary.final_cost,
+		patch.getCurrentTimestamp().count(),
+	};
+	vectorFinalCost_.emplace_back(finalLoss);
+
+	// filtering by costs
+	const auto patchFinalCosts = patch.getFinalCosts();
+	if (patchFinalCosts.size() >= 5)
 	{
-		patch.setLost();
-		return;
+		std::vector<double> lastFiveCosts;
+		for (int i = 0; i < 5; i++)
+		{
+			lastFiveCosts.push_back(
+				patchFinalCosts[patchFinalCosts.size() - 6 + i]);
+		}
+		std::sort(lastFiveCosts.begin(), lastFiveCosts.end());
+		double median = lastFiveCosts[2];
+
+		if (median > params_.optimizerThreshold)
+		{
+			consoleLog_->info("Patch: " + std::to_string(patch.getTrackId()) +
+							  " lost with median last 5 final cost: " +
+							  std::to_string(median));
+			patch.setLost();
+			return;
+		}
 	}
 
 	// !!! Update patch params !!!
@@ -139,7 +165,16 @@ void Optimizer::optimize(Patch& patch)
 	flowDir = fmod(flowDir, 2 * M_PI);
 	patch.setFlowDir(flowDir);
 	patch.setWarp(warp);
+
+	auto oldCenter = patch.toCorner();
 	patch.updatePatchRect();
+	auto newCenter = patch.toCorner();
+	auto newTimeWithoutUpdate = common::timestamp_t(
+		static_cast<int64_t>(params_.patchTimeWithoutUpdateScale /
+							 fmax(1e-1, cv::norm(newCenter - oldCenter))));
+
+	patch.setTimeWithoutUpdate(newTimeWithoutUpdate);
+
 	patch.addTrajectoryPosition();
 
 	// Need events here!
