@@ -83,15 +83,15 @@ void Optimizer::optimize(Patch& patch)
 							  new Sophus::test::LocalParameterizationSE2());
 	problem.AddParameterBlock(&flowDir, 1);
 
-	auto* c = new tracker::OptimizerCostFunctor(normalizedIntegratedNabla,
-												gradInterpolator_.get(),
-												currentRect, imageSize_);
+	auto* c = new tracker::OptimizerCostFunctor(
+		normalizedIntegratedNabla, gradInterpolator_.get(), currentRect,
+		imageSize_, patch.getEvents(), patch.getInitPatch());
 
 	ceres::CostFunction* cost_function =
 		new ceres::AutoDiffCostFunction<tracker::OptimizerCostFunctor,
 										ceres::DYNAMIC,
-										Sophus::SE2d::num_parameters, 1>(c,
-																		 size);
+										Sophus::SE2d::num_parameters, 1>(
+			c, size + 1);
 
 	problem.AddResidualBlock(cost_function,
 							 new ceres::HuberLoss(params_.huberLoss),

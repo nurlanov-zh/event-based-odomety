@@ -17,7 +17,6 @@ struct OptimizerParams
 {
 	bool drawCostMap = false;
 	int maxNumIterations = 50;
-	//	int numThreads = tbb::task_scheduler_init::default_num_threads();
 	int numThreads = 1;
 	double optimizerThreshold = 0.25;
 	double huberLoss = 0.3;
