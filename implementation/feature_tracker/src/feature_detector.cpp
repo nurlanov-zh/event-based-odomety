@@ -23,6 +23,10 @@ void FeatureDetector::init()
 
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
+	initMotionField(common::timestamp_t(0));
+	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	integratedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	lastCompensation = common::timestamp_t(0);
 }
 
 void FeatureDetector::reset()
@@ -37,6 +41,128 @@ void FeatureDetector::reset()
 				   params_.imageSize.width - 2 * (params_.patchExtent + 1),
 				   params_.imageSize.height - 2 * (params_.patchExtent + 1)},
 				  cvScalar(1), CV_FILLED);
+
+	initMotionField(common::timestamp_t(0));
+	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	integratedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	lastCompensation = common::timestamp_t(0);
+}
+
+void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
+{
+	motionField_ = cv::Mat::zeros(params_.imageSize, CV_64FC2);
+	double avgX = 0;
+	double avgY = 0;
+	double count = 0;
+	if (timestamp.count() > 0 && !patches_.empty())
+	{
+		for (const auto& patch : patches_)
+		{
+			// Find left border in patch trajectory according to timestamp
+			// using Binary Search assuming that trajectory is sorted.
+			auto low =
+				std::lower_bound(patch.getTrajectory().begin(),
+								 patch.getTrajectory().end(), timestamp,
+								 [](common::Sample<common::Point2d> const& lhs,
+									common::timestamp_t const& target) {
+									 return lhs.timestamp < target;
+								 });
+			if (low != patch.getTrajectory().end() and
+				(low + 1) != patch.getTrajectory().end())
+			{
+				const auto oldP =
+					common::Point2i(round(low->value.x), round(low->value.y));
+
+				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0] =
+					((low + 1)->value.x - low->value.x) /
+					static_cast<double>(
+						((low + 1)->timestamp - low->timestamp).count());
+
+				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1] =
+					((low + 1)->value.y - low->value.y) /
+					static_cast<double>(
+						((low + 1)->timestamp - low->timestamp).count());
+
+				avgX += motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0];
+				avgY += motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1];
+				count += 1.0;
+			}
+		}
+
+		// Init the rest with an average flow
+		// TODO: Initialize as the flow of neighbour
+		if (count >= 1)
+		{
+			for (int i = 0; i < motionField_.rows; i++)
+			{
+				for (int j = 0; j < motionField_.cols; j++)
+				{
+					if (motionField_.at<cv::Vec2f>(i, j)[0] == 0 and
+						motionField_.at<cv::Vec2f>(i, j)[1] == 0)
+					{
+						motionField_.at<cv::Vec2f>(i, j)[0] = avgX / count;
+						motionField_.at<cv::Vec2f>(i, j)[1] = avgY / count;
+					}
+				}
+			}
+		}
+	}
+}
+
+void FeatureDetector::compensateEvents(
+	const std::list<common::EventSample>& events)
+{
+	// take mid timestamp
+	const auto timestamp = common::timestamp_t(static_cast<int32_t>(
+		(events.front().timestamp + events.back().timestamp).count() * 0.5));
+
+	lastCompensation = timestamp;
+
+	// init motion field according to patches at timestamp
+	initMotionField(timestamp);
+
+	// TODO: Optimize Motion Field
+
+	// Compensate events
+	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	for (const auto& event : events)
+	{
+		// Simple Motion Compensation formula:
+		// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
+		common::Point2i newP;
+
+		newP.x = round(event.value.point.x +
+					   (timestamp - event.timestamp).count() *
+						   motionField_.at<cv::Vec2f>(event.value.point.y,
+													  event.value.point.x)[0]);
+		newP.y = round(event.value.point.y +
+					   (timestamp - event.timestamp).count() *
+						   motionField_.at<cv::Vec2f>(event.value.point.y,
+													  event.value.point.x)[1]);
+
+		if (newP.x >= 0 and newP.x < compensatedEventImage_.cols and
+			newP.y >= 0 and newP.y < compensatedEventImage_.rows)
+		{
+			compensatedEventImage_.at<double>(newP.y, newP.x) +=
+				static_cast<double>(event.value.sign);
+		}
+	}
+}
+
+void FeatureDetector::integrateEvents(
+	const std::list<common::EventSample>& events)
+{
+	integratedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	for (const auto& event : events)
+	{
+		const common::Point2i newP = event.value.point;
+		if (newP.x >= 0 and newP.x < integratedEventImage_.cols and
+			newP.y >= 0 and newP.y < integratedEventImage_.rows)
+		{
+			integratedEventImage_.at<double>(newP.y, newP.x) +=
+				static_cast<double>(event.value.sign);
+		}
+	}
 }
 
 void FeatureDetector::preExit()
@@ -270,6 +396,27 @@ void FeatureDetector::setParams(const tracker::DetectorParams& params)
 	params_ = params;
 	optimizer_->setParams(params_.optimizerParams);
 	reset();
+}
+
+std::vector<tracker::OptimizerFinalLoss>
+FeatureDetector::getOptimizedFinalCosts()
+{
+	return optimizer_->getFinalCosts();
+}
+
+cv::Mat const& FeatureDetector::getCompensatedEventImage()
+{
+	return compensatedEventImage_;
+}
+
+cv::Mat const& FeatureDetector::getIntegratedEventImage()
+{
+	return integratedEventImage_;
+}
+
+common::timestamp_t const& FeatureDetector::getLastCompensation()
+{
+	return lastCompensation;
 }
 
 }  // namespace tracker

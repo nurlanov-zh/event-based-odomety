@@ -218,6 +218,8 @@ void Visualizer::drawOriginalOverlay()
 				break;
 			}
 		}
+		integratedNabla_ = integratedEventImage_;
+		predictedNabla_ = compensatedEventImage_;
 	}
 
 	// Draw events
@@ -524,6 +526,16 @@ void Visualizer::setStoredFrames(
 	const std::list<visual_odometry::Keyframe>& frames)
 {
 	storedFrames_ = frames;
+}
+
+void Visualizer::setCompensatedEventImage(const cv::Mat& compensatedEventImage)
+{
+	compensatedEventImage_ = compensatedEventImage;
+}
+
+void Visualizer::setIntegratedEventImage(const cv::Mat& integratedEventImage)
+{
+	integratedEventImage_ = integratedEventImage;
 }
 
 }  // namespace tools

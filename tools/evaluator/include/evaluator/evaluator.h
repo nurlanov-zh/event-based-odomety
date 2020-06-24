@@ -18,6 +18,8 @@ struct EvaluatorParams
 	common::CameraModelParams cameraModelParams = {};
 	bool drawImages = false;
 	bool experiment = true;
+	// compensate whole image each second
+	uint32_t compensationFrequencyTime = 1e6;
 };
 
 class Evaluator
@@ -45,6 +47,9 @@ class Evaluator
 	visual_odometry::MapLandmarks const& getMapLandmarks();
 	std::list<visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
+
+	cv::Mat const& getCompensatedEventImage();
+	cv::Mat const& getIntegratedEventImage();
 
 	void saveFinalCosts(
 		const std::vector<tracker::OptimizerFinalLoss>& vectorFinalCosts);

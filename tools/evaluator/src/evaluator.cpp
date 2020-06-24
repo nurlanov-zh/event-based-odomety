@@ -28,6 +28,12 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->addEvent(sample);
 	tracker_->updatePatches(sample);
+	if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
+		params_.compensationFrequencyTime)
+	{
+		tracker_->compensateEvents(tracker_->getEvents());
+		tracker_->integrateEvents(tracker_->getEvents());
+	}
 }
 
 void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
@@ -93,7 +99,8 @@ void Evaluator::saveTrajectory(const tracker::Patches& patches)
 			trajFile << std::fixed << std::setprecision(8) << patch.getTrackId()
 					 << " "
 					 << std::chrono::duration<double>(pos.timestamp).count()
-					 << " " << pos.value.x << " " << pos.value.y << std::endl;
+					 << " " << round(pos.value.x) << " " << round(pos.value.y)
+					 << std::endl;
 		}
 	}
 	trajFile.close();
@@ -138,4 +145,15 @@ void Evaluator::saveFinalCosts(
 	costFile.close();
 	consoleLog_->info("Saved!");
 }
+
+cv::Mat const& Evaluator::getCompensatedEventImage()
+{
+	return tracker_->getCompensatedEventImage();
+}
+
+cv::Mat const& Evaluator::getIntegratedEventImage()
+{
+	return tracker_->getIntegratedEventImage();
+}
+
 }  // namespace tools
