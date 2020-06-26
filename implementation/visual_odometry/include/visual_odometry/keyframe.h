@@ -10,6 +10,12 @@ namespace visual_odometry
 using MapLandmarks = std::unordered_map<tracker::TrackId, Eigen::Vector3d>;
 using Landmarks = std::unordered_map<tracker::TrackId, Eigen::Vector2d>;
 
+struct Match
+{
+	common::Pose3d T_i_j;
+	std::vector<tracker::TrackId> inliers;
+};
+
 class Keyframe
 {
    public:

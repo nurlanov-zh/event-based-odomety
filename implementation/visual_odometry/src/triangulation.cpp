@@ -28,4 +28,36 @@ std::vector<Eigen::Vector3d> triangulateLandmarks(
 	return triangulatedLandmarks;
 }
 
+Eigen::Matrix3d computeEssential(const Sophus::SE3d& T_0_1)
+{
+	const Eigen::Vector3d t_0_1 = T_0_1.translation();
+	const Eigen::Matrix3d R_0_1 = T_0_1.rotationMatrix();
+
+	return Sophus::SO3d::hat(t_0_1.normalized()) * R_0_1;
+}
+
+void findInliersEssential(const opengv::bearingVectors_t& bearingVectors1,
+						  const opengv::bearingVectors_t& bearingVectors2,
+						  const Keyframe& keyframe1, const Keyframe& keyframe2,
+						  double epipolarErrorThreshold)
+{
+	assert(bearingVectors1.size() == bearingVectors2.size());
+
+	const Sophus::SE3d T_1_2 = keyframe1.pose.inverse() * keyframe2.pose;
+	const Eigen::Matrix3d& E = computeEssential(T_1_2);
+
+	//md.inliers.clear();
+
+	for (size_t j = 0; j < bearingVectors1.size(); j++)
+	{
+		const double constraint =
+			bearingVectors1[j].transpose() * E * bearingVectors2[j];
+		if (std::abs(constraint) < epipolarErrorThreshold)
+		{
+			// md.inliers.push_back(
+			// 	std::make_pair(md.matches[j].first, md.matches[j].second));
+		}
+	}
+}
+
 }  // namespace visual_odometry

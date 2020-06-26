@@ -24,12 +24,22 @@ struct hash<std::chrono::duration<_rep, ratio>>
 
 namespace visual_odometry
 {
+struct VisualOdometryParams
+{
+	size_t numOfActiveFrames = 10;
+	size_t numOfInliers = 50;
+	size_t ransacMinInliers = 50;
+	double ransacThreshold = 0.1;
+	double reprojectionError = 0.1;
+};
+
 class VisualOdometryFrontEnd
 {
    public:
-	VisualOdometryFrontEnd(const common::CameraModelParams& calibration);
+	VisualOdometryFrontEnd(const common::CameraModelParams& calibration,
+						   const VisualOdometryParams& params);
 
-	void newKeyframeCandidate(const Keyframe& keyframe);
+	void newKeyframeCandidate(Keyframe& keyframe);
 
 	std::optional<common::Pose3d> syncGtAndImage(
 		const common::timestamp_t& timestamp);
@@ -47,9 +57,21 @@ class VisualOdometryFrontEnd
 								 opengv::bearingVectors_t& bearingVectors1,
 								 opengv::bearingVectors_t& bearingVectors2);
 
+	bool initCameras(Keyframe& keyframe);
+	void localizeCamera(const Keyframe& keyframe, Match& match);
+	void addKeyframe(const Keyframe& keyframe);
+	void deleteKeyframe();
+	size_t findInliersRansac(const opengv::bearingVectors_t& bearingVectors1,
+							 const opengv::bearingVectors_t& bearingVectors2,
+							 Keyframe& keyframe, Match& match);
+
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
+
+	VisualOdometryParams params_;
+
+	bool init_;
 
 	std::list<Keyframe> activeFrames_;
 	std::list<Keyframe> storedFrames_;

@@ -60,8 +60,9 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 	tracker_->newImage(sample);
 	corners_ = tracker_->getFeatures();
 
-	visualOdometry_->newKeyframeCandidate(
-		visual_odometry::Keyframe(tracker_->getPatches(), sample.timestamp));
+	auto keyframe =
+		visual_odometry::Keyframe(tracker_->getPatches(), sample.timestamp);
+	visualOdometry_->newKeyframeCandidate(keyframe);
 }
 
 void Evaluator::reset()
@@ -74,8 +75,8 @@ void Evaluator::reset()
 	params.drawImages = params_.drawImages;
 	params.imageSize = params_.imageSize;
 	tracker_.reset(new tracker::FeatureDetector(params));
-	visualOdometry_.reset(
-		new visual_odometry::VisualOdometryFrontEnd(params_.cameraModelParams));
+	visualOdometry_.reset(new visual_odometry::VisualOdometryFrontEnd(
+		params_.cameraModelParams, visual_odometry::VisualOdometryParams()));
 	imageNum_ = 0;
 
 	consoleLog_->info("Evaluator is reset");
