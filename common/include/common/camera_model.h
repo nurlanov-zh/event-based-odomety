@@ -7,17 +7,18 @@
 
 namespace common
 {
+template <typename Scalar = double>
 struct CameraModelParams
 {
-	double fx = 0;
-	double fy = 0;
-	double cx = 0;
-	double cy = 0;
-	double k1 = 0;
-	double k2 = 0;
-	double k3 = 0;
-	double p1 = 0;
-	double p2 = 0;
+	Scalar fx = 0;
+	Scalar fy = 0;
+	Scalar cx = 0;
+	Scalar cy = 0;
+	Scalar k1 = 0;
+	Scalar k2 = 0;
+	Scalar k3 = 0;
+	Scalar p1 = 0;
+	Scalar p2 = 0;
 };
 
 template <typename Scalar = double>
@@ -91,11 +92,18 @@ class CameraModel
 		return res.normalized();
 	}
 
+	const CameraModelParams<Scalar>& getParams() const { return params_; }
+
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
    private:
-	CameraModelParams param_;
+	CameraModelParams<Scalar> param_;
 	cv::Mat D_;
 	cv::Mat K_;
 };
+
+template <typename Scalar = double>
+std::shared_ptr<CameraModel> fromData(const CameraModelParams<Scalar>* params) {
+	return std::shared_ptr<CameraModel>(new CameraModel<Scalar>(*params));
+}
 
 }  // namespace common

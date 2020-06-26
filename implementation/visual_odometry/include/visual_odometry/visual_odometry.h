@@ -29,8 +29,10 @@ struct VisualOdometryParams
 	size_t numOfActiveFrames = 10;
 	size_t numOfInliers = 50;
 	size_t ransacMinInliers = 50;
+	size_t maxNumIterations = 50;
 	double ransacThreshold = 0.1;
 	double reprojectionError = 0.1;
+	double huberLoss = 0.3;
 };
 
 class VisualOdometryFrontEnd
@@ -47,7 +49,7 @@ class VisualOdometryFrontEnd
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
 	MapLandmarks const& getMapLandmarks();
-	std::list<Keyframe> const& getActiveFrames() const;
+	std::unordered_map<common::timestamp_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
 
    private:
@@ -59,11 +61,14 @@ class VisualOdometryFrontEnd
 
 	bool initCameras(Keyframe& keyframe);
 	void localizeCamera(const Keyframe& keyframe, Match& match);
-	void addKeyframe(const Keyframe& keyframe);
+	void addKeyframe(const Keyframe& keyframe, const Match& match);
+	void addNewLandmarks(const Keyframe& keyframe, const Match& match);
 	void deleteKeyframe();
+	void deleteLandmarks(const Keyframe& keyframe);
 	size_t findInliersRansac(const opengv::bearingVectors_t& bearingVectors1,
 							 const opengv::bearingVectors_t& bearingVectors2,
 							 Keyframe& keyframe, Match& match);
+	void optimize();
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
@@ -73,7 +78,7 @@ class VisualOdometryFrontEnd
 
 	bool init_;
 
-	std::list<Keyframe> activeFrames_;
+	std::unordered_map<size_t, Keyframe> activeFrames_;
 	std::list<Keyframe> storedFrames_;
 	MapLandmarks mapLandmarks_;
 	std::unique_ptr<common::CameraModel<double>> cameraModel_;

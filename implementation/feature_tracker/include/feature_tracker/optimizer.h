@@ -43,7 +43,7 @@ class Optimizer
 
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
 
-	OptimizerParams getParams() { return params_; }
+	OptimizerParams* getParams() { return &params_; }
 
 	std::vector<OptimizerFinalLoss> getFinalCosts() { return vectorFinalCost_; }
 
