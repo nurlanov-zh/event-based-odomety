@@ -33,6 +33,7 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 	{
 		tracker_->compensateEvents(tracker_->getEvents());
 		tracker_->integrateEvents(tracker_->getEvents());
+		tracker_->clearEvents();
 	}
 }
 

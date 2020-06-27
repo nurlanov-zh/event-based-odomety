@@ -1,4 +1,5 @@
 #include "feature_tracker/feature_detector.h"
+#include "feature_tracker/total_variance.h"
 
 #include <opencv2/core/eigen.hpp>
 
@@ -27,6 +28,8 @@ void FeatureDetector::init()
 	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
 	integratedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
 	lastCompensation = common::timestamp_t(0);
+	lastEvents_.clear();
+	fixedPoints_.clear();
 }
 
 void FeatureDetector::reset()
@@ -46,11 +49,14 @@ void FeatureDetector::reset()
 	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
 	integratedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
 	lastCompensation = common::timestamp_t(0);
+	lastEvents_.clear();
+	fixedPoints_.clear();
 }
 
 void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 {
 	motionField_ = cv::Mat::zeros(params_.imageSize, CV_64FC2);
+	fixedPoints_.clear();
 	double avgX = 0;
 	double avgY = 0;
 	double count = 0;
@@ -74,14 +80,16 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 					common::Point2i(round(low->value.x), round(low->value.y));
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0] =
-					((low + 1)->value.x - low->value.x) /
+					1e6 * ((low + 1)->value.x - low->value.x) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1] =
-					((low + 1)->value.y - low->value.y) /
+					1e6 * ((low + 1)->value.y - low->value.y) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
+
+				fixedPoints_.emplace_back(oldP);
 
 				avgX += motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0];
 				avgY += motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1];
@@ -109,6 +117,68 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 	}
 }
 
+void FeatureDetector::interpolateMotionField(
+	const common::timestamp_t timestamp)
+{
+	// init motion field according to patches at timestamp, fill fixedPoints_
+	initMotionField(timestamp);
+
+	// if initialized
+	if (cv::norm(motionField_) > 0)
+	{
+		ceres::Problem problem;
+
+		// make it continuous
+		if (!motionField_.isContinuous())
+		{
+			motionField_ = motionField_.clone();
+		}
+
+		auto* c = new tracker::totalVarianceFunctor();
+
+		ceres::CostFunction* cost_function =
+			new ceres::AutoDiffCostFunction<tracker::totalVarianceFunctor, 2, 2,
+											2>(c);
+
+		for (int y = 0; y < params_.imageSize.height - 1; y++)
+		{
+			for (int x = 0; x < params_.imageSize.width - 1; x++)
+			{
+				problem.AddResidualBlock(cost_function,
+										 new ceres::HuberLoss(1e-3),
+										 motionField_.ptr<double>(y, x),
+										 motionField_.ptr<double>(y, x + 1));
+
+				problem.AddResidualBlock(cost_function,
+										 new ceres::HuberLoss(1e-3),
+										 motionField_.ptr<double>(y, x),
+										 motionField_.ptr<double>(y + 1, x));
+			}
+		}
+
+		// Set subset of parameters to be constant
+		for (const auto& point : fixedPoints_)
+		{
+			problem.SetParameterBlockConstant(
+				motionField_.ptr<double>(point.y, point.x));
+		}
+
+		// Set solver options (precision / method)
+		ceres::Solver::Options options;
+		options.minimizer_progress_to_stdout = false;
+		options.num_threads = 1;
+		options.logging_type = ceres::SILENT;
+		options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+		options.use_nonmonotonic_steps = false;
+
+		// Solve
+		ceres::Solver::Summary summary;
+		Solve(options, &problem, &summary);
+
+		consoleLog_->info(summary.BriefReport());
+	}
+}
+
 void FeatureDetector::compensateEvents(
 	const std::list<common::EventSample>& events)
 {
@@ -116,12 +186,16 @@ void FeatureDetector::compensateEvents(
 	const auto timestamp = common::timestamp_t(static_cast<int32_t>(
 		(events.front().timestamp + events.back().timestamp).count() * 0.5));
 
-	lastCompensation = timestamp;
+	lastCompensation = events.back().timestamp;
 
-	// init motion field according to patches at timestamp
-	initMotionField(timestamp);
+	// Optimize Motion Field
+	interpolateMotionField(timestamp);
 
-	// TODO: Optimize Motion Field
+	consoleLog_->info(
+		"Compensating {} events, to time_ref {}, with start "
+		"at {}, end at {} microseconds, using {} fixed patch centers",
+		events.size(), timestamp.count(), events.front().timestamp.count(),
+		events.back().timestamp.count(), fixedPoints_.size());
 
 	// Compensate events
 	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
@@ -132,11 +206,11 @@ void FeatureDetector::compensateEvents(
 		common::Point2i newP;
 
 		newP.x = round(event.value.point.x +
-					   (timestamp - event.timestamp).count() *
+					   (timestamp - event.timestamp).count() * 1e-6 *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[0]);
 		newP.y = round(event.value.point.y +
-					   (timestamp - event.timestamp).count() *
+					   (timestamp - event.timestamp).count() * 1e-6 *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[1]);
 

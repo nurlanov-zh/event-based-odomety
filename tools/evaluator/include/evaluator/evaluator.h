@@ -18,8 +18,8 @@ struct EvaluatorParams
 	common::CameraModelParams cameraModelParams = {};
 	bool drawImages = false;
 	bool experiment = true;
-	// compensate whole image each second
-	uint32_t compensationFrequencyTime = 1e6;
+	// compensate whole image each k microseconds
+	uint32_t compensationFrequencyTime = 300000;
 };
 
 class Evaluator

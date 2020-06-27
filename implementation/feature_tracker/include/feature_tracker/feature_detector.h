@@ -40,7 +40,11 @@ class FeatureDetector
 
 	void initMotionField(const common::timestamp_t timestamp);
 
+	void interpolateMotionField(const common::timestamp_t timestamp);
+
 	void compensateEvents(const std::list<common::EventSample>& events);
+
+	void clearEvents() { lastEvents_.clear(); }
 
 	void integrateEvents(const std::list<common::EventSample>& events);
 
@@ -78,6 +82,7 @@ class FeatureDetector
 	cv::Mat integratedEventImage_;
 
 	cv::Mat motionField_;
+	std::vector<common::Point2i> fixedPoints_;
 
 	std::unique_ptr<Optimizer> optimizer_;
 	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
