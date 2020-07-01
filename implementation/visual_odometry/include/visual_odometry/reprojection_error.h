@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/data_types.h>
+#include <common/camera_model.h>
 
 namespace visual_odometry
 {
@@ -16,8 +17,8 @@ struct BundleAdjustmentReprojectionCostFunctor {
     Eigen::Map<Sophus::SE3<T> const> const Tw2c(sTw2c);
     Eigen::Map<Eigen::Matrix<T, 3, 1> const> const p3dw(sp3dw);
     Eigen::Map<Eigen::Matrix<T, 2, 1>> residuals(sResiduals);
-    const std::shared_ptr<CameraModel<T>> cam =
-        CameraModel<T>::fromData(sIntr);
+    const std::shared_ptr<common::CameraModel<T>> cam =
+        common::CameraModel<T>::fromData(sIntr);
 
     residuals = p2d - cam->project(Tw2c.inverse() * p3dw);
     return true;

@@ -21,6 +21,10 @@ Evaluator::~Evaluator()
 
 tracker::Patches const& Evaluator::getPatches() const
 {
+	if (params_.visOdometryExperiment)
+	{
+		return patches_;
+	}
 	return tracker_->getPatches();
 }
 
@@ -45,7 +49,10 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
-	if (params_.experiment)
+	consoleLog_->info("New image at timestamp " +
+					  std::to_string(sample.timestamp.count()));
+	imageNum_++;
+	if (params_.trackerExperiment)
 	{
 		if (imageNum_ > 2)
 		{
@@ -57,12 +64,39 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 	consoleLog_->info("New image at timestamp " +
 					  std::to_string(sample.timestamp.count()));
 
-	tracker_->newImage(sample);
-	corners_ = tracker_->getFeatures();
+	if (!params_.visOdometryExperiment)
+	{
+		tracker_->newImage(sample);
+		corners_ = tracker_->getFeatures();
+	}
+	else
+	{
+		const auto it = keyframes_.find(sample.timestamp.count());
+		if (it != keyframes_.end())
+		{
+			patches_ = it->second;
+		}
+	}
 
-	auto keyframe =
-		visual_odometry::Keyframe(tracker_->getPatches(), sample.timestamp);
-	visualOdometry_->newKeyframeCandidate(keyframe);
+	if (imageNum_ > 2)
+	{
+		if (!params_.visOdometryExperiment)
+		{
+			auto keyframe = visual_odometry::Keyframe(tracker_->getPatches(),
+													  sample.timestamp);
+			visualOdometry_->newKeyframeCandidate(keyframe);
+		}
+		else
+		{
+			const auto it = keyframes_.find(sample.timestamp.count());
+			if (it != keyframes_.end())
+			{
+				auto keyframe =
+					visual_odometry::Keyframe(it->second, sample.timestamp);
+				visualOdometry_->newKeyframeCandidate(keyframe);
+			}
+		}
+	}
 }
 
 void Evaluator::reset()
@@ -117,12 +151,21 @@ void Evaluator::setGroundTruthSamples(
 	visualOdometry_->setGroundTruthSamples(groundTruthSamples);
 }
 
+void Evaluator::setPatches(const tracker::Patches& patches)
+{
+	for (const auto& patch : patches)
+	{
+		keyframes_[patch.getCurrentTimestamp().count()].push_back(patch);
+	}
+}
+
 visual_odometry::MapLandmarks const& Evaluator::getMapLandmarks()
 {
 	return visualOdometry_->getMapLandmarks();
 }
 
-std::list<visual_odometry::Keyframe> const& Evaluator::getActiveFrames() const
+std::map<size_t, visual_odometry::Keyframe> const& Evaluator::getActiveFrames()
+	const
 {
 	return visualOdometry_->getActiveFrames();
 }

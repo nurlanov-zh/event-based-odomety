@@ -55,6 +55,8 @@ int main(int argc, char** argv)
 	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
 
+	evaluator.setPatches(replayer.getPatches());
+
 	replayer.addEventCallback(
 		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
 	replayer.addImageCallback(
@@ -119,6 +121,11 @@ int main(int argc, char** argv)
 					auto trackerParams = visualizer.getTrackerParams();
 					trackerParams.drawImages = showGui;
 					evaluator.setTrackerParams(trackerParams);
+				}
+
+				if (visualizer.isEvaluatorParamsChanged())
+				{
+					evaluator.setParams(visualizer.getEvaluatorParams());
 				}
 			}
 		}

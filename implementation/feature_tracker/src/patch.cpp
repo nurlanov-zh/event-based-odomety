@@ -28,6 +28,7 @@ void Patch::init()
 	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
 	// set timeWithoutUpdate_ to 10 seconds
 	timeWithoutUpdate_ = common::timestamp_t(static_cast<int64_t>(1e7));
+	initTime_ = currentTimestamp_;
 
 	addTrajectoryPosition();
 }
@@ -121,7 +122,7 @@ void Patch::integrateMotionCompensatedEvents()
 	}
 }
 
-void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
+void Patch::warpImage()
 {
 	cv::Mat warpedGradX;
 	cv::Mat warpedGradY;
@@ -129,13 +130,14 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	cv::Mat warpCv;
 	cv::eigen2cv(warp_.matrix2x3(), warpCv);
 
-	cv::warpAffine(gradX, warpedGradX, warpCv, {gradX.cols, gradX.rows},
+	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows},
 				   cv::WARP_INVERSE_MAP);
-	cv::warpAffine(gradY, warpedGradY, warpCv, {gradY.cols, gradY.rows},
+	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows},
 				   cv::WARP_INVERSE_MAP);
 
-	if (patch_.x < 0 || patch_.y < 0 || patch_.x + patch_.width >= gradX.cols ||
-		patch_.y + patch_.height >= gradX.rows)
+	if (patch_.x < 0 || patch_.y < 0 ||
+		patch_.x + patch_.width >= gradX_.cols ||
+		patch_.y + patch_.height >= gradX_.rows)
 	{
 		return;
 	}
@@ -266,6 +268,22 @@ cv::Rect2d Patch::getInitPatch() const
 void Patch::addFinalCost(double finalCost)
 {
 	finalCosts_.emplace_back(finalCost);
+}
+
+void Patch::setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
+{
+	gradX_ = gradX;
+	gradY_ = gradY;
+}
+
+cv::Mat const& Patch::getGradX() const
+{
+	return gradX_;
+}
+
+cv::Mat const& Patch::getGradY() const
+{
+	return gradY_;
 }
 
 }  // namespace tracker

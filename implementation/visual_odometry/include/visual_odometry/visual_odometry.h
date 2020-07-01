@@ -27,18 +27,18 @@ namespace visual_odometry
 struct VisualOdometryParams
 {
 	size_t numOfActiveFrames = 10;
-	size_t numOfInliers = 50;
-	size_t ransacMinInliers = 50;
+	size_t numOfInliers = 15;
+	size_t ransacMinInliers = 25;
 	size_t maxNumIterations = 50;
-	double ransacThreshold = 0.1;
-	double reprojectionError = 0.1;
-	double huberLoss = 0.3;
+	double ransacThreshold = 5e-5;
+	double reprojectionError = 3;
+	double huberLoss = 0.8;
 };
 
 class VisualOdometryFrontEnd
 {
    public:
-	VisualOdometryFrontEnd(const common::CameraModelParams& calibration,
+	VisualOdometryFrontEnd(const common::CameraModelParams<double>& calibration,
 						   const VisualOdometryParams& params);
 
 	void newKeyframeCandidate(Keyframe& keyframe);
@@ -49,7 +49,7 @@ class VisualOdometryFrontEnd
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
 	MapLandmarks const& getMapLandmarks();
-	std::unordered_map<common::timestamp_t, Keyframe> const& getActiveFrames() const;
+	std::map<size_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
 
    private:
@@ -59,7 +59,8 @@ class VisualOdometryFrontEnd
 								 opengv::bearingVectors_t& bearingVectors1,
 								 opengv::bearingVectors_t& bearingVectors2);
 
-	bool initCameras(Keyframe& keyframe);
+	bool isNewKeyframeNeeded(Keyframe& keyframe, Match& match);
+	bool initCameras(Keyframe& keyframe, Match& match);
 	void localizeCamera(const Keyframe& keyframe, Match& match);
 	void addKeyframe(const Keyframe& keyframe, const Match& match);
 	void addNewLandmarks(const Keyframe& keyframe, const Match& match);
@@ -67,6 +68,7 @@ class VisualOdometryFrontEnd
 	void deleteLandmarks(const Keyframe& keyframe);
 	size_t findInliersRansac(const opengv::bearingVectors_t& bearingVectors1,
 							 const opengv::bearingVectors_t& bearingVectors2,
+							 const std::vector<tracker::TrackId>& trackIds,
 							 Keyframe& keyframe, Match& match);
 	void optimize();
 
@@ -78,7 +80,7 @@ class VisualOdometryFrontEnd
 
 	bool init_;
 
-	std::unordered_map<size_t, Keyframe> activeFrames_;
+	std::map<size_t, Keyframe> activeFrames_;
 	std::list<Keyframe> storedFrames_;
 	MapLandmarks mapLandmarks_;
 	std::unique_ptr<common::CameraModel<double>> cameraModel_;

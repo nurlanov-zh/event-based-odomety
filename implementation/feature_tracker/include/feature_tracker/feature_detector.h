@@ -11,7 +11,7 @@ struct DetectorParams
 {
 	double qualityLevel = 0.01;
 	double minDistance = 3;
-	double associationDistance = 10;
+	double associationDistance = 5;
 	int32_t patchExtent = 17;
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
@@ -27,6 +27,7 @@ struct DetectorParams
 	double compensateTVHuberLoss = 10;
 	double compensateScale = 1e-3;
 	uint compensateMinNumEvents = 100;
+	size_t maxPatches = 100;
 };
 
 class FeatureDetector
@@ -96,6 +97,8 @@ class FeatureDetector
 
 	std::unique_ptr<Optimizer> optimizer_;
 	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
+
+	std::unordered_map<size_t, std::unique_ptr<Optimizer>> optimizers_;
 
 	DetectorParams params_;
 	size_t maxCorners_;

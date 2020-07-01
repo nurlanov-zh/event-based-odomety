@@ -9,6 +9,8 @@ namespace tracker
 FlowEstimator::FlowEstimator(const FlowEstimatorParams& params)
 	: imageCounter_(0), params_(params)
 {
+	consoleLog_ = spdlog::get("console");
+	errLog_ = spdlog::get("stderr");
 }
 
 void FlowEstimator::addImage(const cv::Mat& image)
@@ -43,6 +45,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 		if (!nextPoint.has_value())
 		{
 			patch.setLost();
+			consoleLog_->debug("Patch " + std::to_string(patch.getTrackId()) +
+							   " has no flow value");
 			continue;
 		}
 
@@ -69,6 +73,8 @@ bool FlowEstimator::getFlowPatches(Patches& patches)
 			newCorner.y >= currentImage_.rows - 5)
 		{
 			patch.setLost();
+			consoleLog_->debug("Patch " + std::to_string(patch.getTrackId()) +
+							   " is lost according to KL");
 			continue;
 		}
 	}

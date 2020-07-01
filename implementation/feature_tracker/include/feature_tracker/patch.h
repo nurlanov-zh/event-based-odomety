@@ -43,7 +43,7 @@ class Patch
 
 	bool isLost() const { return lost_; }
 
-	void warpImage(const cv::Mat& gradX, const cv::Mat& gradY);
+	void warpImage();
 
 	common::EventSequence const& getEvents() const;
 	cv::Mat const& getIntegratedNabla() const { return integratedNabla_; }
@@ -65,6 +65,9 @@ class Patch
 	common::timestamp_t getTimeLastUpdate() const;
 
 	cv::Mat const& getCompenatedIntegratedNabla() const;
+	common::timestamp_t getInitTime() const { return initTime_; }
+	cv::Mat const& getGradX() const;
+	cv::Mat const& getGradY() const;
 
 	void setLost() { lost_ = true; }
 	void setNumOfEvents(size_t numOfEvents);
@@ -74,6 +77,8 @@ class Patch
 	void setCostMap(const cv::Mat& costMap) { costMap_ = costMap; }
 	void setIntegratedNabla(const cv::Mat& integratedNabla);
 	void setCorner(const Corner& corner, const common::timestamp_t& timestamp);
+	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
+	void setTs(const common::timestamp_t& ts) { currentTimestamp_ = ts; }
 
 	void setMotionCompensatedIntegratedNabla(
 		const cv::Mat& motionCompensatedIntegratedNabla);
@@ -101,16 +106,20 @@ class Patch
 	common::timestamp_t currentTimestamp_;
 	common::timestamp_t timeLastUpdate_;
 	common::timestamp_t timeWithoutUpdate_;
+	common::timestamp_t initTime_;
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
 	size_t minNumOfEvents_ = 30;
-	size_t maxNumOfEvents_ = 500;
+	size_t maxNumOfEvents_ = 200;
 
 	cv::Mat integratedNabla_;
 	cv::Mat motionCompensatedIntegratedNabla_;
 	cv::Mat predictedNabla_;
 	cv::Mat costMap_;
+
+	cv::Mat gradX_;
+	cv::Mat gradY_;
 
 	double flowDir_;
 	common::Pose2d warp_;

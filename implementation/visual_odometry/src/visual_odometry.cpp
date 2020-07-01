@@ -1,7 +1,7 @@
 #include "visual_odometry/visual_odometry.h"
-#include "visual_odometry/triangulation.h"
-#include "visual_odometry/reprojection_error.h"
 #include "visual_odometry/local_parameterization_se3.hpp"
+#include "visual_odometry/reprojection_error.h"
+#include "visual_odometry/triangulation.h"
 
 #include <sophus/interpolate.hpp>
 
@@ -16,12 +16,14 @@
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
 
+#include <ceres/ceres.h>
+
 #include <cmath>
 
 namespace visual_odometry
 {
 VisualOdometryFrontEnd::VisualOdometryFrontEnd(
-	const common::CameraModelParams& calibration,
+	const common::CameraModelParams<double>& calibration,
 	const VisualOdometryParams& params)
 	: params_(params)
 {
@@ -38,42 +40,65 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 	if (activeFrames_.empty())
 	{
 		keyframe.pose = common::Pose3d();
-		activeFrames_[keyframe.timestamp] = keyframe;
+		Match match;
+		for (const auto& lm : keyframe.getLandmarks())
+		{
+			match.inliers.emplace_back(lm.first);
+		}
+
+		addKeyframe(keyframe, match);
 		return;
 	}
 
 	if (activeFrames_.size() == 1)
 	{
-		if (initCameras(keyframe))
+		Match match;
+		if (initCameras(keyframe, match))
 		{
-			addKeyframe(keyframe);
+			addKeyframe(keyframe, match);
 		}
+		consoleLog_->info("Map consist of " +
+						  std::to_string(mapLandmarks_.landmarks.size()) +
+						  " landmarks");
 		return;
 	}
 
 	Match match;
+	if (!isNewKeyframeNeeded(keyframe, match))
+	{
+		return;
+	}
+
+	deleteKeyframe();
+	addKeyframe(keyframe, match);
+
+	// optimize();
+
+	consoleLog_->info("New keyframe is added " +
+					  std::to_string(keyframe.timestamp.count()));
+	consoleLog_->info("Map consist of " +
+					  std::to_string(mapLandmarks_.landmarks.size()) +
+					  " landmarks");
+}
+
+bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
+												 Match& match)
+{
 	localizeCamera(keyframe, match);
 	keyframe.pose = match.Tw2c;
 
 	if (match.inliers.size() <= params_.numOfInliers)
 	{
-		return;
+		consoleLog_->info("Too few inliers after localize camera " +
+						  std::to_string(match.inliers.size()));
+		return false;
 	}
 
-	// find inliers
-	// localizeCamera(keyframe, match);
-
-	deleteKeyframe();
-	addKeyframe(keyframe, match);
-	
-	optimize();
-
-	consoleLog_->info("New keyframe is added " + std::to_string(keyframe.timestamp.count()));
-	consoleLog_->info("Map consist of " + std::to_string(mapLandmarks_.landmarks.size()) +
-					  " landmarks");
+	return true;
 }
 
-void VisualOdometryFrontEnd::addKeyframe(const Keyframe& keyframe, const Match& match)
+void VisualOdometryFrontEnd::addKeyframe(const Keyframe& keyframe,
+										 const Match& match)
 {
 	activeFrames_[keyframe.timestamp.count()] = keyframe;
 
@@ -91,7 +116,7 @@ void VisualOdometryFrontEnd::deleteKeyframe()
 	}
 }
 
-bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe)
+bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 {
 	opengv::bearingVectors_t bearingVectors1;
 	opengv::bearingVectors_t bearingVectors2;
@@ -99,15 +124,28 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe)
 	getCommonBearingVectors(activeFrames_.begin()->second, keyframe, trackIds,
 							bearingVectors1, bearingVectors2);
 
-	Match match;
-	findInliersRansac(bearingVectors1, bearingVectors2, keyframe, match);
+	const auto inliers = findInliersRansac(bearingVectors1, bearingVectors2,
+										   trackIds, keyframe, match);
 
+	consoleLog_->info("Init frames with " + std::to_string(inliers) +
+					  " Ransac inliers");
+	if (inliers < params_.numOfInliers)
+	{
+		return false;
+	}
+	keyframe.pose = match.Tw2c;
+
+	findInliersEssential(bearingVectors1, bearingVectors2,
+						 activeFrames_.begin()->second, keyframe, trackIds,
+						 match, 1e-3);
+
+	consoleLog_->info("Init frames with " + std::to_string(match.inliers.size()) +
+					  " Essential inliers");
 	if (match.inliers.size() < params_.numOfInliers)
 	{
 		return false;
 	}
 
-	keyframe.pose = match.Tw2c;
 	return true;
 }
 
@@ -126,12 +164,12 @@ void VisualOdometryFrontEnd::localizeCamera(const Keyframe& keyframe,
 
 		if (landmarkIt == mapLandmarks_.landmarks.end())
 		{
-			errLog_->error("Track is not in landmarks");
-			return;
+			consoleLog_->trace("Track is not in landmarks");
+			continue;
 		}
 		points.push_back(landmarkIt->second);
 
-		trackIds.push_back(Landmarks.first);
+		trackIds.push_back(landmark.first);
 
 		bearingVectors.emplace_back(cameraModel_->unproject(landmark.second));
 	}
@@ -140,7 +178,7 @@ void VisualOdometryFrontEnd::localizeCamera(const Keyframe& keyframe,
 														  points);
 
 	const float threshold =
-		1.0 - std::cos(std::atan2(params_.reprojectionError, 500.));
+		1.0 - std::cos(std::atan2(params_.reprojectionError, 200.));
 
 	opengv::sac::Ransac<
 		opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem>
@@ -172,23 +210,25 @@ void VisualOdometryFrontEnd::localizeCamera(const Keyframe& keyframe,
 		ransac.sac_model_->selectWithinDistance(nonlinearTransformation,
 												threshold, updatedInliers);
 
-		match.inliers.reserve(updatedInliers.size()); 
+		match.inliers.reserve(updatedInliers.size());
 		for (const auto& inlier : updatedInliers)
 		{
+			// std::cout << trackIds[inlier] << std::endl;
 			// TODO
-			match.inliers.emplace_back(std::make_pair(trackIds[inlier], 0));
+			match.inliers.emplace_back(trackIds[inlier]);
 		}
 	}
 	else
 	{
-		errorLog_->error("Ransac is not successful!");
+		errLog_->error("Ransac is not successful!");
 		return;
 	}
 }
 
 size_t VisualOdometryFrontEnd::findInliersRansac(
 	const opengv::bearingVectors_t& bearingVectors1,
-	const opengv::bearingVectors_t& bearingVectors2, Keyframe& keyframe,
+	const opengv::bearingVectors_t& bearingVectors2,
+	const std::vector<tracker::TrackId>& trackIds, Keyframe& keyframe,
 	Match& match)
 {
 	match.inliers.clear();
@@ -211,7 +251,7 @@ size_t VisualOdometryFrontEnd::findInliersRansac(
 	ransac.threshold_ = params_.ransacThreshold;
 
 	if (ransac.computeModel() &&
-		static_cast<int>(ransac.inliers_.size()) >= params_.ransacMinInliers)
+		ransac.inliers_.size() >= params_.ransacMinInliers)
 	{
 		adapter.sett12(ransac.model_coefficients_.col(3));
 		adapter.setR12(ransac.model_coefficients_.block<3, 3>(0, 0));
@@ -228,48 +268,52 @@ size_t VisualOdometryFrontEnd::findInliersRansac(
 		std::vector<int> updatedInliers;
 		ransac.sac_model_->selectWithinDistance(
 			nonlinearTransformation, params_.ransacThreshold, updatedInliers);
-		std::vector<int> inliers(updatedInliers.size());
+
+		match.inliers.reserve(updatedInliers.size());
+		for (const auto& inlier : updatedInliers)
+		{
+			match.inliers.emplace_back(trackIds[inlier]);
+		}
 
 		return updatedInliers.size();
-		// for (size_t i = 0; i < updatedInliers.size(); ++i)
-		// {
-		// 	inliers[i] = md.matches[updatedInliers[i]];
-		// }
-
-		// match.inliers = inliers;
 	}
+	return 0;
 }
 
-void VisualOdometryFrontEnd::addNewLandmarks(const Keyframe& keyframe, const Match& match)
+void VisualOdometryFrontEnd::addNewLandmarks(const Keyframe& keyframe,
+											 const Match& match)
 {
-	for (const auto& landmark : match.inliers)
+	std::cout << "Inliers " << match.inliers.size() << std::endl;
+	for (const auto landmark : match.inliers)
 	{
-		const auto it = mapLandmarks_.landmarks.find(landmark.first);
-		if (it == mapLandmarks_.landmarks.end())
+		mapLandmarks_.observations[landmark].push_back(
+			keyframe.timestamp.count());
+
+		const auto observationIt = mapLandmarks_.observations.find(landmark);
+		std::cout << "Track " << landmark << " " << observationIt->second.size()
+				  << std::endl;
+		if (observationIt->second.size() == 2)
 		{
-			mapLandmarks_.observations[landmark.first].push_back(keyframe.timestamp.count());
-			const auto observationIt = mapLandmarks_.observations.find(landmark.first);
-			if (observationIt != mapLandmarks_.observations.end())
-			{
-				if (observationIt->second.size() == 2)
-				{
-					const auto kId1 = observationIt->second.front();
-					const auto kId2 = observationIt->second.back();
+			const auto kId1 = observationIt->second.front();
+			const auto kId2 = observationIt->second.back();
 
-					const auto pose1 = activeFrames_[kId1].pose;
-					const auto pose2 = activeFrames_[kId2].pose;
+			const auto pose1 = activeFrames_[kId1].pose;
+			const auto pose2 = activeFrames_[kId2].pose;
 
-					const auto pose2d1 = activeFrames_[kId1].getLandmarks()[landmark.first];
-					const auto pose2d2 = activeFrames_[kId2].getLandmarks()[landmark.first];
+			const auto pose2d1 =
+				activeFrames_[kId1].getLandmarks().at(landmark);
+			const auto pose2d2 =
+				activeFrames_[kId2].getLandmarks().at(landmark);
 
-					opengv::bearingVectors_t vectors1 = {cameraModel_->unproject(pose2d1)};
-					opengv::bearingVectors_t vectors2 = {cameraModel_->unproject(pose2d2)};
+			opengv::bearingVectors_t vectors1 = {
+				cameraModel_->unproject(pose2d1)};
+			opengv::bearingVectors_t vectors2 = {
+				cameraModel_->unproject(pose2d2)};
 
-					const auto& positions = triangulateLandmarks(pose1, pose2, vectors1, vectors2);
+			const auto& positions =
+				triangulateLandmarks(pose1, pose2, vectors1, vectors2);
 
-					mapLandmarks_.landmarks[landmark.first] = positions[0];
-				}
-			}
+			mapLandmarks_.landmarks[landmark] = positions[0];
 		}
 	}
 }
@@ -281,17 +325,31 @@ void VisualOdometryFrontEnd::deleteLandmarks(const Keyframe& keyframe)
 		const auto it = mapLandmarks_.observations.find(landmarks.first);
 		if (it != mapLandmarks_.observations.end())
 		{
-			it->second.erase(keyframe.timestamp.count());
+			const auto obsIt = std::find(it->second.begin(), it->second.end(),
+										 keyframe.timestamp.count());
+			if (obsIt != it->second.end())
+			{
+				it->second.erase(obsIt);
+			}
 		}
 	}
 
-	for (auto it = mapLandmarks_.observations.begin(); it != mapLandmarks_.observations.end(); ++it)
+	for (auto it = mapLandmarks_.observations.begin();
+		 it != mapLandmarks_.observations.end();)
 	{
 		if (it->second.size() == 0)
 		{
-			mapLandmarks_.landmarks.erase(it->first);
-			mapLandmarks_.observations.erase(it->first);
+			if (mapLandmarks_.landmarks.find(it->first) !=
+				mapLandmarks_.landmarks.end())
+			{
+				mapLandmarks_.landmarks.erase(it->first);
+			}
+			it = mapLandmarks_.observations.erase(it);
 			// TODO save old landmarks
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -300,61 +358,76 @@ void VisualOdometryFrontEnd::optimize()
 {
 	ceres::Problem problem;
 
-  	for (auto it = activeFrames_.begin(); it != activeFrames_.end(); ++it) {
-    	problem.AddParameterBlock(activeFrames_->second.pose.data(),
-                              Sophus::SE3d::num_parameters,
-                              new Sophus::test::LocalParameterizationSE3);
-    }
-  }
+	problem.AddParameterBlock(cameraModel_->getParams(), 9);
+	problem.SetParameterBlockConstant(cameraModel_->getParams());
 
-  for (auto it = mapLandmarks_.landmarks.begin(); it != mapLandmarks_.landmarks.end(); ++it) {
-    problem.AddParameterBlock(it->second.data(), 3);
-  }
+	for (auto it = activeFrames_.begin(); it != activeFrames_.end(); ++it)
+	{
+		problem.AddParameterBlock(it->second.pose.data(),
+								  Sophus::SE3d::num_parameters,
+								  new Sophus::test::LocalParameterizationSE3);
 
-  for (auto landmarkIt = mapLandmarks_.observations.begin(); landmarkIt != mapLandmarks_.observations.end();
-       ++landmarkIt) {
-    for (auto observationIt = landmarkIt->second.begin();
-         observationIt != landmarkIt->second.end(); ++observationIt) {
-		const auto frameIt = activeFrames_.find(*observationIt);
-		if (frameIt == activeFrames_.end())
+		if (it == activeFrames_.begin())
 		{
-			errorLog_->error("Frame is not found");
-			return;
+			problem.SetParameterBlockConstant(it->second.pose.data());
+		}
+	}
+
+	for (auto it = mapLandmarks_.landmarks.begin();
+		 it != mapLandmarks_.landmarks.end(); ++it)
+	{
+		problem.AddParameterBlock(it->second.data(), 3);
+	}
+
+	for (auto landmarkIt = mapLandmarks_.observations.begin();
+		 landmarkIt != mapLandmarks_.observations.end(); ++landmarkIt)
+	{
+		for (auto observationIt = landmarkIt->second.begin();
+			 observationIt != landmarkIt->second.end(); ++observationIt)
+		{
+			const auto frameIt = activeFrames_.find(*observationIt);
+			if (frameIt == activeFrames_.end())
+			{
+				consoleLog_->trace("Frame is not found");
+				continue;
+			}
+
+			const auto cornerIt =
+				frameIt->second.getLandmarks().find(landmarkIt->first);
+			if (cornerIt == frameIt->second.getLandmarks().end())
+			{
+				consoleLog_->trace("Corner is not found");
+				continue;
+			}
+
+			const auto pointIt =
+				mapLandmarks_.landmarks.find(landmarkIt->first);
+			if (pointIt == mapLandmarks_.landmarks.end())
+			{
+				consoleLog_->trace("Point is not found in the map");
+				continue;
+			}
+
+			ceres::CostFunction* costFunction = new ceres::AutoDiffCostFunction<
+				BundleAdjustmentReprojectionCostFunctor, 2,
+				Sophus::SE3d::num_parameters, 3, 9>(
+				new BundleAdjustmentReprojectionCostFunctor(cornerIt->second));
+
+			problem.AddResidualBlock(
+				costFunction, new ceres::HuberLoss(params_.huberLoss),
+				frameIt->second.pose.data(), pointIt->second.data(),
+				cameraModel_->getParams());
 		}
 
-		const auto cornerIt = frameIt->getLandmarks().find(landmarkIt->first);
-		if (cornerIt == frameIt->getLandmarks().end())
-		{
-			errorLog_->error("Corner is not found");
-			return;
-		}
+		ceres::Solver::Options ceresOptions;
+		ceresOptions.max_num_iterations = params_.maxNumIterations;
+		ceresOptions.linear_solver_type = ceres::SPARSE_SCHUR;
+		ceresOptions.num_threads = 1;
+		ceres::Solver::Summary summary;
+		Solve(ceresOptions, &problem, &summary);
 
-		ceres::CostFunction* costFunction = new ceres::AutoDiffCostFunction<
-			BundleAdjustmentReprojectionCostFunctor, 2,
-			Sophus::SE3d::num_parameters, 3, 8>(
-				new BundleAdjustmentReprojectionCostFunctor(
-					*cornerIt));
-
-		const auto pointIt = mapLandmarks_.landmarks.find(landmarkIt->first);
-		if (pointIt == mapLandmarks_.landmarks.end())
-		{
-			errorLog_->error("Point is not found in the map");
-			return;
-		}
-
-		problem.AddResidualBlock(
-			costFunction, new ceres::HuberLoss(params_.huberLoss),
-			frameIt->pose.data(), pointIt->data(), cameraModel_->getParams());
-    }
-
-	ceres::Solver::Options ceres_options;
-	ceres_options.max_num_iterations = params_.maxNumIterations;
-	ceres_options.linear_solver_type = ceres::SPARSE_SCHUR;
-	ceres_options.num_threads = 1;
-	ceres::Solver::Summary summary;
-	Solve(ceres_options, &problem, &summary);
-
-	consoleLog_->debug(summary.BriefReport());
+		consoleLog_->debug(summary.BriefReport());
+	}
 }
 
 void VisualOdometryFrontEnd::getCommonBearingVectors(
@@ -432,7 +505,8 @@ MapLandmarks const& VisualOdometryFrontEnd::getMapLandmarks()
 	return mapLandmarks_;
 }
 
-std::unordered_map<common::timestamp_t, Keyframe> const& VisualOdometryFrontEnd::getActiveFrames() const
+std::map<size_t, Keyframe> const& VisualOdometryFrontEnd::getActiveFrames()
+	const
 {
 	return activeFrames_;
 }

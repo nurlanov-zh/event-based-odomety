@@ -12,7 +12,7 @@ using Landmarks = std::unordered_map<tracker::TrackId, Eigen::Vector2d>;
 struct Match
 {
 	common::Pose3d Tw2c;
-	std::vector<std::pair<tracker::TrackId, size_t>> inliers;
+	std::vector<tracker::TrackId> inliers;
 };
 
 struct MapLandmarks
@@ -24,6 +24,7 @@ struct MapLandmarks
 class Keyframe
 {
    public:
+	Keyframe() {}
 	Keyframe(const tracker::Patches& patches,
 			 const common::timestamp_t& timestamp);
 

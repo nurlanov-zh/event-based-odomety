@@ -254,13 +254,14 @@ void Visualizer::drawScene()
 {
 	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
 	sceneView_->Activate(*(camera_.get()));
+
 	const u_int8_t colorCameraActive[3]{255, 0, 0};
 	// const u_int8_t colorCameraStored[3]{0, 0, 255};
 	const u_int8_t colorOldPoints[3]{0, 0, 0};
 
 	for (const auto& camera : activeFrames_)
 	{
-		renderCamera(camera.pose.matrix(), 3.f, colorCameraActive, 0.1f);
+		renderCamera(camera.second.pose.matrix(), 3.f, colorCameraActive, 0.1f);
 	}
 
 	// for (const auto& camera : storedFrames_)
@@ -272,13 +273,21 @@ void Visualizer::drawScene()
 	glPointSize(3.0);
 	glBegin(GL_POINTS);
 
-	for (const auto& trackLandmark : landmarks_)
+	for (const auto& trackLandmark : landmarks_.landmarks)
 	{
 		glColor3ubv(colorOldPoints);
 		pangolin::glVertex(trackLandmark.second);
 	}
 
 	glEnd();
+
+	for (const auto& trackLandmark : landmarks_.landmarks)
+	{
+		pangolin::GlFont::I()
+			.Text("%d", trackLandmark.first)
+			.Draw(trackLandmark.second(0), trackLandmark.second(1),
+				  trackLandmark.second(2));
+	}
 }
 
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
@@ -414,6 +423,7 @@ void Visualizer::reset()
 	nextIntervalPressed_ = false;
 	nextImagePressed_ = false;
 	trackerParamsChanged_ = false;
+	evaluatorParamsChanged_ = false;
 	flow_ = 0;
 
 	stopPlayButton_ = std::unique_ptr<pangolin::Var<bool>>(
@@ -445,6 +455,14 @@ void Visualizer::reset()
 		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
 			"settings.huberLoss", trackerParams_.optimizerParams.huberLoss, 0,
 			2));
+
+	visualOdometryExperiment_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("settings.visOdometryExperiment",
+								evaluatorParams_.visOdometryExperiment, true));
+
+	trackerExperiment_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("settings.trackerExperiment",
+								evaluatorParams_.trackerExperiment, true));
 }
 
 bool Visualizer::stopPressed() const
@@ -486,6 +504,7 @@ void Visualizer::finishVisualizerIteration()
 	}
 
 	updateTrackerParams();
+	updateEvaluatorParams();
 }
 
 void Visualizer::updateTrackerParams()
@@ -511,13 +530,26 @@ void Visualizer::updateTrackerParams()
 	}
 }
 
+void Visualizer::updateEvaluatorParams()
+{
+	const auto visualOdometryExperiment = (*visualOdometryExperiment_);
+	const auto trackerExperiment = (*trackerExperiment_);
+	if (evaluatorParams_.visOdometryExperiment != visualOdometryExperiment ||
+		evaluatorParams_.trackerExperiment != trackerExperiment)
+	{
+		evaluatorParams_.visOdometryExperiment = visualOdometryExperiment;
+		evaluatorParams_.trackerExperiment = trackerExperiment;
+		evaluatorParamsChanged_ = true;
+	}
+}
+
 void Visualizer::setLandmarks(const visual_odometry::MapLandmarks& landmarks)
 {
 	landmarks_ = landmarks;
 }
 
 void Visualizer::setActiveFrames(
-	const std::list<visual_odometry::Keyframe>& frames)
+	const std::map<size_t, visual_odometry::Keyframe>& frames)
 {
 	activeFrames_ = frames;
 }

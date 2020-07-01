@@ -23,7 +23,7 @@ TEST(CameraModelTest, simpleReprojectionCase)
 	{
 		for (int y = -9; y <= 9; y++)
 		{
-			Vec3 p(x, y, 11);
+			Vec3 p(x, y, 10);
 
 			Vec3 pNormalized = p.normalized();
 			Vec2 res = cam.project(p);

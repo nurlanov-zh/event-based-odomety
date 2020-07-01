@@ -1,5 +1,7 @@
 #pragma once
 #include <common/data_types.h>
+#include <evaluator/evaluator.h>
+#include <visual_odometry/visual_odometry.h>
 #include <feature_tracker/feature_detector.h>
 #include <visual_odometry/visual_odometry.h>
 
@@ -60,10 +62,17 @@ class Visualizer
 		return trackerParams_;
 	}
 
+	tools::EvaluatorParams const& getEvaluatorParams()
+	{
+		evaluatorParamsChanged_ = false;
+		return evaluatorParams_;
+	}
+
 	bool isTrackerParamsChanged() const { return trackerParamsChanged_; }
+	bool isEvaluatorParamsChanged() const { return evaluatorParamsChanged_; }
 
 	void setLandmarks(const visual_odometry::MapLandmarks&);
-	void setActiveFrames(const std::list<visual_odometry::Keyframe>&);
+	void setActiveFrames(const std::map<size_t, visual_odometry::Keyframe>&);
 	void setStoredFrames(const std::list<visual_odometry::Keyframe>&);
 
    private:
@@ -92,6 +101,7 @@ class Visualizer
 	void reset();
 
 	void updateTrackerParams();
+	void updateEvaluatorParams();
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
@@ -102,6 +112,7 @@ class Visualizer
 	bool nextIntervalPressed_;
 	bool nextImagePressed_;
 	bool trackerParamsChanged_;
+	bool evaluatorParamsChanged_;
 
 	std::unique_ptr<pangolin::Panel> settingsPanel_;
 	std::unique_ptr<pangolin::View> sceneView_;
@@ -118,9 +129,11 @@ class Visualizer
 	std::unique_ptr<pangolin::Var<bool>> drawCostMap_;
 	std::unique_ptr<pangolin::Var<double>> optimizerThreshold_;
 	std::unique_ptr<pangolin::Var<double>> huberLoss_;
+	std::unique_ptr<pangolin::Var<bool>> visualOdometryExperiment_;
+	std::unique_ptr<pangolin::Var<bool>> trackerExperiment_;
 
 	std::list<visual_odometry::Keyframe> storedFrames_;
-	std::list<visual_odometry::Keyframe> activeFrames_;
+	std::map<size_t, visual_odometry::Keyframe> activeFrames_;
 	visual_odometry::MapLandmarks landmarks_;
 
 	common::timestamp_t currentTimestamp_;
@@ -140,6 +153,7 @@ class Visualizer
 	tracker::TrackId track_id_;
 
 	tracker::DetectorParams trackerParams_;
+	tools::EvaluatorParams evaluatorParams_;
 
 	float flow_;
 };

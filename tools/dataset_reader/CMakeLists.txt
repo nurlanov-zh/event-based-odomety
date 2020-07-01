@@ -11,7 +11,7 @@ add_library(mapped_file
 add_library(${PROJECT_NAME} 
     src/davis240c_reader.cpp)
 
-target_link_libraries(${PROJECT_NAME} common mapped_file)
+target_link_libraries(${PROJECT_NAME} common mapped_file feature_detector)
 
 # FIXME It is not needed to include whole include dir 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)

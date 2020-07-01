@@ -7,6 +7,7 @@ Optimizer::Optimizer(const OptimizerParams& params, const cv::Size2i& imageSize)
 	: params_(params), imageSize_(imageSize)
 {
 	grad_.resize(imageSize.height * imageSize.width * 2);
+	used_ = 0;
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
 };
