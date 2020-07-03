@@ -613,7 +613,6 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 				optimizers_[patch.getInitTime().count()]->optimize(patch);
 				updateNumOfEvents(patch);
 				patch.warpImage();
-
 			}
 		}
 	}

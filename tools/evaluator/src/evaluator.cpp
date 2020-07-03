@@ -15,7 +15,8 @@ Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
 Evaluator::~Evaluator()
 {
 	tracker_->preExit();
-	saveTrajectory(tracker_->getArchivedPatches());
+	saveFeaturesTrajectory(tracker_->getArchivedPatches());
+	savePoses(visualOdometry_->getStoredFrames());
 	saveFinalCosts(tracker_->getOptimizedFinalCosts());
 }
 
@@ -121,7 +122,7 @@ void Evaluator::setTrackerParams(const tracker::DetectorParams& params)
 	tracker_->setParams(params);
 }
 
-void Evaluator::saveTrajectory(const tracker::Patches& patches)
+void Evaluator::saveFeaturesTrajectory(const tracker::Patches& patches)
 {
 	// Since we are going to use evaluator by uzh-rpg lab. We just need to store
 	// trajectory in proper format
@@ -140,6 +141,33 @@ void Evaluator::saveTrajectory(const tracker::Patches& patches)
 					 << " " << round(pos.value.x) << " " << round(pos.value.y)
 					 << std::endl;
 		}
+	}
+	trajFile.close();
+	consoleLog_->info("Saved!");
+}
+
+void Evaluator::savePoses(const std::list<visual_odometry::Keyframe>& keyframes)
+{
+	const std::string outputFilename = params_.outputDir + "/vo_trajectory.txt";
+	consoleLog_->info("Saving VO trajectories into " + outputFilename);
+	std::ofstream trajFile;
+	trajFile.open(outputFilename);
+	for (const auto& kf : keyframes)
+	{
+		// feature_id timestamp x y
+		trajFile << std::fixed << std::setprecision(8)
+				 << kf.pose.matrix3x4()(0, 0) << " "
+				 << kf.pose.matrix3x4()(0, 1) << " "
+				 << kf.pose.matrix3x4()(0, 2) << " "
+				 << kf.pose.matrix3x4()(0, 3) << " "
+				 << kf.pose.matrix3x4()(1, 0) << " "
+				 << kf.pose.matrix3x4()(1, 1) << " "
+				 << kf.pose.matrix3x4()(1, 2) << " "
+				 << kf.pose.matrix3x4()(1, 3) << " "
+				 << kf.pose.matrix3x4()(2, 0) << " "
+				 << kf.pose.matrix3x4()(2, 1) << " "
+				 << kf.pose.matrix3x4()(2, 2) << " "
+				 << kf.pose.matrix3x4()(2, 3) << std::endl;
 	}
 	trajFile.close();
 	consoleLog_->info("Saved!");
@@ -203,4 +231,14 @@ cv::Mat const& Evaluator::getIntegratedEventImage()
 	return tracker_->getIntegratedEventImage();
 }
 
+std::vector<common::Pose3d> const& Evaluator::getGtPoses() const
+{
+	return visualOdometry_->getGtPoses();
+}
+
+std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
+Evaluator::getStoredMapLandmarks() const
+{
+	return visualOdometry_->getStoredLandmarks();
+}
 }  // namespace tools

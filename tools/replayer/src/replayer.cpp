@@ -15,9 +15,15 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 		events_ = events.value();
 	}
 
-	groundTruth_ = reader->getGroundTruth();
-	
-	traj_ = reader->getTrajectory();
+	try
+	{
+		groundTruth_ = reader->getGroundTruth();
+		traj_ = reader->getTrajectory();
+	}
+	catch (std::runtime_error)
+	{
+		errLog_->warn("No Ground truth or trajectory");
+	}
 
 	reset();
 
@@ -49,6 +55,10 @@ void Replayer::next()
 			hasEvents_ = true;
 			events_ = events.value();
 			eventIt_ = events_.begin();
+		}
+		else
+		{
+			hasEvents_ = false;
 		}
 	}
 

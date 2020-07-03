@@ -11,7 +11,7 @@
 
 tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
-	std::chrono::microseconds(500);
+	std::chrono::microseconds(5000);
 
 int main(int argc, char** argv)
 {
@@ -114,6 +114,8 @@ int main(int argc, char** argv)
 				visualizer.setActiveFrames(evaluator.getActiveFrames());
 				visualizer.setStoredFrames(evaluator.getStoredFrames());
 				visualizer.setLandmarks(evaluator.getMapLandmarks());
+				visualizer.setGtPoses(evaluator.getGtPoses());
+				visualizer.setStoredLandmarks(evaluator.getStoredMapLandmarks());
 				visualizer.step();
 
 				if (visualizer.isTrackerParamsChanged())

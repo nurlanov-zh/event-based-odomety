@@ -74,6 +74,8 @@ class Visualizer
 	void setLandmarks(const visual_odometry::MapLandmarks&);
 	void setActiveFrames(const std::map<size_t, visual_odometry::Keyframe>&);
 	void setStoredFrames(const std::list<visual_odometry::Keyframe>&);
+	void setGtPoses(const std::vector<common::Pose3d>&);
+	void setStoredLandmarks(const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>&);
 
    private:
 	void wait() const;
@@ -135,9 +137,11 @@ class Visualizer
 	std::list<visual_odometry::Keyframe> storedFrames_;
 	std::map<size_t, visual_odometry::Keyframe> activeFrames_;
 	visual_odometry::MapLandmarks landmarks_;
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> storedLandmarks_;
 
 	common::timestamp_t currentTimestamp_;
 	std::vector<std::shared_ptr<pangolin::ImageView>> imgView_;
+	std::vector<common::Pose3d> gt_;
 	tracker::Patches patches_;
 
 	std::list<common::EventSample> integratedEvents_;

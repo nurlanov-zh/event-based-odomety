@@ -27,8 +27,9 @@ namespace visual_odometry
 struct VisualOdometryParams
 {
 	size_t numOfActiveFrames = 10;
-	size_t numOfInliers = 15;
-	size_t ransacMinInliers = 25;
+	size_t numOfInliers = 10;
+	size_t numOfEssentialInliers = 10;
+	size_t ransacMinInliers = 15;
 	size_t maxNumIterations = 50;
 	double ransacThreshold = 5e-5;
 	double reprojectionError = 3;
@@ -51,6 +52,9 @@ class VisualOdometryFrontEnd
 	MapLandmarks const& getMapLandmarks();
 	std::map<size_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
+	std::vector<common::Pose3d> const& getGtPoses() const { return gt_; }
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& 
+	getStoredLandmarks() const;
 
    private:
 	void getCommonBearingVectors(const Keyframe& keyframe1,
@@ -78,11 +82,15 @@ class VisualOdometryFrontEnd
 
 	VisualOdometryParams params_;
 
+	std::vector<common::Pose3d> gt_;
+	common::Pose3d zeroGt_;
+
 	bool init_;
 
 	std::map<size_t, Keyframe> activeFrames_;
 	std::list<Keyframe> storedFrames_;
 	MapLandmarks mapLandmarks_;
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> storedLandmarks_;
 	std::unique_ptr<common::CameraModel<double>> cameraModel_;
 	common::GroundTruth groundTruthSamples_;
 };

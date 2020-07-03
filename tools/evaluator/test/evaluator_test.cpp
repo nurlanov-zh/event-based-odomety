@@ -44,7 +44,7 @@ TEST(EvaluatorTest, saveTrajectoryTest)
 	const auto param = tools::EvaluatorParams();
 	tools::Evaluator evaluator(param);
 
-	evaluator.saveTrajectory(patches);
+	evaluator.saveFeaturesTrajectory(patches);
 
 	std::ifstream file;
 	file.open(param.outputDir + "/trajectory.txt");

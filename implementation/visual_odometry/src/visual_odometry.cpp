@@ -37,6 +37,16 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 
 void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 {
+	const auto poseGt = syncGtAndImage(keyframe.timestamp);
+	if (poseGt.has_value())
+	{
+		if (gt_.size() == 0)
+		{
+			zeroGt_ = poseGt.value();
+		}
+		gt_.push_back(zeroGt_.inverse() * poseGt.value());
+	}
+
 	if (activeFrames_.empty())
 	{
 		keyframe.pose = common::Pose3d();
@@ -72,7 +82,7 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 	deleteKeyframe();
 	addKeyframe(keyframe, match);
 
-	// optimize();
+	optimize();
 
 	consoleLog_->info("New keyframe is added " +
 					  std::to_string(keyframe.timestamp.count()));
@@ -89,9 +99,12 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 
 	if (match.inliers.size() <= params_.numOfInliers)
 	{
-		consoleLog_->info("Too few inliers after localize camera " +
-						  std::to_string(match.inliers.size()));
-		return false;
+		if (!initCameras(keyframe, match))
+		{
+			consoleLog_->info("Few inliers after localize camera: " +
+							  std::to_string(match.inliers.size()));
+			return false;
+		}
 	}
 
 	return true;
@@ -121,8 +134,9 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 	opengv::bearingVectors_t bearingVectors1;
 	opengv::bearingVectors_t bearingVectors2;
 	std::vector<tracker::TrackId> trackIds;
-	getCommonBearingVectors(activeFrames_.begin()->second, keyframe, trackIds,
-							bearingVectors1, bearingVectors2);
+	const auto startKeyframe = activeFrames_.rbegin()->second;
+	getCommonBearingVectors(startKeyframe, keyframe, trackIds, bearingVectors1,
+							bearingVectors2);
 
 	const auto inliers = findInliersRansac(bearingVectors1, bearingVectors2,
 										   trackIds, keyframe, match);
@@ -133,15 +147,17 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 	{
 		return false;
 	}
-	keyframe.pose = match.Tw2c;
+	// because Tw2c is relative transform in this case
+	keyframe.pose = startKeyframe.pose * match.Tw2c;
 
 	findInliersEssential(bearingVectors1, bearingVectors2,
 						 activeFrames_.begin()->second, keyframe, trackIds,
 						 match, 1e-3);
 
-	consoleLog_->info("Init frames with " + std::to_string(match.inliers.size()) +
+	consoleLog_->info("Init frames with " +
+					  std::to_string(match.inliers.size()) +
 					  " Essential inliers");
-	if (match.inliers.size() < params_.numOfInliers)
+	if (match.inliers.size() < params_.numOfEssentialInliers)
 	{
 		return false;
 	}
@@ -283,15 +299,13 @@ size_t VisualOdometryFrontEnd::findInliersRansac(
 void VisualOdometryFrontEnd::addNewLandmarks(const Keyframe& keyframe,
 											 const Match& match)
 {
-	std::cout << "Inliers " << match.inliers.size() << std::endl;
 	for (const auto landmark : match.inliers)
 	{
 		mapLandmarks_.observations[landmark].push_back(
 			keyframe.timestamp.count());
 
 		const auto observationIt = mapLandmarks_.observations.find(landmark);
-		std::cout << "Track " << landmark << " " << observationIt->second.size()
-				  << std::endl;
+
 		if (observationIt->second.size() == 2)
 		{
 			const auto kId1 = observationIt->second.front();
@@ -339,9 +353,10 @@ void VisualOdometryFrontEnd::deleteLandmarks(const Keyframe& keyframe)
 	{
 		if (it->second.size() == 0)
 		{
-			if (mapLandmarks_.landmarks.find(it->first) !=
-				mapLandmarks_.landmarks.end())
+			const auto lmIt = mapLandmarks_.landmarks.find(it->first);
+			if (lmIt != mapLandmarks_.landmarks.end())
 			{
+				storedLandmarks_.emplace_back(*lmIt);
 				mapLandmarks_.landmarks.erase(it->first);
 			}
 			it = mapLandmarks_.observations.erase(it);
@@ -382,6 +397,11 @@ void VisualOdometryFrontEnd::optimize()
 	for (auto landmarkIt = mapLandmarks_.observations.begin();
 		 landmarkIt != mapLandmarks_.observations.end(); ++landmarkIt)
 	{
+		if (landmarkIt->second.size() < 2)
+		{
+			continue;
+		}
+
 		for (auto observationIt = landmarkIt->second.begin();
 			 observationIt != landmarkIt->second.end(); ++observationIt)
 		{
@@ -418,16 +438,17 @@ void VisualOdometryFrontEnd::optimize()
 				frameIt->second.pose.data(), pointIt->second.data(),
 				cameraModel_->getParams());
 		}
-
-		ceres::Solver::Options ceresOptions;
-		ceresOptions.max_num_iterations = params_.maxNumIterations;
-		ceresOptions.linear_solver_type = ceres::SPARSE_SCHUR;
-		ceresOptions.num_threads = 1;
-		ceres::Solver::Summary summary;
-		Solve(ceresOptions, &problem, &summary);
-
-		consoleLog_->debug(summary.BriefReport());
 	}
+
+	ceres::Solver::Options ceresOptions;
+	ceresOptions.max_num_iterations = params_.maxNumIterations;
+	ceresOptions.linear_solver_type = ceres::SPARSE_SCHUR;
+	ceresOptions.num_threads = 1;
+	ceres::Solver::Summary summary;
+	Solve(ceresOptions, &problem, &summary);
+
+	consoleLog_->info("Bundle adjustment optimization info: ");
+	consoleLog_->info(summary.BriefReport());
 }
 
 void VisualOdometryFrontEnd::getCommonBearingVectors(
@@ -514,6 +535,12 @@ std::map<size_t, Keyframe> const& VisualOdometryFrontEnd::getActiveFrames()
 std::list<Keyframe> const& VisualOdometryFrontEnd::getStoredFrames() const
 {
 	return storedFrames_;
+}
+
+std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
+VisualOdometryFrontEnd::getStoredLandmarks() const
+{
+	return storedLandmarks_;
 }
 
 }  // namespace visual_odometry

@@ -41,7 +41,9 @@ class Evaluator
 
 	void setTrackerParams(const tracker::DetectorParams& params);
 
-	void saveTrajectory(const tracker::Patches& patches);
+	void saveFeaturesTrajectory(const tracker::Patches& patches);
+
+	void savePoses(const std::list<visual_odometry::Keyframe>& keyframes);
 
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
@@ -51,8 +53,10 @@ class Evaluator
 
 	tracker::Patches const& getPatches() const;
 	visual_odometry::MapLandmarks const& getMapLandmarks();
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& getStoredMapLandmarks() const;
 	std::map<size_t, visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
+	std::vector<common::Pose3d> const& getGtPoses() const;
 
 	cv::Mat const& getCompensatedEventImage();
 	cv::Mat const& getIntegratedEventImage();

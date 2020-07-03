@@ -256,26 +256,32 @@ void Visualizer::drawScene()
 	sceneView_->Activate(*(camera_.get()));
 
 	const u_int8_t colorCameraActive[3]{255, 0, 0};
-	// const u_int8_t colorCameraStored[3]{0, 0, 255};
-	const u_int8_t colorOldPoints[3]{0, 0, 0};
+	const u_int8_t colorCameraStored[3]{0, 255, 0};
+	const u_int8_t colorCameraGt[3]{0, 0, 255};
+	const u_int8_t colorActivePoints[3]{0, 0, 0};
+	const u_int8_t colorOldPoints[3]{220, 220, 220};
 
 	for (const auto& camera : activeFrames_)
 	{
 		renderCamera(camera.second.pose.matrix(), 3.f, colorCameraActive, 0.1f);
 	}
 
-	// for (const auto& camera : storedFrames_)
-	// {
-	// 	renderCamera(storedFrames_[i].pose.matrix(), 3.f, colorCameraStored,
-	// 				 0.1f);
-	// }
+	for (const auto& camera : gt_)
+	{
+		renderCamera(camera.matrix(), 3.f, colorCameraGt, 0.1f);
+	}
+
+	for (const auto& camera : storedFrames_)
+	{
+		renderCamera(camera.pose.matrix(), 3.f, colorCameraStored, 0.1f);
+	}
 
 	glPointSize(3.0);
 	glBegin(GL_POINTS);
 
 	for (const auto& trackLandmark : landmarks_.landmarks)
 	{
-		glColor3ubv(colorOldPoints);
+		glColor3ubv(colorActivePoints);
 		pangolin::glVertex(trackLandmark.second);
 	}
 
@@ -287,6 +293,25 @@ void Visualizer::drawScene()
 			.Text("%d", trackLandmark.first)
 			.Draw(trackLandmark.second(0), trackLandmark.second(1),
 				  trackLandmark.second(2));
+	}
+
+	glPointSize(3.0);
+	glBegin(GL_POINTS);
+
+	for (const auto& lm : storedLandmarks_)
+	{
+		glColor3ubv(colorOldPoints);
+		pangolin::glVertex(lm.second);
+	}
+
+	glEnd();
+
+	for (const auto& lm : storedLandmarks_)
+	{
+		pangolin::GlFont::I()
+			.Text("%d", lm.first)
+			.Draw(lm.second(0), lm.second(1),
+				  lm.second(2));
 	}
 }
 
@@ -568,6 +593,17 @@ void Visualizer::setCompensatedEventImage(const cv::Mat& compensatedEventImage)
 void Visualizer::setIntegratedEventImage(const cv::Mat& integratedEventImage)
 {
 	integratedEventImage_ = integratedEventImage;
+}
+
+void Visualizer::setGtPoses(const std::vector<common::Pose3d>& gt)
+{
+	gt_ = gt;
+}
+
+void Visualizer::setStoredLandmarks(
+	const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>& lms)
+{
+	storedLandmarks_ = lms;
 }
 
 }  // namespace tools
