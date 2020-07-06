@@ -57,9 +57,9 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 {
 	motionField_ = cv::Mat::zeros(params_.imageSize, CV_64FC2);
 	fixedPoints_.clear();
-	double avgX = 0;
-	double avgY = 0;
-	double count = 0;
+	double avgX = 0.0;
+	double avgY = 0.0;
+	double count = 0.0;
 	if (timestamp.count() > 0 && !patches_.empty())
 	{
 		for (const auto& patch : patches_)
@@ -80,12 +80,12 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 					common::Point2i(round(low->value.x), round(low->value.y));
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0] =
-					1e6 * ((low + 1)->value.x - low->value.x) /
+					1e3 * ((low + 1)->value.x - low->value.x) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1] =
-					1e6 * ((low + 1)->value.y - low->value.y) /
+					1e3 * ((low + 1)->value.y - low->value.y) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
 
@@ -97,19 +97,44 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 			}
 		}
 
-		// Init the rest with an average flow
-		// TODO: Initialize as the flow of neighbour
-		if (count >= 1)
+		// Init the rest with an average flow or as the flow of neighbour
+		if (!fixedPoints_.empty())
 		{
-			for (int i = 0; i < motionField_.rows; i++)
+			for (int y = 0; y < motionField_.rows; y++)
 			{
-				for (int j = 0; j < motionField_.cols; j++)
+				for (int x = 0; x < motionField_.cols; x++)
 				{
-					if (motionField_.at<cv::Vec2f>(i, j)[0] == 0 and
-						motionField_.at<cv::Vec2f>(i, j)[1] == 0)
+					if (motionField_.at<cv::Vec2f>(y, x)[0] == 0 and
+						motionField_.at<cv::Vec2f>(y, x)[1] == 0)
 					{
-						motionField_.at<cv::Vec2f>(i, j)[0] = avgX / count;
-						motionField_.at<cv::Vec2f>(i, j)[1] = avgY / count;
+						if (params_.useAverageFlow)
+						{
+							motionField_.at<cv::Vec2f>(y, x)[0] = avgX / count;
+							motionField_.at<cv::Vec2f>(y, x)[1] = avgY / count;
+						}
+						else
+						{
+							int bestId = 0;
+							double bestDist = 1e16;
+							for (int id = 0;
+								 id < static_cast<int>(fixedPoints_.size());
+								 id++)
+							{
+								const auto& point = fixedPoints_[id];
+								double dist = (x - point.x) * (x - point.x) +
+											  (y - point.y) * (y - point.y);
+								if (dist < bestDist)
+								{
+									bestDist = dist;
+									bestId = id;
+								}
+							}
+							const auto& bestP = fixedPoints_[bestId];
+							motionField_.at<cv::Vec2f>(y, x)[0] =
+								motionField_.at<cv::Vec2f>(bestP.y, bestP.x)[0];
+							motionField_.at<cv::Vec2f>(y, x)[1] =
+								motionField_.at<cv::Vec2f>(bestP.y, bestP.x)[1];
+						}
 					}
 				}
 			}
@@ -122,45 +147,71 @@ void FeatureDetector::interpolateMotionField(
 {
 	// init motion field according to patches at timestamp, fill fixedPoints_
 	initMotionField(timestamp);
+	cv::Mat oldMotionField = motionField_.clone();
 
 	// if initialized
 	if (cv::norm(motionField_) > 0)
 	{
 		ceres::Problem problem;
 
-		// make it continuous
-		if (!motionField_.isContinuous())
+		// init and fill data into array
+		auto* mf =
+			new double[params_.imageSize.width * params_.imageSize.height * 2];
+		for (int y = 0; y < params_.imageSize.height; y++)
 		{
-			motionField_ = motionField_.clone();
+			for (int x = 0; x < params_.imageSize.width; x++)
+			{
+				mf[2 * (y * params_.imageSize.width + x)] =
+					motionField_.at<cv::Vec2f>(y, x)[0];
+				mf[1 + 2 * (y * params_.imageSize.width + x)] =
+					motionField_.at<cv::Vec2f>(y, x)[1];
+			}
 		}
-
-		auto* c = new tracker::totalVarianceFunctor();
-
-		ceres::CostFunction* cost_function =
-			new ceres::AutoDiffCostFunction<tracker::totalVarianceFunctor, 2, 2,
-											2>(c);
 
 		for (int y = 0; y < params_.imageSize.height - 1; y++)
 		{
 			for (int x = 0; x < params_.imageSize.width - 1; x++)
 			{
-				problem.AddResidualBlock(cost_function,
-										 new ceres::HuberLoss(1e-3),
-										 motionField_.ptr<double>(y, x),
-										 motionField_.ptr<double>(y, x + 1));
+				ceres::CostFunction* cost_function =
+					new ceres::AutoDiffCostFunction<
+						tracker::totalVarianceFunctor, 2, 2, 2>(
+						new tracker::totalVarianceFunctor());
 
-				problem.AddResidualBlock(cost_function,
-										 new ceres::HuberLoss(1e-3),
-										 motionField_.ptr<double>(y, x),
-										 motionField_.ptr<double>(y + 1, x));
+				if (params_.useL1)
+				{
+					problem.AddResidualBlock(
+						cost_function, new ceres::HuberLoss(1e-5),
+						&mf[2 * (y * params_.imageSize.width + x)],
+						&mf[2 * (y * params_.imageSize.width + x + 1)]);
+
+					problem.AddResidualBlock(
+						cost_function, new ceres::HuberLoss(1e-5),
+						&mf[2 * (y * params_.imageSize.width + x)],
+						&mf[2 * ((y + 1) * params_.imageSize.width + x)]);
+				}
+				else
+				{
+					problem.AddResidualBlock(
+						cost_function, nullptr,
+						&mf[2 * (y * params_.imageSize.width + x)],
+						&mf[2 * (y * params_.imageSize.width + x + 1)]);
+
+					problem.AddResidualBlock(
+						cost_function, nullptr,
+						&mf[2 * (y * params_.imageSize.width + x)],
+						&mf[2 * ((y + 1) * params_.imageSize.width + x)]);
+				}
 			}
 		}
 
-		// Set subset of parameters to be constant
 		for (const auto& point : fixedPoints_)
 		{
-			problem.SetParameterBlockConstant(
-				motionField_.ptr<double>(point.y, point.x));
+			if (!problem.IsParameterBlockConstant(
+					&mf[2 * (point.y * params_.imageSize.width + point.x)]))
+			{
+				problem.SetParameterBlockConstant(
+					&mf[2 * (point.y * params_.imageSize.width + point.x)]);
+			}
 		}
 
 		// Set solver options (precision / method)
@@ -175,7 +226,18 @@ void FeatureDetector::interpolateMotionField(
 		ceres::Solver::Summary summary;
 		Solve(options, &problem, &summary);
 
-		consoleLog_->info(summary.BriefReport());
+		consoleLog_->debug(summary.BriefReport());
+
+		for (int y = 0; y < params_.imageSize.height; y++)
+		{
+			for (int x = 0; x < params_.imageSize.width; x++)
+			{
+				motionField_.at<cv::Vec2f>(y, x)[0] =
+					mf[2 * (y * params_.imageSize.width + x)];
+				motionField_.at<cv::Vec2f>(y, x)[1] =
+					mf[1 + 2 * (y * params_.imageSize.width + x)];
+			}
+		}
 	}
 }
 
@@ -189,7 +251,14 @@ void FeatureDetector::compensateEvents(
 	lastCompensation = events.back().timestamp;
 
 	// Optimize Motion Field
-	interpolateMotionField(timestamp);
+	if (params_.optimizeFlowTV)
+	{
+		interpolateMotionField(timestamp);
+	}
+	else
+	{
+		initMotionField(timestamp);
+	}
 
 	consoleLog_->info(
 		"Compensating {} events, to time_ref {}, with start "
@@ -206,19 +275,21 @@ void FeatureDetector::compensateEvents(
 		common::Point2i newP;
 
 		newP.x = round(event.value.point.x +
-					   (timestamp - event.timestamp).count() * 1e-6 *
+					   (timestamp - event.timestamp).count() * 1e-3 *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[0]);
 		newP.y = round(event.value.point.y +
-					   (timestamp - event.timestamp).count() * 1e-6 *
+					   (timestamp - event.timestamp).count() * 1e-3 *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[1]);
 
 		if (newP.x >= 0 and newP.x < compensatedEventImage_.cols and
 			newP.y >= 0 and newP.y < compensatedEventImage_.rows)
 		{
+			//			compensatedEventImage_.at<double>(newP.y, newP.x) +=
+			//				static_cast<double>(event.value.sign);
 			compensatedEventImage_.at<double>(newP.y, newP.x) +=
-				static_cast<double>(event.value.sign);
+				static_cast<double>(1);
 		}
 	}
 }
@@ -233,8 +304,10 @@ void FeatureDetector::integrateEvents(
 		if (newP.x >= 0 and newP.x < integratedEventImage_.cols and
 			newP.y >= 0 and newP.y < integratedEventImage_.rows)
 		{
+			//			integratedEventImage_.at<double>(newP.y, newP.x) +=
+			//				static_cast<double>(event.value.sign);
 			integratedEventImage_.at<double>(newP.y, newP.x) +=
-				static_cast<double>(event.value.sign);
+				static_cast<double>(1);
 		}
 	}
 }

@@ -13,10 +13,8 @@ struct totalVarianceFunctor
 	template <typename T>
 	bool operator()(const T* x, const T* y, T* residual) const
 	{
-		Eigen::Map<Eigen::Matrix<T, 2, 1> const> xV(x);
-		Eigen::Map<Eigen::Matrix<T, 2, 1> const> yV(y);
-		residual[0] = xV.x() - yV.x();
-		residual[1] = xV.y() - yV.y();
+		residual[0] = x[0] - y[0];
+		residual[1] = x[1] - y[1];
 		return true;
 	}
 };
