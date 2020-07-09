@@ -22,6 +22,7 @@ struct DetectorParams
 	bool useAverageFlow = true;
 	bool optimizeFlowTV = true;
 	bool useL1 = false;
+	cv::Size patchCompensateSize = {30, 30};
 };
 
 class FeatureDetector
@@ -46,6 +47,8 @@ class FeatureDetector
 	void interpolateMotionField(const common::timestamp_t timestamp);
 
 	void compensateEvents(const std::list<common::EventSample>& events);
+
+	void compensateEventsContrast(const std::list<common::EventSample>& events);
 
 	void clearEvents() { lastEvents_.clear(); }
 

@@ -31,7 +31,8 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 	if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
 		params_.compensationFrequencyTime)
 	{
-		tracker_->compensateEvents(tracker_->getEvents());
+		//		tracker_->compensateEvents(tracker_->getEvents());
+		tracker_->compensateEventsContrast(tracker_->getEvents());
 		tracker_->integrateEvents(tracker_->getEvents());
 		tracker_->clearEvents();
 	}
