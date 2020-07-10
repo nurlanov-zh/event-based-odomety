@@ -22,7 +22,7 @@ struct DetectorParams
 	bool useAverageFlow = true;
 	bool optimizeFlowTV = true;
 	bool useL1 = false;
-	cv::Size patchCompensateSize = {30, 30};
+	cv::Size patchCompensateSize = {20, 20};
 };
 
 class FeatureDetector

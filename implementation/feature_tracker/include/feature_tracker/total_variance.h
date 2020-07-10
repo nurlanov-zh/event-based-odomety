@@ -14,8 +14,8 @@ struct totalVarianceFunctor
 	template <typename T>
 	bool operator()(const T* x, const T* y, T* residual) const
 	{
-		residual[0] = T(weight_) * (x[0] - y[0]);
-		residual[1] = T(weight_) * (x[1] - y[1]);
+		residual[0] = T(weight_) * ceres::abs((x[0] - y[0]));
+		residual[1] = T(weight_) * ceres::abs((x[1] - y[1]));
 		return true;
 	}
 	double weight_;

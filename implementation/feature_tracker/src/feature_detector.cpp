@@ -320,14 +320,6 @@ void FeatureDetector::compensateEventsContrast(
 	{
 		for (int x = 0; x < numPatchesX; x++)
 		{
-			//			mf[2 * (y * numPatchesX + x)] =
-			//motionField_.at<cv::Vec2f>( 				y *
-			//params_.patchCompensateSize.height, 				x *
-			//params_.patchCompensateSize.width)[0]; 			mf[2 * (y * numPatchesX +
-			//x) + 1] = motionField_.at<cv::Vec2f>( 				y *
-			//params_.patchCompensateSize.height, 				x *
-			//params_.patchCompensateSize.width)[1];
-
 			mf[2 * (y * numPatchesX + x)] = 0;
 			mf[2 * (y * numPatchesX + x) + 1] = 0;
 		}
@@ -378,9 +370,10 @@ void FeatureDetector::compensateEventsContrast(
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
 						tracker::totalVarianceFunctor, 2, 2, 2>(
-						new tracker::totalVarianceFunctor(1e2));
+						new tracker::totalVarianceFunctor(5e2));
 
-				problem.AddResidualBlock(cost_function, nullptr,
+				problem.AddResidualBlock(cost_function,
+										 new ceres::HuberLoss(1e2),
 										 &mf[2 * (y * numPatchesX + x)],
 										 &mf[2 * (y * numPatchesX + x + 1)]);
 			}
@@ -389,9 +382,10 @@ void FeatureDetector::compensateEventsContrast(
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
 						tracker::totalVarianceFunctor, 2, 2, 2>(
-						new tracker::totalVarianceFunctor(1e2));
+						new tracker::totalVarianceFunctor(5e2));
 
-				problem.AddResidualBlock(cost_function, nullptr,
+				problem.AddResidualBlock(cost_function,
+										 new ceres::HuberLoss(1e2),
 										 &mf[2 * (y * numPatchesX + x)],
 										 &mf[2 * ((y + 1) * numPatchesX + x)]);
 			}
