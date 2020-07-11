@@ -608,7 +608,7 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 				patch.setLost();
 			}
 
-			if (patch.isReady() && patch.isInit() && !patch.isLost())
+			if (patch.isReady() && patch.isInit())
 			{
 				optimizers_[patch.getInitTime().count()]->optimize(patch);
 				updateNumOfEvents(patch);

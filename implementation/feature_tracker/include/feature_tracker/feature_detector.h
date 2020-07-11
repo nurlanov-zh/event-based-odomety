@@ -73,10 +73,14 @@ class FeatureDetector
 	Corners const& getFeatures() const { return corners_; }
 	Patches const& getArchivedPatches() const { return archivedPatches_; }
 	std::list<common::EventSample> const& getEvents() { return lastEvents_; }
-	std::vector<tracker::OptimizerFinalLoss> getOptimizedFinalCosts();
 	cv::Mat const& getCompensatedEventImage();
 	cv::Mat const& getIntegratedEventImage();
 	common::timestamp_t const& getLastCompensation();
+
+	std::vector<tracker::OptimizerFinalLoss> getOptimizedFinalCosts() const
+	{
+		return optimizers_.begin()->second->getFinalCosts();
+	}
 
    private:
 	cv::Mat getLogImage(const cv::Mat& image);

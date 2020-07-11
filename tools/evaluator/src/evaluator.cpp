@@ -60,7 +60,6 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 			return;
 		}
 	}
-	imageNum_++;
 
 	consoleLog_->info("New image at timestamp " +
 					  std::to_string(sample.timestamp.count()));
