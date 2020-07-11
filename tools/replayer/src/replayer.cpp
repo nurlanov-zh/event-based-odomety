@@ -15,6 +15,9 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 		events_ = events.value();
 	}
 
+	consoleLog_ = spdlog::get("console");
+	errLog_ = spdlog::get("stderr");
+	
 	try
 	{
 		groundTruth_ = reader->getGroundTruth();
@@ -26,9 +29,6 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	}
 
 	reset();
-
-	consoleLog_ = spdlog::get("console");
-	errLog_ = spdlog::get("stderr");
 }
 
 bool Replayer::finished() const

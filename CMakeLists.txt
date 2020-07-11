@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(event-based-odometry)
 include(CTest)
 
+set(CCACHE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/.ccache")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/" ${CMAKE_MODULE_PATH})
 set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
