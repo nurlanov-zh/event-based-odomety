@@ -10,8 +10,10 @@ namespace tracker
 struct contrastFunctor
 {
 	contrastFunctor(const std::list<common::EventSample>& events,
-					const cv::Rect2i patchRect)
-		: events_(events), patchRect_(patchRect)
+					const cv::Rect2i patchRect, const double compensateScale)
+		: events_(events),
+		  patchRect_(patchRect),
+		  compensateScale_(compensateScale)
 	{
 		timestamp_ = common::timestamp_t(static_cast<int32_t>(
 			(events.front().timestamp + events.back().timestamp).count() *
@@ -44,10 +46,12 @@ struct contrastFunctor
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 			const T compEventX =
 				T(event.value.point.x) +
-				T((timestamp_ - event.timestamp).count() * 1e-3) * motion[0];
+				T((timestamp_ - event.timestamp).count() * compensateScale_) *
+					motion[0];
 			const T compEventY =
 				T(event.value.point.y) +
-				T((timestamp_ - event.timestamp).count() * 1e-3) * motion[1];
+				T((timestamp_ - event.timestamp).count() * compensateScale_) *
+					motion[1];
 
 			common::Point2i compEvent;
 			if constexpr (std::is_same<T, double>::value)
@@ -59,9 +63,11 @@ struct contrastFunctor
 				compEvent = {int(compEventX.a), int(compEventY.a)};
 			}
 
-			for (int i = -gaussianBlockSize_; i <= gaussianBlockSize_; i++)
+			for (int i = -gaussianCompensateKernelSize_;
+				 i <= gaussianCompensateKernelSize_; i++)
 			{
-				for (int j = -gaussianBlockSize_; j <= gaussianBlockSize_; j++)
+				for (int j = -gaussianCompensateKernelSize_;
+					 j <= gaussianCompensateKernelSize_; j++)
 				{
 					const int pointX =
 						compEvent.x + i - patchRect_.tl().x + patchRect_.width;
@@ -72,8 +78,8 @@ struct contrastFunctor
 						pointY >= 0 && pointY < 3 * patchRect_.height)
 					{
 						const T value =
-							gaussian(compEventX, compEventY, compEvent.x + i,
-									 compEvent.y + j);
+							gaussian(compEventX, compEventY, T(compEvent.x + i),
+									 T(compEvent.y + j), sigmaCompensate_);
 						compensatedEventImage(pointY, pointX) += value;
 					}
 				}
@@ -82,14 +88,14 @@ struct contrastFunctor
 	}
 
 	template <typename T>
-	T gaussian(const T& compEventX, const T& compEventY, const int x,
-			   const int y) const
+	T gaussian(const T meanX, const T meanY, const T x, const T y,
+			   const double sigma) const
 	{
-		T sigmaSq = T(sigma_ * sigma_);
+		T sigmaSq = T(sigma * sigma);
 		T normCoef = T(1) / (T(2 * M_PI) * sigmaSq);
-		return normCoef * exp(T(-0.5) / sigmaSq *
-							  ((T(x) - compEventX) * (T(x) - compEventX) +
-							   (T(y) - compEventY) * (T(y) - compEventY)));
+		return normCoef *
+			   exp(T(-0.5) / sigmaSq *
+				   ((x - meanX) * (x - meanX) + (y - meanY) * (y - meanY)));
 	}
 
 	template <typename T>
@@ -132,13 +138,14 @@ struct contrastFunctor
 				}
 			}
 			std = std / T(counterNonZero);
-			residual[0] = T(1e3) - std;
+			residual[0] = T(maxPossibleResidual_) - std;
 		}
 		else
 		{
 			// Events went outside of 3 * patch_size
-			residual[0] = T(1e3) * (T(1) + (motion[0] * motion[0]) +
-									(motion[1] * motion[1]));
+			residual[0] =
+				T(maxPossibleResidual_) *
+				(T(1) + (motion[0] * motion[0]) + (motion[1] * motion[1]));
 		}
 	}
 
@@ -151,14 +158,15 @@ struct contrastFunctor
 	{
 		if (compensatedEventImage.mean() <= T(0.0001))
 		{
-			// Events went outside of 3 * patch_size
-			residual[0] = T(1e3) * (T(1) + (motion[0] * motion[0]) +
-									(motion[1] * motion[1]));
+			// Events went outside of 3 * patch_size. Too much motion!
+			residual[0] =
+				T(maxPossibleResidual_) *
+				(T(1) + (motion[0] * motion[0]) + (motion[1] * motion[1]));
 		}
 		else
 		{
-			residual[0] = T(1e3);
-			// compute structure tensor
+			residual[0] = T(maxPossibleResidual_);
+			// Compute gradients
 			Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic> gradX;
 			gradX.setZero(3 * patchRect_.height, 3 * patchRect_.width);
 			Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic> gradY;
@@ -174,30 +182,53 @@ struct contrastFunctor
 				}
 			}
 
+			// Compute first eigen values of structure tensors at each pixel.
+			// Weight with gaussian weighting matrix
 			Eigen::Array<T, 2, 2> structureTensor;
+
+			Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic> firstEigenValues;
+			firstEigenValues.setZero(3 * patchRect_.height,
+									 3 * patchRect_.width);
+
+			Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic> weight;
+			weight.setZero(kernelSizeST_ * 2 + 1, kernelSizeST_ * 2 + 1);
+			for (int i = -kernelSizeST_; i <= kernelSizeST_; i++)
+			{
+				for (int j = -kernelSizeST_; j <= kernelSizeST_; j++)
+				{
+					weight(i + kernelSizeST_, j + kernelSizeST_) =
+						gaussian(T(0), T(0), T(j), T(i), sigmaST_);
+				}
+			}
 
 			for (int y = 0; y < 3 * patchRect_.height - 1; y++)
 			{
 				for (int x = 0; x < 3 * patchRect_.width - 1; x++)
 				{
 					structureTensor.setZero();
-					for (int i = -(blockSize_ - 1) / 2;
-						 i <= int((blockSize_ - 1) / 2); i++)
+					for (int i = -kernelSizeST_; i <= kernelSizeST_; i++)
 					{
-						for (int j = -(blockSize_ - 1) / 2;
-							 j <= int((blockSize_ - 1) / 2); j++)
+						for (int j = -kernelSizeST_; j <= kernelSizeST_; j++)
 						{
 							if (x + j >= 0 &&
 								x + j < 3 * patchRect_.width - 1 &&
 								y + i >= 0 && y + i < 3 * patchRect_.height - 1)
 							{
 								structureTensor(0, 0) +=
+									weight(i + kernelSizeST_,
+										   j + kernelSizeST_) *
 									gradX(y + i, x + j) * gradX(y + i, x + j);
 								structureTensor(0, 1) +=
+									weight(i + kernelSizeST_,
+										   j + kernelSizeST_) *
 									gradX(y + i, x + j) * gradY(y + i, x + j);
 								structureTensor(1, 1) +=
+									weight(i + kernelSizeST_,
+										   j + kernelSizeST_) *
 									gradY(y + i, x + j) * gradY(y + i, x + j);
 								structureTensor(1, 0) +=
+									weight(i + kernelSizeST_,
+										   j + kernelSizeST_) *
 									gradX(y + i, x + j) * gradY(y + i, x + j);
 							}
 						}
@@ -205,12 +236,38 @@ struct contrastFunctor
 					T trace = structureTensor(0, 0) + structureTensor(1, 1);
 					T det = structureTensor(0, 0) * structureTensor(1, 1) -
 							structureTensor(0, 1) * structureTensor(1, 0);
-					T eigenDiff = ceres::sqrt(trace * trace - T(4) * det);
-					T eigenFirstVal = T(0.5) * (trace + eigenDiff);
+					T diffEigenVals = ceres::sqrt(trace * trace - T(4) * det);
+					T firstEigenVal = T(0.5) * (trace + diffEigenVals);
 
-					if (eigenFirstVal > T(3))
+					if (firstEigenVal > T(0))
 					{
-						residual[0] -= eigenFirstVal / T(1e3);
+						firstEigenValues(y, x) = firstEigenVal;
+					}
+				}
+			}
+
+			// Non maximum suppression of first eigen values in blocks
+			for (int y = kernelSizeNMS_; y < 3 * patchRect_.height - 1;
+				 y += kernelSizeNMS_)
+			{
+				for (int x = kernelSizeNMS_; x < 3 * patchRect_.width - 1;
+					 x += kernelSizeNMS_)
+				{
+					T maxVal = T(0);
+					for (int i = -kernelSizeNMS_; i <= kernelSizeNMS_; i++)
+					{
+						for (int j = -kernelSizeNMS_; j <= kernelSizeNMS_; j++)
+						{
+							if (firstEigenValues(y + i, x + j) > maxVal)
+							{
+								maxVal = firstEigenValues(y + i, x + j);
+							}
+						}
+					}
+
+					if (maxVal > T(0))
+					{
+						residual[0] -= maxVal / T(maxPossibleResidual_);
 					}
 				}
 			}
@@ -220,8 +277,15 @@ struct contrastFunctor
 	std::list<common::EventSample> events_;
 	cv::Rect2i patchRect_;
 	common::timestamp_t timestamp_;
-	double sigma_ = 0.5;
-	int blockSize_ = 7;
-	int gaussianBlockSize_ = 2;
+	double compensateScale_ = 1e-3;
+	double maxPossibleResidual_ = 1e3;
+
+	double sigmaCompensate_ = 1;
+	int gaussianCompensateKernelSize_ = 3;
+
+	double sigmaST_ = 1.5;
+	int kernelSizeST_ = 3;
+
+	int kernelSizeNMS_ = 1;
 };
 }  // namespace tracker

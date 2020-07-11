@@ -81,12 +81,14 @@ void FeatureDetector::initMotionField(const common::timestamp_t timestamp)
 					common::Point2i(round(low->value.x), round(low->value.y));
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[0] =
-					1e3 * ((low + 1)->value.x - low->value.x) /
+					(1 / params_.compensateScale) *
+					((low + 1)->value.x - low->value.x) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
 
 				motionField_.at<cv::Vec2f>(oldP.y, oldP.x)[1] =
-					1e3 * ((low + 1)->value.y - low->value.y) /
+					(1 / params_.compensateScale) *
+					((low + 1)->value.y - low->value.y) /
 					static_cast<double>(
 						((low + 1)->timestamp - low->timestamp).count());
 
@@ -276,11 +278,13 @@ void FeatureDetector::compensateEvents(
 		common::Point2i newP;
 
 		newP.x = round(event.value.point.x +
-					   (timestamp - event.timestamp).count() * 1e-3 *
+					   (timestamp - event.timestamp).count() *
+						   params_.compensateScale *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[0]);
 		newP.y = round(event.value.point.y +
-					   (timestamp - event.timestamp).count() * 1e-3 *
+					   (timestamp - event.timestamp).count() *
+						   params_.compensateScale *
 						   motionField_.at<cv::Vec2f>(event.value.point.y,
 													  event.value.point.x)[1]);
 
@@ -354,12 +358,13 @@ void FeatureDetector::compensateEventsContrast(
 				}
 			}
 
-			if (!patchEvents.empty())
+			if (patchEvents.size() > params_.compensateMinNumEvents)
 			{
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<tracker::contrastFunctor, 1,
 													2>(
-						new tracker::contrastFunctor(patchEvents, patchRect));
+						new tracker::contrastFunctor(patchEvents, patchRect,
+													 params_.compensateScale));
 
 				problem.AddResidualBlock(cost_function, nullptr,
 										 &mf[2 * (y * numPatchesX + x)]);
@@ -370,24 +375,28 @@ void FeatureDetector::compensateEventsContrast(
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
 						tracker::totalVarianceFunctor, 2, 2, 2>(
-						new tracker::totalVarianceFunctor(5e2));
+						new tracker::totalVarianceFunctor(
+							params_.compensateTVweight));
 
-				problem.AddResidualBlock(cost_function,
-										 new ceres::HuberLoss(1e2),
-										 &mf[2 * (y * numPatchesX + x)],
-										 &mf[2 * (y * numPatchesX + x + 1)]);
+				problem.AddResidualBlock(
+					cost_function,
+					new ceres::HuberLoss(params_.compensateTVHuberLoss),
+					&mf[2 * (y * numPatchesX + x)],
+					&mf[2 * (y * numPatchesX + x + 1)]);
 			}
 			if (y < numPatchesY - 1)
 			{
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
 						tracker::totalVarianceFunctor, 2, 2, 2>(
-						new tracker::totalVarianceFunctor(5e2));
+						new tracker::totalVarianceFunctor(
+							params_.compensateTVweight));
 
-				problem.AddResidualBlock(cost_function,
-										 new ceres::HuberLoss(1e2),
-										 &mf[2 * (y * numPatchesX + x)],
-										 &mf[2 * ((y + 1) * numPatchesX + x)]);
+				problem.AddResidualBlock(
+					cost_function,
+					new ceres::HuberLoss(params_.compensateTVHuberLoss),
+					&mf[2 * (y * numPatchesX + x)],
+					&mf[2 * ((y + 1) * numPatchesX + x)]);
 			}
 		}
 	}
@@ -438,12 +447,14 @@ void FeatureDetector::compensateEventsContrast(
 		// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 		common::Point2i newP;
 
-		newP.x = round(event.value.point.x +
-					   (timestamp - event.timestamp).count() * 1e-3 *
-						   mf[2 * (y * numPatchesX + x)]);
-		newP.y = round(event.value.point.y +
-					   (timestamp - event.timestamp).count() * 1e-3 *
-						   mf[2 * (y * numPatchesX + x) + 1]);
+		newP.x =
+			round(event.value.point.x + (timestamp - event.timestamp).count() *
+											params_.compensateScale *
+											mf[2 * (y * numPatchesX + x)]);
+		newP.y =
+			round(event.value.point.y + (timestamp - event.timestamp).count() *
+											params_.compensateScale *
+											mf[2 * (y * numPatchesX + x) + 1]);
 
 		if (newP.x >= 0 and newP.x < compensatedEventImage_.cols and
 			newP.y >= 0 and newP.y < compensatedEventImage_.rows)

@@ -23,6 +23,10 @@ struct DetectorParams
 	bool optimizeFlowTV = true;
 	bool useL1 = false;
 	cv::Size patchCompensateSize = {20, 20};
+	double compensateTVweight = 1e3;
+	double compensateTVHuberLoss = 10;
+	double compensateScale = 1e-3;
+	uint compensateMinNumEvents = 100;
 };
 
 class FeatureDetector
