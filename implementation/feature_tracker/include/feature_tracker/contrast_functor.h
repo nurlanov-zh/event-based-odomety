@@ -30,8 +30,8 @@ struct contrastFunctor
 		compensateEvents(motion, compensatedEventImage_);
 
 		// Calculate loss on compensated event image
-		//		calculateVarianceLoss(motion, compensatedEventImage_, residual);
-		calculateEdgeLoss(motion, compensatedEventImage_, residual);
+		calculateVarianceLoss(motion, compensatedEventImage_, residual);
+		//		calculateEdgeLoss(motion, compensatedEventImage_, residual);
 		return true;
 	}
 
@@ -44,14 +44,17 @@ struct contrastFunctor
 		{
 			// Simple Motion Compensation formula:
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
-			const T compEventX =
-				T(event.value.point.x) +
-				T((timestamp_ - event.timestamp).count() * compensateScale_) *
-					motion[0];
-			const T compEventY =
-				T(event.value.point.y) +
-				T((timestamp_ - event.timestamp).count() * compensateScale_) *
-					motion[1];
+			const T timeDiff =
+				T((timestamp_ - event.timestamp).count() * compensateScale_);
+			const T cosR = ceres::cos(timeDiff * motion[2]);
+			const T sinR = ceres::sin(timeDiff * motion[2]);
+
+			const T compEventX = T(event.value.point.x - patchRect_.x) * cosR -
+								 T(event.value.point.y - patchRect_.y) * sinR +
+								 T(patchRect_.x) + timeDiff * motion[0];
+			const T compEventY = T(event.value.point.x - patchRect_.x) * sinR +
+								 T(event.value.point.y - patchRect_.y) * cosR +
+								 T(patchRect_.y) + timeDiff * motion[1];
 
 			common::Point2i compEvent;
 			if constexpr (std::is_same<T, double>::value)
@@ -143,9 +146,9 @@ struct contrastFunctor
 		else
 		{
 			// Events went outside of 3 * patch_size
-			residual[0] =
-				T(maxPossibleResidual_) *
-				(T(1) + (motion[0] * motion[0]) + (motion[1] * motion[1]));
+			residual[0] = T(maxPossibleResidual_) *
+						  (T(1) + (motion[0] * motion[0]) +
+						   (motion[1] * motion[1]) + (motion[2] * motion[2]));
 		}
 	}
 
@@ -159,9 +162,9 @@ struct contrastFunctor
 		if (compensatedEventImage.mean() <= T(0.0001))
 		{
 			// Events went outside of 3 * patch_size. Too much motion!
-			residual[0] =
-				T(maxPossibleResidual_) *
-				(T(1) + (motion[0] * motion[0]) + (motion[1] * motion[1]));
+			residual[0] = T(maxPossibleResidual_) *
+						  (T(1) + (motion[0] * motion[0]) +
+						   (motion[1] * motion[1]) + (motion[2] * motion[2]));
 		}
 		else
 		{

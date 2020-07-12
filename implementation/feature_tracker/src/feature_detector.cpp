@@ -310,6 +310,10 @@ void FeatureDetector::compensateEventsContrast(
 		(events.front().timestamp + events.back().timestamp).count() * 0.5));
 	lastCompensation = events.back().timestamp;
 
+	double timeInter =
+		(events.back().timestamp - events.front().timestamp).count();
+	params_.compensateScale = 1 / (timeInter + 1);
+
 	consoleLog_->info(
 		"Compensating {} events, to time_ref {}, with start "
 		"at {}, end at {} microseconds, using {}x{}-sized {}x{} patches",
@@ -319,13 +323,14 @@ void FeatureDetector::compensateEventsContrast(
 
 	ceres::Problem problem;
 	// init and fill data into array
-	auto* mf = new double[numPatchesX * numPatchesY * 2];
+	auto* mf = new double[numPatchesX * numPatchesY * 3];
 	for (int y = 0; y < numPatchesY; y++)
 	{
 		for (int x = 0; x < numPatchesX; x++)
 		{
-			mf[2 * (y * numPatchesX + x)] = 0;
-			mf[2 * (y * numPatchesX + x) + 1] = 0;
+			mf[3 * (y * numPatchesX + x)] = 0;
+			mf[3 * (y * numPatchesX + x) + 1] = 0;
+			mf[3 * (y * numPatchesX + x) + 2] = 0;
 		}
 	}
 
@@ -362,41 +367,41 @@ void FeatureDetector::compensateEventsContrast(
 			{
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<tracker::contrastFunctor, 1,
-													2>(
+													3>(
 						new tracker::contrastFunctor(patchEvents, patchRect,
 													 params_.compensateScale));
 
 				problem.AddResidualBlock(cost_function, nullptr,
-										 &mf[2 * (y * numPatchesX + x)]);
+										 &mf[3 * (y * numPatchesX + x)]);
 			}
 
 			if (x < numPatchesX - 1)
 			{
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
-						tracker::totalVarianceFunctor, 2, 2, 2>(
+						tracker::totalVarianceFunctor, 2, 3, 3>(
 						new tracker::totalVarianceFunctor(
-							params_.compensateTVweight));
+							params_.compensateTVweight, 2));
 
 				problem.AddResidualBlock(
 					cost_function,
 					new ceres::HuberLoss(params_.compensateTVHuberLoss),
-					&mf[2 * (y * numPatchesX + x)],
-					&mf[2 * (y * numPatchesX + x + 1)]);
+					&mf[3 * (y * numPatchesX + x)],
+					&mf[3 * (y * numPatchesX + x + 1)]);
 			}
 			if (y < numPatchesY - 1)
 			{
 				ceres::CostFunction* cost_function =
 					new ceres::AutoDiffCostFunction<
-						tracker::totalVarianceFunctor, 2, 2, 2>(
+						tracker::totalVarianceFunctor, 2, 3, 3>(
 						new tracker::totalVarianceFunctor(
-							params_.compensateTVweight));
+							params_.compensateTVweight, 2));
 
 				problem.AddResidualBlock(
 					cost_function,
 					new ceres::HuberLoss(params_.compensateTVHuberLoss),
-					&mf[2 * (y * numPatchesX + x)],
-					&mf[2 * ((y + 1) * numPatchesX + x)]);
+					&mf[3 * (y * numPatchesX + x)],
+					&mf[3 * ((y + 1) * numPatchesX + x)]);
 			}
 		}
 	}
@@ -426,11 +431,11 @@ void FeatureDetector::compensateEventsContrast(
 			motionField_.at<cv::Vec2f>(
 				y * params_.patchCompensateSize.height,
 				x * params_.patchCompensateSize.width)[0] =
-				mf[2 * (y * numPatchesX + x)];
+				mf[3 * (y * numPatchesX + x)];
 			motionField_.at<cv::Vec2f>(
 				y * params_.patchCompensateSize.height,
 				x * params_.patchCompensateSize.width)[1] =
-				mf[2 * (y * numPatchesX + x) + 1];
+				mf[3 * (y * numPatchesX + x) + 1];
 		}
 	}
 
@@ -443,18 +448,39 @@ void FeatureDetector::compensateEventsContrast(
 		int y = std::min(
 			int(event.value.point.y / params_.patchCompensateSize.height),
 			numPatchesY - 1);
+		cv::Rect2i patchRect;
+		patchRect.x = x * params_.patchCompensateSize.width;
+		patchRect.y = y * params_.patchCompensateSize.height;
+		patchRect.width = params_.patchCompensateSize.width;
+		patchRect.height = params_.patchCompensateSize.height;
+		if (x == numPatchesX - 1)
+		{
+			patchRect.width =
+				params_.imageSize.width - x * params_.patchCompensateSize.width;
+		}
+		if (y == numPatchesY - 1)
+		{
+			patchRect.height = params_.imageSize.height -
+							   y * params_.patchCompensateSize.height;
+		}
 		// Simple Motion Compensation formula:
 		// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 		common::Point2i newP;
 
-		newP.x =
-			round(event.value.point.x + (timestamp - event.timestamp).count() *
-											params_.compensateScale *
-											mf[2 * (y * numPatchesX + x)]);
+		const double timeDiff =
+			(timestamp - event.timestamp).count() * params_.compensateScale;
+		const double cosR =
+			std::cos(timeDiff * mf[3 * (y * numPatchesX + x) + 2]);
+		const double sinR =
+			std::sin(timeDiff * mf[3 * (y * numPatchesX + x) + 2]);
+
+		newP.x = round((event.value.point.x - patchRect.x) * cosR -
+					   (event.value.point.y - patchRect.y) * sinR +
+					   patchRect.x + timeDiff * mf[3 * (y * numPatchesX + x)]);
 		newP.y =
-			round(event.value.point.y + (timestamp - event.timestamp).count() *
-											params_.compensateScale *
-											mf[2 * (y * numPatchesX + x) + 1]);
+			round((event.value.point.x - patchRect.x) * sinR +
+				  (event.value.point.y - patchRect.y) * cosR + patchRect.y +
+				  timeDiff * mf[3 * (y * numPatchesX + x) + 1]);
 
 		if (newP.x >= 0 and newP.x < compensatedEventImage_.cols and
 			newP.y >= 0 and newP.y < compensatedEventImage_.rows)
