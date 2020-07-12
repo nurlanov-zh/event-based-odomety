@@ -54,6 +54,9 @@ class FeatureDetector
 
 	void compensateEventsContrast(const std::list<common::EventSample>& events);
 
+	void compensateEventsContrastNoise(
+		const std::list<common::EventSample>& events);
+
 	void clearEvents() { lastEvents_.clear(); }
 
 	void integrateEvents(const std::list<common::EventSample>& events);

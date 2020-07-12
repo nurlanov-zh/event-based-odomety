@@ -33,7 +33,8 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 		tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
 	{
 		//		tracker_->compensateEvents(tracker_->getEvents());
-		tracker_->compensateEventsContrast(tracker_->getEvents());
+		//		tracker_->compensateEventsContrast(tracker_->getEvents());
+		tracker_->compensateEventsContrastNoise(tracker_->getEvents());
 		tracker_->integrateEvents(tracker_->getEvents());
 		tracker_->clearEvents();
 	}

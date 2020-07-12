@@ -1,5 +1,6 @@
 #include "feature_tracker/feature_detector.h"
 #include "feature_tracker/contrast_functor.h"
+#include "feature_tracker/contrast_noise_functor.h"
 #include "feature_tracker/total_variance.h"
 
 #include <opencv2/core/eigen.hpp>
@@ -319,6 +320,7 @@ void FeatureDetector::compensateEventsContrast(
 
 	ceres::Problem problem;
 	// init and fill data into array
+	// mf - motion field: (v_x, v_y) - one for each patch
 	auto* mf = new double[numPatchesX * numPatchesY * 2];
 	for (int y = 0; y < numPatchesY; y++)
 	{
@@ -465,6 +467,220 @@ void FeatureDetector::compensateEventsContrast(
 				static_cast<double>(1);
 		}
 	}
+}
+
+void FeatureDetector::compensateEventsContrastNoise(
+	const std::list<common::EventSample>& events)
+{
+	int numPatchesX =
+		params_.imageSize.width / params_.patchCompensateSize.width;
+	int numPatchesY =
+		params_.imageSize.height / params_.patchCompensateSize.height;
+	const auto timestamp = common::timestamp_t(static_cast<int32_t>(
+		(events.front().timestamp + events.back().timestamp).count() * 0.5));
+	lastCompensation = events.back().timestamp;
+
+	consoleLog_->info(
+		"Compensating {} events, to time_ref {}, with start "
+		"at {}, end at {} microseconds, using {}x{}-sized {}x{} patches",
+		events.size(), timestamp.count(), events.front().timestamp.count(),
+		events.back().timestamp.count(), params_.patchCompensateSize.width,
+		params_.patchCompensateSize.height, numPatchesX, numPatchesY);
+
+	ceres::Problem problem;
+	// init and fill data into array
+	// mf - motion field: (v_x, v_y) - one for each patch
+	auto* mf = new double[numPatchesX * numPatchesY * 2];
+	for (int y = 0; y < numPatchesY; y++)
+	{
+		for (int x = 0; x < numPatchesX; x++)
+		{
+			mf[2 * (y * numPatchesX + x)] = 0;
+			mf[2 * (y * numPatchesX + x) + 1] = 0;
+		}
+	}
+
+	// noise model. At each pixel independent noise.
+	std::vector<cv::Rect2i> vectorPatchRect;
+	double** noiseMat = new double*[numPatchesX * numPatchesY];
+	for (int y = 0; y < numPatchesY; y++)
+	{
+		for (int x = 0; x < numPatchesX; x++)
+		{
+			cv::Rect2i patchRect;
+			patchRect.x = x * params_.patchCompensateSize.width;
+			patchRect.y = y * params_.patchCompensateSize.height;
+			patchRect.width = params_.patchCompensateSize.width;
+			patchRect.height = params_.patchCompensateSize.height;
+			if (x == numPatchesX - 1)
+			{
+				patchRect.width = params_.imageSize.width -
+								  x * params_.patchCompensateSize.width;
+			}
+			if (y == numPatchesY - 1)
+			{
+				patchRect.height = params_.imageSize.height -
+								   y * params_.patchCompensateSize.height;
+			}
+			vectorPatchRect.emplace_back(patchRect);
+			noiseMat[y * numPatchesX + x] =
+				new double[patchRect.width * patchRect.height];
+			for (int i = 0; i < patchRect.width * patchRect.height; i++)
+			{
+				noiseMat[y * numPatchesX + x][i] = 1.0;
+			}
+		}
+	}
+
+	// Setup optimization problem
+	for (int y = 0; y < numPatchesY; y++)
+	{
+		for (int x = 0; x < numPatchesX; x++)
+		{
+			const auto patchRect = vectorPatchRect[y * numPatchesX + x];
+			std::list<common::EventSample> patchEvents;
+			for (const auto& event : events)
+			{
+				if (patchRect.contains(event.value.point))
+				{
+					patchEvents.push_back(event);
+				}
+			}
+
+			// Add contrast noise functor residuals
+			if (patchEvents.size() > params_.compensateMinNumEvents)
+			{
+				auto* cost_function = new ceres::DynamicAutoDiffCostFunction<
+					tracker::contrastNoiseFunctor>(
+					new tracker::contrastNoiseFunctor(patchEvents, patchRect,
+													  params_.compensateScale));
+				// Parameter block for motion field
+				cost_function->AddParameterBlock(2);
+				// Parameter block for noise
+				cost_function->AddParameterBlock(patchRect.height *
+												 patchRect.width);
+				cost_function->SetNumResiduals(1);
+
+				problem.AddResidualBlock(cost_function, nullptr,
+										 &mf[2 * (y * numPatchesX + x)],
+										 noiseMat[y * numPatchesX + x]);
+			}
+
+			// Add Total Variation residuals
+			if (x < numPatchesX - 1)
+			{
+				ceres::CostFunction* cost_function =
+					new ceres::AutoDiffCostFunction<
+						tracker::totalVarianceFunctor, 2, 2, 2>(
+						new tracker::totalVarianceFunctor(
+							params_.compensateTVweight));
+
+				problem.AddResidualBlock(
+					cost_function,
+					new ceres::HuberLoss(params_.compensateTVHuberLoss),
+					&mf[2 * (y * numPatchesX + x)],
+					&mf[2 * (y * numPatchesX + x + 1)]);
+			}
+			if (y < numPatchesY - 1)
+			{
+				ceres::CostFunction* cost_function =
+					new ceres::AutoDiffCostFunction<
+						tracker::totalVarianceFunctor, 2, 2, 2>(
+						new tracker::totalVarianceFunctor(
+							params_.compensateTVweight));
+
+				problem.AddResidualBlock(
+					cost_function,
+					new ceres::HuberLoss(params_.compensateTVHuberLoss),
+					&mf[2 * (y * numPatchesX + x)],
+					&mf[2 * ((y + 1) * numPatchesX + x)]);
+			}
+		}
+	}
+
+	// Set solver options (precision / method)
+	ceres::Solver::Options options;
+	options.minimizer_progress_to_stdout = false;
+	options.num_threads = 1;
+	options.logging_type = ceres::SILENT;
+	options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+	options.use_nonmonotonic_steps = true;
+	options.max_num_iterations = 50;
+	options.function_tolerance = 1e-12;
+	options.gradient_tolerance = 1e-12;
+	options.parameter_tolerance = 1e-12;
+
+	// Solve
+	ceres::Solver::Summary summary;
+	Solve(options, &problem, &summary);
+
+	consoleLog_->info(summary.BriefReport());
+
+	for (int y = 0; y < numPatchesY; y++)
+	{
+		for (int x = 0; x < numPatchesX; x++)
+		{
+			motionField_.at<cv::Vec2f>(
+				y * params_.patchCompensateSize.height,
+				x * params_.patchCompensateSize.width)[0] =
+				mf[2 * (y * numPatchesX + x)];
+			motionField_.at<cv::Vec2f>(
+				y * params_.patchCompensateSize.height,
+				x * params_.patchCompensateSize.width)[1] =
+				mf[2 * (y * numPatchesX + x) + 1];
+		}
+	}
+
+	compensatedEventImage_ = cv::Mat::zeros(params_.imageSize, CV_64F);
+	for (const auto& event : events)
+	{
+		int x = std::min(
+			int(event.value.point.x / params_.patchCompensateSize.width),
+			numPatchesX - 1);
+		int y = std::min(
+			int(event.value.point.y / params_.patchCompensateSize.height),
+			numPatchesY - 1);
+		// Simple Motion Compensation formula:
+		// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
+		common::Point2i newP;
+
+		newP.x =
+			round(event.value.point.x + (timestamp - event.timestamp).count() *
+											params_.compensateScale *
+											mf[2 * (y * numPatchesX + x)]);
+		newP.y =
+			round(event.value.point.y + (timestamp - event.timestamp).count() *
+											params_.compensateScale *
+											mf[2 * (y * numPatchesX + x) + 1]);
+
+		if (newP.x >= 0 and newP.x < compensatedEventImage_.cols and
+			newP.y >= 0 and newP.y < compensatedEventImage_.rows)
+		{
+			//			compensatedEventImage_.at<double>(newP.y, newP.x) +=
+			//				static_cast<double>(event.value.sign);
+			const auto patchRect = vectorPatchRect[y * numPatchesX + x];
+			Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic,
+									 Eigen::RowMajor>>
+				patchNoiseMat(noiseMat[y * numPatchesX + x], patchRect.height,
+							  patchRect.width);
+			const double noise =
+				patchNoiseMat(event.value.point.y - patchRect.y,
+							  event.value.point.x - patchRect.x);
+			compensatedEventImage_.at<double>(newP.y, newP.x) +=
+				std::exp(noise) / (std::exp(noise) + 1) *
+				static_cast<double>(1);
+		}
+	}
+
+	delete[] mf;
+	for (int y = 0; y < numPatchesY; y++)
+	{
+		for (int x = 0; x < numPatchesX; x++)
+		{
+			delete[] noiseMat[y * numPatchesX + x];
+		}
+	}
+	delete[] noiseMat;
 }
 
 void FeatureDetector::integrateEvents(
