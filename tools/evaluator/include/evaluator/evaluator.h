@@ -20,6 +20,7 @@ struct EvaluatorParams
 	bool experiment = true;
 	// compensate whole image each k microseconds
 	uint32_t compensationFrequencyTime = 300000;
+	uint32_t compensationFrequencyEvents = 15000;
 };
 
 class Evaluator

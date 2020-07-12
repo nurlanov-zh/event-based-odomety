@@ -247,10 +247,12 @@ struct contrastFunctor
 			}
 
 			// Non maximum suppression of first eigen values in blocks
-			for (int y = kernelSizeNMS_; y < 3 * patchRect_.height - 1;
+			for (int y = kernelSizeNMS_;
+				 y < 3 * patchRect_.height - 1 - kernelSizeNMS_;
 				 y += kernelSizeNMS_)
 			{
-				for (int x = kernelSizeNMS_; x < 3 * patchRect_.width - 1;
+				for (int x = kernelSizeNMS_;
+					 x < 3 * patchRect_.width - 1 - kernelSizeNMS_;
 					 x += kernelSizeNMS_)
 				{
 					T maxVal = T(0);
@@ -286,6 +288,6 @@ struct contrastFunctor
 	double sigmaST_ = 1.5;
 	int kernelSizeST_ = 3;
 
-	int kernelSizeNMS_ = 1;
+	int kernelSizeNMS_ = 2;
 };
 }  // namespace tracker
