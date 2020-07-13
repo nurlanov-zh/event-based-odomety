@@ -103,6 +103,10 @@ int main(int argc, char** argv)
 				(!stop &&
 				 (timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
 			{
+				visualizer.setCompensatedEventImage(
+					evaluator.getCompensatedEventImage());
+				visualizer.setIntegratedEventImage(
+					evaluator.getIntegratedEventImage());
 				visualizer.setPatches(evaluator.getPatches());
 				visualizer.setTimestamp(timestamp);
 				visualizer.setActiveFrames(evaluator.getActiveFrames());

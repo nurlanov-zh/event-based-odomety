@@ -46,6 +46,10 @@ class Visualizer
 
 	void setPatches(const tracker::Patches& patches) { patches_ = patches; }
 
+	void setCompensatedEventImage(const cv::Mat& compensatedEventImage);
+
+	void setIntegratedEventImage(const cv::Mat& integratedEventImage);
+
 	common::timestamp_t getStepInterval() const;
 	void eventCallback(const common::EventSample& sample);
 	void imageCallback(const common::ImageSample& sample);
@@ -126,8 +130,10 @@ class Visualizer
 	std::list<common::EventSample> integratedEvents_;
 
 	cv::Mat integratedNabla_;
+	cv::Mat integratedEventImage_;
 	cv::Mat costMap_;
 	cv::Mat predictedNabla_;
+	cv::Mat compensatedEventImage_;
 	cv::Mat originalImage_;
 	cv::Rect2d newPatch_;
 	cv::Rect2d initPatch_;
