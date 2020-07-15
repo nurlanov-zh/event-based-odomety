@@ -129,22 +129,17 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 	localizeCamera(keyframe, match);
 	keyframe.pose = match.Tw2c;
 
+	consoleLog_->info("Localize camera: " + std::to_string(match.inliers.size()) + " inliers");
 	if (match.inliers.size() > params_.numOfInliers)
 	{
 		return true;
 	}
-	else if (initCameras(keyframe, match))
+	else if (params_.maxNumWithoutAdd >= withoutAdd_)
 	{
-		return true;
-	}
-	else if (params_.maxNumWithoutAdd > withoutAdd_)
-	{
-		match.Tw2c = activeFrames_.rbegin()->second.pose;
-		for (const auto& lm : keyframe.getLandmarks())
+		if (initCameras(keyframe, match))
 		{
-			match.inliers.emplace_back(lm.first);
+			return true;
 		}
-		return true;
 	}
 	
 	consoleLog_->info("Few inliers after localize camera: " +

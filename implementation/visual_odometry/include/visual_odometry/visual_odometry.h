@@ -27,7 +27,7 @@ namespace visual_odometry
 struct VisualOdometryParams
 {
 	size_t numOfActiveFrames = 20;
-	size_t numOfInliers = 55;
+	size_t numOfInliers = 25;
 	size_t numOfEssentialInliers = 10;
 	size_t ransacMinInliers = 15;
 	size_t maxNumIterations = 50;

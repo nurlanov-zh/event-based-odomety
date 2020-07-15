@@ -33,15 +33,15 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->addEvent(sample);
 	tracker_->updatePatches(sample);
-	if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
-			params_.compensationFrequencyTime or
-		tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
-	{
-		//		tracker_->compensateEvents(tracker_->getEvents());
-		tracker_->compensateEventsContrast(tracker_->getEvents());
-		tracker_->integrateEvents(tracker_->getEvents());
-		tracker_->clearEvents();
-	}
+	// if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
+	// 		params_.compensationFrequencyTime or
+	// 	tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
+	// {
+	// 	//		tracker_->compensateEvents(tracker_->getEvents());
+	// 	tracker_->compensateEventsContrast(tracker_->getEvents());
+	// 	tracker_->integrateEvents(tracker_->getEvents());
+	// 	tracker_->clearEvents();
+	// }
 }
 
 void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
