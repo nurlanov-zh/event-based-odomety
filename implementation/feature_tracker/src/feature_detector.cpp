@@ -14,10 +14,6 @@ FeatureDetector::FeatureDetector(const DetectorParams& params) : params_(params)
 
 void FeatureDetector::init()
 {
-	OptimizerParams params;
-	params = params_.optimizerParams;
-	optimizer_.reset(new Optimizer(params, params_.imageSize));
-
 	flowEstimator_.reset(
 		new tracker::FlowEstimator(tracker::FlowEstimatorParams()));
 
@@ -41,9 +37,9 @@ void FeatureDetector::reset()
 
 	mask_ = cv::Mat::zeros(params_.imageSize, CV_8U);
 	cv::rectangle(mask_,
-				  {params_.patchExtent + 1, params_.patchExtent + 1,
-				   params_.imageSize.width - 2 * (params_.patchExtent + 1),
-				   params_.imageSize.height - 2 * (params_.patchExtent + 1)},
+				  {params_.patchExtent, params_.patchExtent,
+				   params_.imageSize.width - 2 * params_.patchExtent,
+				   params_.imageSize.height - 2 * params_.patchExtent},
 				  cvScalar(1), CV_FILLED);
 
 	initMotionField(common::timestamp_t(0));
@@ -509,7 +505,7 @@ void FeatureDetector::newImage(const common::ImageSample& image)
 	{
 		for (auto& patch : patches_)
 		{
-			patch.warpImage(gradX_, gradY_);
+			patch.warpImage();
 		}
 	}
 
@@ -518,13 +514,30 @@ void FeatureDetector::newImage(const common::ImageSample& image)
 		if (patchIt->isLost())
 		{
 			archivedPatches_.push_back(*patchIt);
+			optimizers_[patchIt->getInitTime().count()]->deleteUser();
+
 			patchIt = patches_.erase(patchIt);
 			continue;
 		}
 		++patchIt;
 	}
+
+	for (auto optIt = optimizers_.begin(); optIt != optimizers_.end();)
+	{
+		if (!optIt->second->isUsed())
+		{
+			optIt = optimizers_.erase(optIt);
+		}
+		else
+		{
+			++optIt;
+		}
+	}
+
 	consoleLog_->info("Extracted " + std::to_string(patches_.size()) +
 					  " patches.");
+	consoleLog_->info("Used " + std::to_string(optimizers_.size()) +
+					  " optimizers.");
 }
 
 void FeatureDetector::extractPatches(const common::ImageSample& image)
@@ -541,7 +554,13 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 
 	gradX_ = getGradients(logImage, true);
 	gradY_ = getGradients(logImage, false);
-	optimizer_->setGrad(gradX_, gradY_);
+
+	OptimizerParams params;
+	params = params_.optimizerParams;
+	optimizers_[image.timestamp.count()] = std::make_unique<tracker::Optimizer>(
+		Optimizer(params, params_.imageSize));
+
+	optimizers_[image.timestamp.count()]->setGrad(gradX_, gradY_);
 
 	associatePatches(newPatches, image.timestamp);
 }
@@ -558,7 +577,7 @@ Corners FeatureDetector::detectFeatures(const cv::Mat& image)
 
 	cv::goodFeaturesToTrack(imageGray, corners, maxCorners_,
 							params_.qualityLevel, params_.minDistance, mask_,
-							params_.blockSize, true);
+							params_.blockSize, true, 0.04);
 
 	return corners;
 }
@@ -574,30 +593,26 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 				patch.addEvent(event);
 			}
 
-			if (event.timestamp - patch.getTimeLastUpdate() >
-				patch.getTimeWithoutUpdate())
-			{
-				consoleLog_->info(
-					"Lost patch " + std::to_string(patch.getTrackId()) +
-					" because timeWithoutUpdate has been "
-					"reached:\ntime since last update: " +
-					std::to_string(
-						(event.timestamp - patch.getTimeLastUpdate()).count()) +
-					" microseconds vs timeWithoutUpdate: " +
-					std::to_string(patch.getTimeWithoutUpdate().count()) +
-					" microseconds.");
-				patch.setLost();
-			}
+			// if (event.timestamp - patch.getTimeLastUpdate() >
+			// 	patch.getTimeWithoutUpdate())
+			// {
+			// 	consoleLog_->info(
+			// 		"Lost patch " + std::to_string(patch.getTrackId()) +
+			// 		" because timeWithoutUpdate has been "
+			// 		"reached:\ntime since last update: " +
+			// 		std::to_string(
+			// 			(event.timestamp - patch.getTimeLastUpdate()).count()) +
+			// 		" microseconds vs timeWithoutUpdate: " +
+			// 		std::to_string(patch.getTimeWithoutUpdate().count()) +
+			// 		" microseconds.");
+			// 	patch.setLost();
+			// }
 
-			if (patch.isReady() && patch.isInit() && !patch.isLost())
+			if (patch.isReady() && patch.isInit())
 			{
-				optimizer_->optimize(patch);
+				optimizers_[patch.getInitTime().count()]->optimize(patch);
 				updateNumOfEvents(patch);
-
-				if (params_.drawImages)
-				{
-					patch.warpImage(gradX_, gradY_);
-				}
+				patch.warpImage();
 			}
 		}
 	}
@@ -627,18 +642,22 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 			{
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
-				patch.setCorner(newPatch.toCorner(), timestamp);
 				break;
 			}
 		}
+
+		patch.setTs(timestamp);
+		patch.addTrajectoryPosition();
 	}
 
 	for (auto& newPatch : newPatches)
 	{
-		if (newPatch.getTrackId() == -1)
+		if (newPatch.getTrackId() == -1 && patches_.size() < params_.maxPatches)
 		{
 			newPatch.setTrackId(nextTrackId_);
+			newPatch.setGrad(gradX_, gradY_);
 			patches_.push_back(newPatch);
+			optimizers_[timestamp.count()]->addUser();
 			nextTrackId_++;
 		}
 	}
@@ -682,7 +701,8 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	size_t sumPatch =
-		cv::norm(gradX * std::cos(flow) + gradY * std::sin(flow), cv::NORM_L1);
+		cv::norm(0.6 * gradX * std::cos(flow) + 0.6 * gradY * std::sin(flow),
+				 cv::NORM_L1);
 
 	patch.setNumOfEvents(sumPatch);
 
@@ -698,7 +718,7 @@ cv::Mat FeatureDetector::getLogImage(const cv::Mat& image)
 	cv::Mat logImage;
 
 	image.convertTo(normalizedImage, CV_64F, 1.0 / 255.0);
-	cv::log(normalizedImage + 10e-5, logImage);
+	cv::log(normalizedImage + 10e-2, logImage);
 	return logImage;
 }
 
@@ -714,14 +734,11 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 void FeatureDetector::setParams(const tracker::DetectorParams& params)
 {
 	params_ = params;
-	optimizer_->setParams(params_.optimizerParams);
+	for (const auto& opt : optimizers_)
+	{
+		opt.second->setParams(params_.optimizerParams);
+	}
 	reset();
-}
-
-std::vector<tracker::OptimizerFinalLoss>
-FeatureDetector::getOptimizedFinalCosts()
-{
-	return optimizer_->getFinalCosts();
 }
 
 cv::Mat const& FeatureDetector::getCompensatedEventImage()

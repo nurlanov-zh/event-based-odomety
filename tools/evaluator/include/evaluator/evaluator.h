@@ -15,12 +15,13 @@ struct EvaluatorParams
 {
 	cv::Size2i imageSize = {240, 180};
 	std::string outputDir = "/tmp";
-	common::CameraModelParams cameraModelParams = {};
+	common::CameraModelParams<double> cameraModelParams = {};
 	bool drawImages = false;
-	bool experiment = true;
 	// compensate whole image each k microseconds
 	uint32_t compensationFrequencyTime = 300000;
 	uint32_t compensationFrequencyEvents = 15000;
+	bool trackerExperiment = false;
+	bool visOdometryExperiment = false;
 };
 
 class Evaluator
@@ -40,14 +41,22 @@ class Evaluator
 
 	void setTrackerParams(const tracker::DetectorParams& params);
 
-	void saveTrajectory(const tracker::Patches& patches);
+	void saveFeaturesTrajectory(const tracker::Patches& patches);
+
+	void savePoses(const std::list<visual_odometry::Keyframe>& keyframes);
 
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
+	void setPatches(const tracker::Patches& patches);
+
+	void setParams(const EvaluatorParams& params) { params_ = params; }
+
 	tracker::Patches const& getPatches() const;
 	visual_odometry::MapLandmarks const& getMapLandmarks();
-	std::list<visual_odometry::Keyframe> const& getActiveFrames() const;
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& getStoredMapLandmarks() const;
+	std::map<size_t, visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
+	std::vector<common::Pose3d> const& getGtPoses() const;
 
 	cv::Mat const& getCompensatedEventImage();
 	cv::Mat const& getIntegratedEventImage();
@@ -64,7 +73,10 @@ class Evaluator
 	std::unique_ptr<tracker::FeatureDetector> tracker_;
 	std::unique_ptr<visual_odometry::VisualOdometryFrontEnd> visualOdometry_;
 
+	std::unordered_map<size_t, tracker::Patches> keyframes_;
+
 	tracker::Corners corners_;
+	tracker::Patches patches_;
 
 	size_t imageNum_;
 };

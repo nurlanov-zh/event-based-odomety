@@ -66,8 +66,8 @@ struct OptimizerCostFunctor
 							transform(1, 2);
 
 				// evaluate interpolated gradients at warped points
-				if (warpedX >= T(imageSize_.width) or
-					warpedY >= T(imageSize_.height) or warpedX < T(0.0) or
+				if (warpedX >= T(imageSize_.width) ||
+					warpedY >= T(imageSize_.height) || warpedX < T(0.0) ||
 					warpedY < T(0.0))
 				{
 					sResiduals[x + static_cast<int>(patch_.width) * y] = T(0.0);

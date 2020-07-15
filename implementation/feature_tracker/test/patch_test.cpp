@@ -74,8 +74,8 @@ TEST(Patch, warpImageTest)
 
 	common::Pose2d warp = Sophus::SE2d::rot(M_PI / 4);
 	patch.setWarp(warp);
-
-	patch.warpImage(gradX, gradY);
+	patch.setGrad(gradX, gradY);
+	patch.warpImage();
 
 	const auto image = patch.getPredictedNabla();
 

@@ -80,7 +80,7 @@ cmake ../ceres-solver "${COMMON_CMAKE_ARGS[@]}" \
     -DBUILD_EXAMPLES=OFF \
     -DBUILD_TESTING=OFF \
     -DEXPORT_BUILD_DIR=ON
-make -j$NUM_PARALLEL_BUILDS ceres
+sudo make -j$NUM_PARALLEL_BUILDS ceres
 popd
 
 mkdir -p "$BUILD_PANGOLIN"
@@ -92,7 +92,7 @@ cmake ../Pangolin "${COMMON_CMAKE_ARGS[@]}" \
     -DBUILD_TESTS=OFF \
     -DBUILD_PANGOLIN_PYTHON=OFF \
     "-DEIGEN_INCLUDE_DIR=$EIGEN_DIR"
-make -j$NUM_PARALLEL_BUILDS pangolin
+sudo make -j$NUM_PARALLEL_BUILDS pangolin
 popd
 
 mkdir -p "$BUILD_OPENGV"
@@ -100,11 +100,11 @@ pushd "$BUILD_OPENGV"
 cmake ../opengv "${COMMON_CMAKE_ARGS[@]}" \
     "-DEIGEN_INCLUDE_DIR=$EIGEN_DIR" \
     -DBUILD_TESTS=OFF
-make -j$NUM_PARALLEL_BUILDS opengv
+sudo make -j$NUM_PARALLEL_BUILDS opengv
 popd
 
 mkdir -p "$BUILD_SPDLOG"
 pushd "$BUILD_SPDLOG"
 cmake ../spdlog "${COMMON_CMAKE_ARGS[@]}"
-make -j$NUM_PARALLEL_BUILDS
+sudo make -j$NUM_PARALLEL_BUILDS
 popd

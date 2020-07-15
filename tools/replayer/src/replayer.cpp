@@ -3,34 +3,49 @@
 namespace tools
 {
 Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
-	: lastTimestamp_(0)
+	: reader_(reader), lastTimestamp_(0)
 {
+	hasEvents_ = false;
 	images_ = reader->getImages();
-	events_ = reader->getEvents();
-	groundTruth_ = reader->getGroundTruth();
 
-	reset();
+	const auto& events = reader->getEvents();
+	if (events.has_value())
+	{
+		hasEvents_ = true;
+		events_ = events.value();
+	}
 
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
+	
+	try
+	{
+		groundTruth_ = reader->getGroundTruth();
+	}
+	catch (std::runtime_error)
+	{
+		errLog_->warn("No Ground truth");
+	}
+	
+	try
+	{
+		traj_ = reader->getTrajectory();
+	}
+	catch (std::runtime_error)
+	{
+		errLog_->warn("No trajectory");
+	}
+
+	reset();
 }
 
 bool Replayer::finished() const
 {
-	return timestampsQueue_.empty();
+	return !hasEvents_ || imageIt_ == images_.end();
 }
 
 void Replayer::reset()
 {
-	while (!timestampsQueue_.empty())
-	{
-		timestampsQueue_.pop();
-	}
-
-	fillTimestampsQueue(images_, EventType::IMAGE);
-	fillTimestampsQueue(events_, EventType::EVENT);
-	fillTimestampsQueue(groundTruth_, EventType::GROUND_TRUTH);
-
 	eventIt_ = events_.begin();
 	imageIt_ = images_.begin();
 
@@ -40,39 +55,46 @@ void Replayer::reset()
 
 void Replayer::next()
 {
-	const auto minSample = timestampsQueue_.top();
-	timestampsQueue_.pop();
-	switch (minSample.second)
+	if (hasEvents_ && eventIt_ == events_.end())
 	{
-		case EventType::EVENT:
-
-			consoleLog_->trace("New event sample is arrived at time {:08d}",
-							   imageIt_->timestamp.count());
-
-			notify(eventCallbacks_, *eventIt_);
-			if (eventIt_ != events_.end())
-			{
-				++eventIt_;
-			}
-			break;
-
-		case EventType::IMAGE:
-
-			consoleLog_->trace("New image sample is arrived at time {:08d}",
-							   imageIt_->timestamp.count());
-
-			imageArrived_ = true;
-			notify(imageCallbacks_, *imageIt_);
-			if (imageIt_ != images_.end())
-			{
-				++imageIt_;
-			}
-			break;
-
-		case EventType::GROUND_TRUTH:
-			break;
+		const auto& events = reader_->getEvents();
+		if (events.has_value())
+		{
+			hasEvents_ = true;
+			events_ = events.value();
+			eventIt_ = events_.begin();
+		}
+		else
+		{
+			hasEvents_ = false;
+		}
 	}
-	lastTimestamp_ = minSample.first;
+
+	if (eventIt_->timestamp < imageIt_->timestamp)
+	{
+		lastTimestamp_ = eventIt_->timestamp;
+		consoleLog_->trace("New event sample is arrived at time {:08d}",
+						   imageIt_->timestamp.count());
+
+		notify(eventCallbacks_, *eventIt_);
+		if (eventIt_ != events_.end())
+		{
+			++eventIt_;
+		}
+	}
+	else
+	{
+		lastTimestamp_ = imageIt_->timestamp;
+		consoleLog_->trace("New image sample is arrived at time {:08d}",
+						   imageIt_->timestamp.count());
+
+		imageArrived_ = true;
+		notify(imageCallbacks_, *imageIt_);
+		if (imageIt_ != images_.end())
+		{
+			++imageIt_;
+		}
+	}
 }
 
 void Replayer::nextInterval(const common::timestamp_t& interval)

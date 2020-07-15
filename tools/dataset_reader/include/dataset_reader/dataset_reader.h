@@ -2,6 +2,7 @@
 
 #include <common/camera_model.h>
 #include <common/data_types.h>
+#include <feature_tracker/patch.h>
 #include "dataset_reader/mapped_file.h"
 
 #include <spdlog/sinks/stdout_sinks.h>
@@ -18,30 +19,40 @@ class DatasetReader
    public:
 	explicit DatasetReader(const std::string& path) : path_(path) {}
 
-	virtual common::EventSequence getEvents() const = 0;
+	virtual std::optional<common::EventSequence> getEvents() = 0;
 
 	virtual common::ImageSequence getImages() const = 0;
 
 	virtual common::GroundTruth getGroundTruth() const = 0;
 
-	virtual common::CameraModelParams getCalibration() const = 0;
+	virtual common::CameraModelParams<double> getCalibration() const = 0;
+
+	virtual tracker::Patches getTrajectory() const = 0;
 
    protected:
 	template <typename T, typename D>
-	T readFile(const std::string& path,
-			   std::function<D(std::string&)> getData) const
+	T readFile(const std::string& path, std::function<D(std::string&)> getData,
+			   size_t start, size_t end, size_t& numOfStrings) const
 	{
+		assert(end > start);
 		T sequence;
 		MappedFile mappedFile(path);
 		const char* filePtr = mappedFile.begin();
 		const char* lineTs = nullptr;
 
+		size_t lineNum = 0;
 		std::vector<std::string> lines;
-		while ((lineTs = strchr(filePtr, '\n')))
+		while ((lineTs = strchr(filePtr, '\n')) && lineNum < end)
 		{
-			lines.push_back(std::string(filePtr, lineTs));
+			if (lineNum >= start)
+			{
+				lines.push_back(std::string(filePtr, lineTs));
+			}
 			filePtr = lineTs + 1;
+			lineNum++;
 		}
+
+		numOfStrings = lines.size();
 
 		std::vector<T> sequenceThreads(NUM_THREADS);
 		std::vector<size_t> startLines;
@@ -88,6 +99,8 @@ class DatasetReader
    protected:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
+
+	size_t eventStart_;
 
 	std::string path_;
 };

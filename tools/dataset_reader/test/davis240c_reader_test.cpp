@@ -21,6 +21,8 @@ TEST(Davis240cReader, eventsTest)
 	tools::Davis240cReader reader(TEST_DATA_PATH);
 	const auto events = reader.getEvents();
 
+	EXPECT_TRUE(events.has_value());
+
 	std::vector<common::Point2i> points = {
 		{33, 39}, {158, 145}, {88, 143}, {174, 154}, {112, 139}};
 
@@ -34,14 +36,14 @@ TEST(Davis240cReader, eventsTest)
 		common::timestamp_t(50), common::timestamp_t(55),
 		common::timestamp_t(80)};
 
-	ASSERT_EQ(timestamps.size(), events.size());
+	ASSERT_EQ(timestamps.size(), events.value().size());
 
-	for (size_t i = 0; i < events.size(); ++i)
+	for (size_t i = 0; i < events.value().size(); ++i)
 	{
-		EXPECT_EQ(events[i].timestamp.count(), timestamps[i].count());
-		EXPECT_EQ(events[i].value.point.x, points[i].x);
-		EXPECT_EQ(events[i].value.point.y, points[i].y);
-		EXPECT_EQ(events[i].value.sign, signs[i]);
+		EXPECT_EQ(events.value()[i].timestamp.count(), timestamps[i].count());
+		EXPECT_EQ(events.value()[i].value.point.x, points[i].x);
+		EXPECT_EQ(events.value()[i].value.point.y, points[i].y);
+		EXPECT_EQ(events.value()[i].value.sign, signs[i]);
 	}
 }
 

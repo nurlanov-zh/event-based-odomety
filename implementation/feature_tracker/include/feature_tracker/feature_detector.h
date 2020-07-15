@@ -10,9 +10,9 @@ namespace tracker
 struct DetectorParams
 {
 	double qualityLevel = 0.01;
-	double minDistance = 3;
-	double associationDistance = 10;
-	int32_t patchExtent = 17;
+	double minDistance = 10;
+	double associationDistance = 5;
+	int32_t patchExtent = 12;
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
 	bool drawImages = false;
@@ -27,6 +27,7 @@ struct DetectorParams
 	double compensateTVHuberLoss = 10;
 	double compensateScale = 1e-3;
 	uint compensateMinNumEvents = 100;
+	size_t maxPatches = 100;
 };
 
 class FeatureDetector
@@ -72,10 +73,14 @@ class FeatureDetector
 	Corners const& getFeatures() const { return corners_; }
 	Patches const& getArchivedPatches() const { return archivedPatches_; }
 	std::list<common::EventSample> const& getEvents() { return lastEvents_; }
-	std::vector<tracker::OptimizerFinalLoss> getOptimizedFinalCosts();
 	cv::Mat const& getCompensatedEventImage();
 	cv::Mat const& getIntegratedEventImage();
 	common::timestamp_t const& getLastCompensation();
+
+	std::vector<tracker::OptimizerFinalLoss> getOptimizedFinalCosts() const
+	{
+		return optimizers_.begin()->second->getFinalCosts();
+	}
 
    private:
 	cv::Mat getLogImage(const cv::Mat& image);
@@ -96,6 +101,8 @@ class FeatureDetector
 
 	std::unique_ptr<Optimizer> optimizer_;
 	std::unique_ptr<tracker::FlowEstimator> flowEstimator_;
+
+	std::unordered_map<size_t, std::unique_ptr<Optimizer>> optimizers_;
 
 	DetectorParams params_;
 	size_t maxCorners_;
