@@ -741,12 +741,6 @@ void FeatureDetector::setParams(const tracker::DetectorParams& params)
 	reset();
 }
 
-std::vector<tracker::OptimizerFinalLoss>
-FeatureDetector::getOptimizedFinalCosts()
-{
-	return optimizer_->getFinalCosts();
-}
-
 cv::Mat const& FeatureDetector::getCompensatedEventImage()
 {
 	return compensatedEventImage_;
