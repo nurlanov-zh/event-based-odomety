@@ -259,7 +259,7 @@ void Visualizer::drawScene()
 	const u_int8_t colorCameraStored[3]{0, 255, 0};
 	const u_int8_t colorCameraGt[3]{0, 0, 255};
 	const u_int8_t colorActivePoints[3]{0, 0, 0};
-	const u_int8_t colorOldPoints[3]{220, 220, 220};
+	const u_int8_t colorOldPoints[3]{49, 51, 53};
 
 	for (const auto& camera : activeFrames_)
 	{

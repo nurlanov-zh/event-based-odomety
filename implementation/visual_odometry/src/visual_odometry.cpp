@@ -93,7 +93,7 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 		consoleLog_->info("Mean: " + std::to_string(ate.mean));
 		consoleLog_->info("Max: " + std::to_string(ate.max));
 		consoleLog_->info("Min: " + std::to_string(ate.min));
-
+		consoleLog_->info("Scale: " + std::to_string(sim.scale()));
 	}
 
 	consoleLog_->info("New keyframe is added " +
@@ -182,7 +182,7 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 
 	consoleLog_->info("Init frames with " + std::to_string(inliers) +
 					  " Ransac inliers");
-	if (inliers < params_.numOfInliers)
+	if (inliers < params_.ransacMinInliers)
 	{
 		return false;
 	}

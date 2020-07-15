@@ -45,6 +45,8 @@ class Evaluator
 
 	void savePoses(const std::list<visual_odometry::Keyframe>& keyframes);
 
+	void saveGt(const std::vector<common::Pose3d>& gts);
+
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
 	void setPatches(const tracker::Patches& patches);

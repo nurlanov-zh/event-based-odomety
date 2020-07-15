@@ -17,6 +17,7 @@ Evaluator::~Evaluator()
 	tracker_->preExit();
 	saveFeaturesTrajectory(tracker_->getArchivedPatches());
 	savePoses(visualOdometry_->getStoredFrames());
+	saveGt(visualOdometry_->getGtPoses());
 	saveFinalCosts(tracker_->getOptimizedFinalCosts());
 }
 
@@ -171,6 +172,34 @@ void Evaluator::savePoses(const std::list<visual_odometry::Keyframe>& keyframes)
 				 << kf.pose.matrix3x4()(2, 1) << " "
 				 << kf.pose.matrix3x4()(2, 2) << " "
 				 << kf.pose.matrix3x4()(2, 3) << std::endl;
+	}
+	trajFile.close();
+	consoleLog_->info("Saved!");
+}
+
+
+void Evaluator::saveGt(const std::vector<common::Pose3d>& gts)
+{
+	const std::string outputFilename = params_.outputDir + "/groundtruth_aligned.txt";
+	consoleLog_->info("Saving GT trajectories into " + outputFilename);
+	std::ofstream trajFile;
+	trajFile.open(outputFilename);
+	for (const auto& gt : gts)
+	{
+		// feature_id timestamp x y
+		trajFile << std::fixed << std::setprecision(8)
+				 << gt.matrix3x4()(0, 0) << " "
+				 << gt.matrix3x4()(0, 1) << " "
+				 << gt.matrix3x4()(0, 2) << " "
+				 << gt.matrix3x4()(0, 3) << " "
+				 << gt.matrix3x4()(1, 0) << " "
+				 << gt.matrix3x4()(1, 1) << " "
+				 << gt.matrix3x4()(1, 2) << " "
+				 << gt.matrix3x4()(1, 3) << " "
+				 << gt.matrix3x4()(2, 0) << " "
+				 << gt.matrix3x4()(2, 1) << " "
+				 << gt.matrix3x4()(2, 2) << " "
+				 << gt.matrix3x4()(2, 3) << std::endl;
 	}
 	trajFile.close();
 	consoleLog_->info("Saved!");
