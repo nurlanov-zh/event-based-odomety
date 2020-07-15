@@ -21,6 +21,7 @@ void Patch::init()
 	trackId_ = -1;
 	numOfEvents_ = 75;
 	initPoint_ = toCorner();
+	counter_ = 0;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	motionCompensatedIntegratedNabla_ =
 		cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -35,7 +36,14 @@ void Patch::init()
 
 void Patch::addEvent(const common::EventSample& event)
 {
-	events_.emplace_back(event);
+	events_.push_front(event);
+
+	while (events_.size() > numOfEvents_)
+	{
+		events_.pop_back();
+	}
+
+	counter_++;
 }
 
 void Patch::updatePatchRect()
@@ -56,7 +64,6 @@ void Patch::updatePatchRect()
 
 void Patch::integrateEvents()
 {
-	if (events_.size() >= numOfEvents_)
 	{
 		integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 		for (const auto& event : events_)
@@ -153,13 +160,13 @@ cv::Mat Patch::getNormalizedIntegratedNabla() const
 
 void Patch::resetBatch()
 {
-	events_.clear();
+	counter_ = 0;
 }
 
 Corner Patch::toCorner() const
 {
-	return cv::Point2d(patch_.x + (patch_.width - 1) / 2,
-					   patch_.y + (patch_.height - 1) / 2);
+	return cv::Point2d(patch_.x + (patch_.width - 1) / 2.,
+					   patch_.y + (patch_.height - 1) / 2.);
 }
 
 bool Patch::isInPatch(const common::Point2i& point) const
@@ -248,8 +255,8 @@ void Patch::addTrajectoryPosition()
 void Patch::setCorner(const Corner& corner,
 					  const common::timestamp_t& timestamp)
 {
-	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2,
-						corner.y - (patch_.height - 1) / 2, patch_.width,
+	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2.,
+						corner.y - (patch_.height - 1) / 2., patch_.width,
 						patch_.height);
 	initPoint_ = toCorner();
 	init_ = false;
@@ -260,8 +267,8 @@ void Patch::setCorner(const Corner& corner,
 
 cv::Rect2d Patch::getInitPatch() const
 {
-	return cv::Rect2d(initPoint_.x - (patch_.width - 1) / 2,
-					  initPoint_.y - (patch_.height - 1) / 2, patch_.width,
+	return cv::Rect2d(initPoint_.x - (patch_.width - 1) / 2.,
+					  initPoint_.y - (patch_.height - 1) / 2., patch_.width,
 					  patch_.height);
 }
 
@@ -284,6 +291,11 @@ cv::Mat const& Patch::getGradX() const
 cv::Mat const& Patch::getGradY() const
 {
 	return gradY_;
+}
+
+bool Patch::isReady() const
+{
+	return counter_ >= 30 && events_.size() >= numOfEvents_;
 }
 
 }  // namespace tracker

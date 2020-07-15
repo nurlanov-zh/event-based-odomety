@@ -21,11 +21,19 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	try
 	{
 		groundTruth_ = reader->getGroundTruth();
+	}
+	catch (std::runtime_error)
+	{
+		errLog_->warn("No Ground truth");
+	}
+	
+	try
+	{
 		traj_ = reader->getTrajectory();
 	}
 	catch (std::runtime_error)
 	{
-		errLog_->warn("No Ground truth or trajectory");
+		errLog_->warn("No trajectory");
 	}
 
 	reset();

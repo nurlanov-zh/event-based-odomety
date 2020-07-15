@@ -88,6 +88,7 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 		}
 		else
 		{
+			std::cout << "here" << std::endl;
 			const auto it = keyframes_.find(sample.timestamp.count());
 			if (it != keyframes_.end())
 			{
@@ -137,8 +138,11 @@ void Evaluator::saveFeaturesTrajectory(const tracker::Patches& patches)
 			trajFile << std::fixed << std::setprecision(8) << patch.getTrackId()
 					 << " "
 					 << std::chrono::duration<double>(pos.timestamp).count()
-					 << " " << round(pos.value.x) << " " << round(pos.value.y)
-					 << std::endl;
+							/*1468939993.086614018 -*/
+							// std::chrono::duration<double>(
+							// 	patch.getTrajectory().front().timestamp)
+							// 	.count()
+					 << " " << pos.value.x << " " << pos.value.y << std::endl;
 		}
 	}
 	trajFile.close();

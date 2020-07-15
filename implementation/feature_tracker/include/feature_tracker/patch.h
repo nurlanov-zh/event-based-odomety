@@ -39,7 +39,7 @@ class Patch
 
 	bool isInPatch(const common::Point2i& point) const;
 
-	bool isReady() const { return events_.size() >= numOfEvents_; }
+	bool isReady() const;
 
 	bool isLost() const { return lost_; }
 
@@ -110,8 +110,9 @@ class Patch
 
 	common::EventSequence events_;
 	size_t numOfEvents_;
-	size_t minNumOfEvents_ = 30;
-	size_t maxNumOfEvents_ = 200;
+	size_t minNumOfEvents_ = 100;
+	size_t maxNumOfEvents_ = 300;
+	size_t counter_;
 
 	cv::Mat integratedNabla_;
 	cv::Mat motionCompensatedIntegratedNabla_;

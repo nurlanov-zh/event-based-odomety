@@ -2,6 +2,7 @@
 #include "visual_odometry/local_parameterization_se3.hpp"
 #include "visual_odometry/reprojection_error.h"
 #include "visual_odometry/triangulation.h"
+#include "visual_odometry/aligner.h"
 
 #include <sophus/interpolate.hpp>
 
@@ -20,6 +21,19 @@
 
 #include <cmath>
 
+namespace Sophus
+{
+	// apply sim3 to se3 transformation (returns se3)
+	template <typename Sim3Derived, typename SE3Derived>
+	Sophus::SE3<typename Eigen::ScalarBinaryOpTraits<
+		typename Sim3Derived::Scalar, typename SE3Derived::Scalar>::ReturnType>
+	operator*(const Sophus::Sim3Base<Sim3Derived>& a,
+			const Sophus::SE3Base<SE3Derived>& b) {
+	return {a.quaternion().normalized() * b.unit_quaternion(),
+			a.rxso3() * b.translation() + a.translation()};
+	}
+}
+
 namespace visual_odometry
 {
 VisualOdometryFrontEnd::VisualOdometryFrontEnd(
@@ -37,6 +51,14 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 
 void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 {
+
+	Match match;
+	if (!isNewKeyframeNeeded(keyframe, match))
+	{
+		withoutAdd_++;
+		return;
+	}
+
 	const auto poseGt = syncGtAndImage(keyframe.timestamp);
 	if (poseGt.has_value())
 	{
@@ -45,44 +67,34 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 			zeroGt_ = poseGt.value();
 		}
 		gt_.push_back(zeroGt_.inverse() * poseGt.value());
-	}
-
-	if (activeFrames_.empty())
-	{
-		keyframe.pose = common::Pose3d();
-		Match match;
-		for (const auto& lm : keyframe.getLandmarks())
-		{
-			match.inliers.emplace_back(lm.first);
-		}
-
-		addKeyframe(keyframe, match);
-		return;
-	}
-
-	if (activeFrames_.size() == 1)
-	{
-		Match match;
-		if (initCameras(keyframe, match))
-		{
-			addKeyframe(keyframe, match);
-		}
-		consoleLog_->info("Map consist of " +
-						  std::to_string(mapLandmarks_.landmarks.size()) +
-						  " landmarks");
-		return;
-	}
-
-	Match match;
-	if (!isNewKeyframeNeeded(keyframe, match))
-	{
-		return;
+		gtAligned_.push_back(zeroGt_.inverse() * poseGt.value());
 	}
 
 	deleteKeyframe();
 	addKeyframe(keyframe, match);
 
 	optimize();
+
+	std::list<Keyframe> pose = storedFrames_;
+	for (const auto& kf : activeFrames_)
+	{
+		pose.emplace_back(kf.second);
+	}
+	if (pose.size() > 5 && gt_.size() > 0)
+	{
+		gtAligned_.clear();
+		visual_odometry::ErrorMetricValue ate;
+		const auto sim = align_cameras_sim3(gt_, pose, &ate);
+		for (auto& kf : gt_)
+		{
+			gtAligned_.push_back(sim.inverse() * kf);
+		}
+		consoleLog_->info("RMSE: " + std::to_string(ate.rmse));
+		consoleLog_->info("Mean: " + std::to_string(ate.mean));
+		consoleLog_->info("Max: " + std::to_string(ate.max));
+		consoleLog_->info("Min: " + std::to_string(ate.min));
+
+	}
 
 	consoleLog_->info("New keyframe is added " +
 					  std::to_string(keyframe.timestamp.count()));
@@ -94,18 +106,49 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 												 Match& match)
 {
+	if (activeFrames_.empty())
+	{
+		keyframe.pose = common::Pose3d();
+		for (const auto& lm : keyframe.getLandmarks())
+		{
+			match.inliers.emplace_back(lm.first);
+		}
+
+		return true;
+	}
+
+	if (activeFrames_.size() == 1)
+	{
+		if (initCameras(keyframe, match))
+		{
+			return true;
+		}
+		return false;
+	}
+
 	localizeCamera(keyframe, match);
 	keyframe.pose = match.Tw2c;
 
-	if (match.inliers.size() <= params_.numOfInliers)
+	if (match.inliers.size() > params_.numOfInliers)
 	{
-		if (!initCameras(keyframe, match))
-		{
-			consoleLog_->info("Few inliers after localize camera: " +
-							  std::to_string(match.inliers.size()));
-			return false;
-		}
+		return true;
 	}
+	else if (initCameras(keyframe, match))
+	{
+		return true;
+	}
+	else if (params_.maxNumWithoutAdd > withoutAdd_)
+	{
+		match.Tw2c = activeFrames_.rbegin()->second.pose;
+		for (const auto& lm : keyframe.getLandmarks())
+		{
+			match.inliers.emplace_back(lm.first);
+		}
+		return true;
+	}
+	
+	consoleLog_->info("Few inliers after localize camera: " +
+						std::to_string(match.inliers.size()));
 
 	return true;
 }
@@ -113,6 +156,7 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 void VisualOdometryFrontEnd::addKeyframe(const Keyframe& keyframe,
 										 const Match& match)
 {
+	withoutAdd_ = 0;
 	activeFrames_[keyframe.timestamp.count()] = keyframe;
 
 	addNewLandmarks(keyframe, match);
@@ -150,17 +194,17 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 	// because Tw2c is relative transform in this case
 	keyframe.pose = startKeyframe.pose * match.Tw2c;
 
-	findInliersEssential(bearingVectors1, bearingVectors2,
-						 activeFrames_.begin()->second, keyframe, trackIds,
-						 match, 1e-3);
+	// findInliersEssential(bearingVectors1, bearingVectors2,
+	// 					 activeFrames_.begin()->second, keyframe, trackIds,
+	// 					 match, 1e-3);
 
-	consoleLog_->info("Init frames with " +
-					  std::to_string(match.inliers.size()) +
-					  " Essential inliers");
-	if (match.inliers.size() < params_.numOfEssentialInliers)
-	{
-		return false;
-	}
+	// consoleLog_->info("Init frames with " +
+	// 				  std::to_string(match.inliers.size()) +
+	// 				  " Essential inliers");
+	// if (match.inliers.size() < params_.numOfEssentialInliers)
+	// {
+	// 	return false;
+	// }
 
 	return true;
 }
@@ -261,7 +305,7 @@ size_t VisualOdometryFrontEnd::findInliersRansac(
 			new opengv::sac_problems::relative_pose::
 				CentralRelativePoseSacProblem(
 					adapter, opengv::sac_problems::relative_pose::
-								 CentralRelativePoseSacProblem::NISTER));
+								 CentralRelativePoseSacProblem::EIGHTPT));
 
 	ransac.sac_model_ = relposeproblemPtr;
 	ransac.threshold_ = params_.ransacThreshold;
@@ -376,13 +420,14 @@ void VisualOdometryFrontEnd::optimize()
 	problem.AddParameterBlock(cameraModel_->getParams(), 9);
 	problem.SetParameterBlockConstant(cameraModel_->getParams());
 
-	for (auto it = activeFrames_.begin(); it != activeFrames_.end(); ++it)
+	size_t i = 0;
+	for (auto it = activeFrames_.begin(); it != activeFrames_.end(); ++it, ++i)
 	{
 		problem.AddParameterBlock(it->second.pose.data(),
 								  Sophus::SE3d::num_parameters,
 								  new Sophus::test::LocalParameterizationSE3);
 
-		if (it == activeFrames_.begin())
+		if (i < 2)
 		{
 			problem.SetParameterBlockConstant(it->second.pose.data());
 		}

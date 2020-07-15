@@ -160,6 +160,9 @@ class Visualizer
 	tools::EvaluatorParams evaluatorParams_;
 
 	float flow_;
+
+	cv::Mat currentImage_;
+	bool set_ = false;
 };
 
 }  // namespace tools

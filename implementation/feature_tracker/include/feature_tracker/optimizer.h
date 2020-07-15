@@ -16,9 +16,9 @@ namespace tracker
 struct OptimizerParams
 {
 	bool drawCostMap = false;
-	int maxNumIterations = 50;
+	int maxNumIterations = 10;
 	int numThreads = 1;
-	double optimizerThreshold = 0.25;
+	double optimizerThreshold = 0.6;
 	double huberLoss = 0.3;
 	int costMapWidth = 11;
 	int costMapHeight = 11;

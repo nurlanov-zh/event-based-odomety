@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <sophus/se3.hpp>
+#include <sophus/sim3.hpp>
 
 #include <memory>
 #include <opencv2/opencv.hpp>

@@ -26,11 +26,12 @@ namespace visual_odometry
 {
 struct VisualOdometryParams
 {
-	size_t numOfActiveFrames = 10;
-	size_t numOfInliers = 10;
+	size_t numOfActiveFrames = 20;
+	size_t numOfInliers = 55;
 	size_t numOfEssentialInliers = 10;
 	size_t ransacMinInliers = 15;
 	size_t maxNumIterations = 50;
+	size_t maxNumWithoutAdd = 4;
 	double ransacThreshold = 5e-5;
 	double reprojectionError = 3;
 	double huberLoss = 0.8;
@@ -52,7 +53,7 @@ class VisualOdometryFrontEnd
 	MapLandmarks const& getMapLandmarks();
 	std::map<size_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
-	std::vector<common::Pose3d> const& getGtPoses() const { return gt_; }
+	std::vector<common::Pose3d> const& getGtPoses() const { return gtAligned_; }
 	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& 
 	getStoredLandmarks() const;
 
@@ -83,6 +84,7 @@ class VisualOdometryFrontEnd
 	VisualOdometryParams params_;
 
 	std::vector<common::Pose3d> gt_;
+	std::vector<common::Pose3d> gtAligned_;
 	common::Pose3d zeroGt_;
 
 	bool init_;
@@ -93,5 +95,7 @@ class VisualOdometryFrontEnd
 	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> storedLandmarks_;
 	std::unique_ptr<common::CameraModel<double>> cameraModel_;
 	common::GroundTruth groundTruthSamples_;
+
+	size_t withoutAdd_;
 };
 }  // namespace visual_odometry

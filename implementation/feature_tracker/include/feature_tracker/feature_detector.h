@@ -10,9 +10,9 @@ namespace tracker
 struct DetectorParams
 {
 	double qualityLevel = 0.01;
-	double minDistance = 3;
+	double minDistance = 10;
 	double associationDistance = 5;
-	int32_t patchExtent = 17;
+	int32_t patchExtent = 12;
 	int32_t blockSize = 3;
 	cv::Size imageSize = {240, 180};
 	bool drawImages = false;

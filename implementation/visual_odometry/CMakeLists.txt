@@ -7,7 +7,8 @@ include_directories(include)
 add_library(${PROJECT_NAME}
     src/visual_odometry.cpp
     src/keyframe.cpp
-    src/triangulation.cpp)
+    src/triangulation.cpp
+    src/aligner.cpp)
 
 target_link_libraries(${PROJECT_NAME} common feature_detector opengv ceres)
 target_include_directories(${PROJECT_NAME}  PUBLIC ${PROJECT_SOURCE_DIR}/include)

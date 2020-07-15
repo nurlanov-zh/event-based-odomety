@@ -37,9 +37,9 @@ void FeatureDetector::reset()
 
 	mask_ = cv::Mat::zeros(params_.imageSize, CV_8U);
 	cv::rectangle(mask_,
-				  {params_.patchExtent + 1, params_.patchExtent + 1,
-				   params_.imageSize.width - 2 * (params_.patchExtent + 1),
-				   params_.imageSize.height - 2 * (params_.patchExtent + 1)},
+				  {params_.patchExtent, params_.patchExtent,
+				   params_.imageSize.width - 2 * params_.patchExtent,
+				   params_.imageSize.height - 2 * params_.patchExtent},
 				  cvScalar(1), CV_FILLED);
 
 	initMotionField(common::timestamp_t(0));
@@ -577,7 +577,7 @@ Corners FeatureDetector::detectFeatures(const cv::Mat& image)
 
 	cv::goodFeaturesToTrack(imageGray, corners, maxCorners_,
 							params_.qualityLevel, params_.minDistance, mask_,
-							params_.blockSize, true);
+							params_.blockSize, true, 0.04);
 
 	return corners;
 }
@@ -593,20 +593,20 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 				patch.addEvent(event);
 			}
 
-			if (event.timestamp - patch.getTimeLastUpdate() >
-				patch.getTimeWithoutUpdate())
-			{
-				consoleLog_->info(
-					"Lost patch " + std::to_string(patch.getTrackId()) +
-					" because timeWithoutUpdate has been "
-					"reached:\ntime since last update: " +
-					std::to_string(
-						(event.timestamp - patch.getTimeLastUpdate()).count()) +
-					" microseconds vs timeWithoutUpdate: " +
-					std::to_string(patch.getTimeWithoutUpdate().count()) +
-					" microseconds.");
-				patch.setLost();
-			}
+			// if (event.timestamp - patch.getTimeLastUpdate() >
+			// 	patch.getTimeWithoutUpdate())
+			// {
+			// 	consoleLog_->info(
+			// 		"Lost patch " + std::to_string(patch.getTrackId()) +
+			// 		" because timeWithoutUpdate has been "
+			// 		"reached:\ntime since last update: " +
+			// 		std::to_string(
+			// 			(event.timestamp - patch.getTimeLastUpdate()).count()) +
+			// 		" microseconds vs timeWithoutUpdate: " +
+			// 		std::to_string(patch.getTimeWithoutUpdate().count()) +
+			// 		" microseconds.");
+			// 	patch.setLost();
+			// }
 
 			if (patch.isReady() && patch.isInit())
 			{
@@ -701,7 +701,8 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	size_t sumPatch =
-		cv::norm(gradX * std::cos(flow) + gradY * std::sin(flow), cv::NORM_L1);
+		cv::norm(0.6 * gradX * std::cos(flow) + 0.6 * gradY * std::sin(flow),
+				 cv::NORM_L1);
 
 	patch.setNumOfEvents(sumPatch);
 
@@ -717,7 +718,7 @@ cv::Mat FeatureDetector::getLogImage(const cv::Mat& image)
 	cv::Mat logImage;
 
 	image.convertTo(normalizedImage, CV_64F, 1.0 / 255.0);
-	cv::log(normalizedImage + 10e-5, logImage);
+	cv::log(normalizedImage + 10e-2, logImage);
 	return logImage;
 }
 
