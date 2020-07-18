@@ -22,15 +22,6 @@ enum EventType
 	GROUND_TRUTH = 2
 };
 
-struct TimestampCompare
-{
-	bool operator()(const std::pair<common::timestamp_t, EventType>& lhs,
-					const std::pair<common::timestamp_t, EventType>& rhs)
-	{
-		return lhs.first > rhs.first;
-	}
-};
-
 class Replayer
 {
    public:
@@ -59,6 +50,8 @@ class Replayer
 
 	const common::GroundTruth& getGroundTruth() const { return groundTruth_; }
 
+	const tracker::Patches& getPatches() const { return traj_; }
+
    private:
 	template <typename T>
 	void notify(const std::vector<std::function<void(const T&)>>& callbacks,
@@ -70,31 +63,24 @@ class Replayer
 		}
 	}
 
-	template <typename T>
-	void fillTimestampsQueue(const T& sequence, const EventType& type)
-	{
-		for (const auto& sample : sequence)
-		{
-			timestampsQueue_.push(std::make_pair(sample.timestamp, type));
-		}
-	}
-
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
 
+	std::shared_ptr<DatasetReader> reader_;
+
 	common::GroundTruth groundTruth_;
 	common::EventSequence events_;
 	common::ImageSequence images_;
-	std::priority_queue<std::pair<common::timestamp_t, EventType>,
-						std::vector<std::pair<common::timestamp_t, EventType>>,
-						TimestampCompare>
-		timestampsQueue_;
+
+	bool hasEvents_;
 
 	common::EventSequence::iterator eventIt_;
 	common::ImageSequence::iterator imageIt_;
 
 	common::timestamp_t lastTimestamp_;
+
+	tracker::Patches traj_;
 
 	bool imageArrived_;
 

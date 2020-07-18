@@ -21,6 +21,7 @@ void Patch::init()
 	trackId_ = -1;
 	numOfEvents_ = 75;
 	initPoint_ = toCorner();
+	counter_ = 0;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 	motionCompensatedIntegratedNabla_ =
 		cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -28,13 +29,21 @@ void Patch::init()
 	costMap_ = cv::Mat::zeros(1, 1, CV_64F);
 	// set timeWithoutUpdate_ to 10 seconds
 	timeWithoutUpdate_ = common::timestamp_t(static_cast<int64_t>(1e7));
+	initTime_ = currentTimestamp_;
 
 	addTrajectoryPosition();
 }
 
 void Patch::addEvent(const common::EventSample& event)
 {
-	events_.emplace_back(event);
+	events_.push_front(event);
+
+	while (events_.size() > numOfEvents_)
+	{
+		events_.pop_back();
+	}
+
+	counter_++;
 }
 
 void Patch::updatePatchRect()
@@ -55,7 +64,6 @@ void Patch::updatePatchRect()
 
 void Patch::integrateEvents()
 {
-	if (events_.size() >= numOfEvents_)
 	{
 		integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
 		for (const auto& event : events_)
@@ -64,7 +72,7 @@ void Patch::integrateEvents()
 			{
 				const auto& point = frameToPatchCoords(event.value.point);
 				integratedNabla_.at<double>(point.y, point.x) +=
-					static_cast<int32_t>(event.value.sign);
+					static_cast<double>(event.value.sign);
 			}
 		}
 		currentTimestamp_ = common::timestamp_t(static_cast<int32_t>(
@@ -85,7 +93,7 @@ void Patch::integrateMotionCompensatedEvents()
 
 		const auto midTime = getCurrentTimestamp();
 
-		const auto half = common::timestamp_t(static_cast<int64_t>(
+		const auto half = common::timestamp_t(static_cast<int32_t>(
 			(lastPoint.timestamp - preLastPoint.timestamp).count() * 0.5));
 
 		if (lastPoint.timestamp + half >= midTime &&
@@ -98,7 +106,7 @@ void Patch::integrateMotionCompensatedEvents()
 			// event_t = event_0 + (t - t_event) / (t_final - t_init) * dir
 			const common::Point2d dir = lastPoint.value - preLastPoint.value;
 			const auto t_dif = static_cast<double>(
-				(events_.back().timestamp - events_.front().timestamp).count());
+				(lastPoint.timestamp - preLastPoint.timestamp).count());
 			const auto t = static_cast<double>(midTime.count());
 
 			for (const auto& event : events_)
@@ -114,14 +122,14 @@ void Patch::integrateMotionCompensatedEvents()
 					const auto& point = frameToPatchCoords(compEvent);
 					motionCompensatedIntegratedNabla_.at<double>(point.y,
 																 point.x) +=
-						static_cast<int32_t>(event.value.sign);
+						static_cast<double>(event.value.sign);
 				}
 			}
 		}
 	}
 }
 
-void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
+void Patch::warpImage()
 {
 	cv::Mat warpedGradX;
 	cv::Mat warpedGradY;
@@ -129,13 +137,14 @@ void Patch::warpImage(const cv::Mat& gradX, const cv::Mat& gradY)
 	cv::Mat warpCv;
 	cv::eigen2cv(warp_.matrix2x3(), warpCv);
 
-	cv::warpAffine(gradX, warpedGradX, warpCv, {gradX.cols, gradX.rows},
+	cv::warpAffine(gradX_, warpedGradX, warpCv, {gradX_.cols, gradX_.rows},
 				   cv::WARP_INVERSE_MAP);
-	cv::warpAffine(gradY, warpedGradY, warpCv, {gradY.cols, gradY.rows},
+	cv::warpAffine(gradY_, warpedGradY, warpCv, {gradY_.cols, gradY_.rows},
 				   cv::WARP_INVERSE_MAP);
 
-	if (patch_.x < 0 || patch_.y < 0 || patch_.x + patch_.width >= gradX.cols ||
-		patch_.y + patch_.height >= gradX.rows)
+	if (patch_.x < 0 || patch_.y < 0 ||
+		patch_.x + patch_.width >= gradX_.cols ||
+		patch_.y + patch_.height >= gradX_.rows)
 	{
 		return;
 	}
@@ -151,13 +160,13 @@ cv::Mat Patch::getNormalizedIntegratedNabla() const
 
 void Patch::resetBatch()
 {
-	events_.clear();
+	counter_ = 0;
 }
 
 Corner Patch::toCorner() const
 {
-	return cv::Point2d(patch_.x + (patch_.width - 1) / 2,
-					   patch_.y + (patch_.height - 1) / 2);
+	return cv::Point2d(patch_.x + (patch_.width - 1) / 2.,
+					   patch_.y + (patch_.height - 1) / 2.);
 }
 
 bool Patch::isInPatch(const common::Point2i& point) const
@@ -246,8 +255,8 @@ void Patch::addTrajectoryPosition()
 void Patch::setCorner(const Corner& corner,
 					  const common::timestamp_t& timestamp)
 {
-	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2,
-						corner.y - (patch_.height - 1) / 2, patch_.width,
+	patch_ = cv::Rect2d(corner.x - (patch_.width - 1) / 2.,
+						corner.y - (patch_.height - 1) / 2., patch_.width,
 						patch_.height);
 	initPoint_ = toCorner();
 	init_ = false;
@@ -258,14 +267,35 @@ void Patch::setCorner(const Corner& corner,
 
 cv::Rect2d Patch::getInitPatch() const
 {
-	return cv::Rect2d(initPoint_.x - (patch_.width - 1) / 2,
-					  initPoint_.y - (patch_.height - 1) / 2, patch_.width,
+	return cv::Rect2d(initPoint_.x - (patch_.width - 1) / 2.,
+					  initPoint_.y - (patch_.height - 1) / 2., patch_.width,
 					  patch_.height);
 }
 
 void Patch::addFinalCost(double finalCost)
 {
 	finalCosts_.emplace_back(finalCost);
+}
+
+void Patch::setGrad(const cv::Mat& gradX, const cv::Mat& gradY)
+{
+	gradX_ = gradX;
+	gradY_ = gradY;
+}
+
+cv::Mat const& Patch::getGradX() const
+{
+	return gradX_;
+}
+
+cv::Mat const& Patch::getGradY() const
+{
+	return gradY_;
+}
+
+bool Patch::isReady() const
+{
+	return counter_ >= 30 && events_.size() >= numOfEvents_;
 }
 
 }  // namespace tracker

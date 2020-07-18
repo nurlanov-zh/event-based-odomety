@@ -9,18 +9,22 @@ class Davis240cReader : public DatasetReader
    public:
 	Davis240cReader(const std::string& path);
 
-	common::EventSequence getEvents() const override;
+	std::optional<common::EventSequence> getEvents() override;
 
 	common::ImageSequence getImages() const override;
 
 	common::GroundTruth getGroundTruth() const override;
 
-	common::CameraModelParams getCalibration() const override;
+	common::CameraModelParams<double> getCalibration() const override;
 
+	tracker::Patches getTrajectory() const override;
+	
 	common::EventSample getEventSample(std::string& line) const;
 	common::ImageSample getImageSample(std::string& line) const;
 	common::GroundTruthSample getGroundTruthSample(std::string& line) const;
-	common::CameraModelParams getCalibrationLine(std::string& line) const;
+	common::CameraModelParams<double> getCalibrationLine(
+		std::string& line) const;
+	tracker::Patch getTrajectoryLine(std::string& line) const;
 };
 
 }  // namespace tools

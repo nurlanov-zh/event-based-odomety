@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <sophus/se2.hpp>
 #include <sophus/se3.hpp>
+#include <sophus/sim3.hpp>
 
 namespace common
 {

@@ -101,16 +101,16 @@ void Visualizer::drawIntegratedNabla(const cv::Mat& cvImage)
 
 void Visualizer::drawCostMap(const cv::Mat& cvImage)
 {
-	//	cv::Mat grayImage = convertImageToGray(cvImage);
-	//	cv::Mat imColor;
-	//	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
-	//
-	//	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false,
-	// 0, 								GL_RGB, GL_UNSIGNED_BYTE);
-	// texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
-	//	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+	cv::Mat grayImage = convertImageToGray(cvImage);
+	cv::Mat imColor;
+	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
 
-	drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
+	pangolin::GlTexture texture(imColor.cols, imColor.rows, GL_RGB, false, 0,
+								GL_RGB, GL_UNSIGNED_BYTE);
+	texture.Upload(imColor.data, GL_BGR, GL_UNSIGNED_BYTE);
+	imgView_[static_cast<size_t>(ImageViews::COST_MAP)]->SetImage(texture);
+
+	// drawImage(convertImageToGray(cvImage), ImageViews::COST_MAP);
 }
 
 void Visualizer::drawImage(const cv::Mat& cvImage, const ImageViews& view)
@@ -184,9 +184,9 @@ void Visualizer::drawOriginalOverlay()
 					integratedNabla_ = patch.getIntegratedNabla();
 					predictedNabla_ = patch.getPredictedNabla();
 
-					//					costMap_ = patch.getCostMap();
+					costMap_ = patch.getCostMap();
 
-					costMap_ = patch.getCompenatedIntegratedNabla();
+					// costMap_ = patch.getCompenatedIntegratedNabla();
 
 					flow_ = patch.getFlow();
 					newPatch_ = patch.getPatch();
@@ -207,9 +207,9 @@ void Visualizer::drawOriginalOverlay()
 				integratedNabla_ = patch.getIntegratedNabla();
 				predictedNabla_ = patch.getPredictedNabla();
 
-				//				costMap_ = patch.getCostMap();
+				costMap_ = patch.getCostMap();
 
-				costMap_ = patch.getCompenatedIntegratedNabla();
+				// costMap_ = patch.getCompenatedIntegratedNabla();
 
 				flow_ = patch.getFlow();
 				newPatch_ = patch.getPatch();
@@ -218,6 +218,8 @@ void Visualizer::drawOriginalOverlay()
 				break;
 			}
 		}
+		integratedNabla_ = integratedEventImage_;
+		predictedNabla_ = compensatedEventImage_;
 	}
 
 	// Draw events
@@ -252,31 +254,64 @@ void Visualizer::drawScene()
 {
 	glClearColor(0.95f, 0.95f, 0.95f, 1.0f);
 	sceneView_->Activate(*(camera_.get()));
+
 	const u_int8_t colorCameraActive[3]{255, 0, 0};
-	// const u_int8_t colorCameraStored[3]{0, 0, 255};
-	const u_int8_t colorOldPoints[3]{0, 0, 0};
+	const u_int8_t colorCameraStored[3]{0, 255, 0};
+	const u_int8_t colorCameraGt[3]{0, 0, 255};
+	const u_int8_t colorActivePoints[3]{0, 0, 0};
+	const u_int8_t colorOldPoints[3]{220, 220, 220};
 
 	for (const auto& camera : activeFrames_)
 	{
-		renderCamera(camera.pose.matrix(), 3.f, colorCameraActive, 0.1f);
+		renderCamera(camera.second.pose.matrix(), 3.f, colorCameraActive, 0.1f);
 	}
 
-	// for (const auto& camera : storedFrames_)
-	// {
-	// 	renderCamera(storedFrames_[i].pose.matrix(), 3.f, colorCameraStored,
-	// 				 0.1f);
-	// }
+	for (const auto& camera : gt_)
+	{
+		renderCamera(camera.matrix(), 3.f, colorCameraGt, 0.1f);
+	}
+
+	for (const auto& camera : storedFrames_)
+	{
+		renderCamera(camera.pose.matrix(), 3.f, colorCameraStored, 0.1f);
+	}
 
 	glPointSize(3.0);
 	glBegin(GL_POINTS);
 
-	for (const auto& trackLandmark : landmarks_)
+	for (const auto& trackLandmark : landmarks_.landmarks)
 	{
-		glColor3ubv(colorOldPoints);
+		glColor3ubv(colorActivePoints);
 		pangolin::glVertex(trackLandmark.second);
 	}
 
 	glEnd();
+
+	for (const auto& trackLandmark : landmarks_.landmarks)
+	{
+		pangolin::GlFont::I()
+			.Text("%d", trackLandmark.first)
+			.Draw(trackLandmark.second(0), trackLandmark.second(1),
+				  trackLandmark.second(2));
+	}
+
+	glPointSize(3.0);
+	glBegin(GL_POINTS);
+
+	for (const auto& lm : storedLandmarks_)
+	{
+		glColor3ubv(colorOldPoints);
+		pangolin::glVertex(lm.second);
+	}
+
+	glEnd();
+
+	for (const auto& lm : storedLandmarks_)
+	{
+		pangolin::GlFont::I()
+			.Text("%d", lm.first)
+			.Draw(lm.second(0), lm.second(1), lm.second(2));
+	}
 }
 
 void Visualizer::drawTrajectory(const tracker::Patch& patch)
@@ -319,6 +354,7 @@ cv::Mat Visualizer::convertImageToGray(const cv::Mat& cvImage)
 
 void Visualizer::imageCallback(const common::ImageSample& sample)
 {
+	set_ = true;
 	originalImage_ = sample.value;
 }
 
@@ -412,6 +448,7 @@ void Visualizer::reset()
 	nextIntervalPressed_ = false;
 	nextImagePressed_ = false;
 	trackerParamsChanged_ = false;
+	evaluatorParamsChanged_ = false;
 	flow_ = 0;
 
 	stopPlayButton_ = std::unique_ptr<pangolin::Var<bool>>(
@@ -443,6 +480,14 @@ void Visualizer::reset()
 		std::unique_ptr<pangolin::Var<double>>(new pangolin::Var<double>(
 			"settings.huberLoss", trackerParams_.optimizerParams.huberLoss, 0,
 			2));
+
+	visualOdometryExperiment_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("settings.visOdometryExperiment",
+								evaluatorParams_.visOdometryExperiment, true));
+
+	trackerExperiment_ = std::unique_ptr<pangolin::Var<bool>>(
+		new pangolin::Var<bool>("settings.trackerExperiment",
+								evaluatorParams_.trackerExperiment, true));
 }
 
 bool Visualizer::stopPressed() const
@@ -472,6 +517,91 @@ common::timestamp_t Visualizer::getStepInterval() const
 
 void Visualizer::finishVisualizerIteration()
 {
+	// if (set_)
+	// {
+	// 	static int id = 0;
+	// 	cv::Mat image1;
+	// 	cv::cvtColor(originalImage_, image1, cv::COLOR_GRAY2RGB);
+
+	// 	for (const auto& event : integratedEvents_)
+	// 	{
+	// 		Eigen::Vector2d point(event.value.point.x, event.value.point.y);
+	// 		if (event.value.sign == common::EventPolarity::POSITIVE)
+	// 		{
+	// 			image1.at<cv::Vec3b>(event.value.point.y,
+	// 								 event.value.point.x) = {255, 0, 0};
+	// 		}
+	// 		else
+	// 		{  // event.value.sign == common::EventPolarity::NEGATIVE
+	// 			image1.at<cv::Vec3b>(event.value.point.y,
+	// 								 event.value.point.x) = {0, 0, 255};
+	// 		}
+	// 	}
+
+	// 	cv::resize(image1, image1, {720, 540});
+	// 	for (const auto& patch : patches_)
+	// 	{
+	// 		if (patch.isLost())
+	// 		{
+	// 			continue;
+	// 		}
+
+	// 		cv::circle(image1, {patch.toCorner().x * 3, patch.toCorner().y * 3},
+	// 				   4, {0, 255, 0}, 2);
+	// 		const auto& trajectory = patch.getTrajectory();
+	// 		for (int i = static_cast<int>(trajectory.size()) - 1;
+	// 			 i > static_cast<int>(trajectory.size()) - 60 && i >= 1; --i)
+	// 		{
+	// 			cv::line(image1,
+	// 					 {trajectory[i].value.x * 3, trajectory[i].value.y * 3},
+	// 					 {trajectory[i - 1].value.x * 3,
+	// 					  trajectory[i - 1].value.y * 3},
+	// 					 {127, 0, 127}, 2);
+	// 		}
+	// 	}
+
+	// 	cv::Mat image2;
+	// 	cv::cvtColor(convertImageToGray(integratedNabla_), image2,
+	// 				 cv::COLOR_GRAY2RGB);
+	// 	cv::resize(image2, image2, {540, 540});
+
+	// 	cv::Mat image3;
+	// 	cv::cvtColor(convertImageToGray(predictedNabla_), image3,
+	// 				 cv::COLOR_GRAY2RGB);
+	// 	cv::resize(image3, image3, {540, 540});
+	// 	const auto start =
+	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 * std::sin(flow_));
+	// 	const auto end =
+	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
+	// 	const auto arrow1Start =
+	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
+	// 	const auto arrow1End = Eigen::Vector2d(270 + 35 * std::cos(flow_ + 0.2),
+	// 										   270 + 35 * std::sin(flow_ + 0.2));
+	// 	const auto arrow2Start =
+	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
+	// 	const auto arrow2End = Eigen::Vector2d(270 + 35 * std::cos(flow_ - 0.2),
+	// 										   270 + 35 * std::sin(flow_ - 0.2));
+	// 	cv::line(image3, {start(0), start(1)}, {end(0), end(1)}, {50, 0, 127});
+	// 	cv::line(image3, {arrow1Start(0), arrow1Start(1)},
+	// 			 {arrow1End(0), arrow1End(1)}, {50, 0, 127});
+	// 	cv::line(image3, {arrow2Start(0), arrow2Start(1)},
+	// 			 {arrow2End(0), arrow2End(1)}, {50, 0, 127});
+
+	// 	cv::Mat grayImage = convertImageToGray(costMap_);
+	// 	cv::Mat imColor;
+	// 	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+	// 	cv::Mat image4 = imColor;
+
+	// 	cv::resize(image4, image4, {540, 540});
+	// 	cv::hconcat(image1, image2, image1);
+	// 	cv::hconcat(image1, image3, image1);
+	// 	cv::hconcat(image1, image4, image1);
+
+	// 	cv::imwrite("../results/tracking_images/second_experiment/" +
+	// 					std::to_string(id++) + ".png",
+	// 				image1);
+	// }
+
 	pangolin::FinishFrame();
 	quit_ = pangolin::ShouldQuit();
 	nextPressed_ = pangolin::Pushed(*nextStepButton_);
@@ -484,6 +614,7 @@ void Visualizer::finishVisualizerIteration()
 	}
 
 	updateTrackerParams();
+	updateEvaluatorParams();
 }
 
 void Visualizer::updateTrackerParams()
@@ -509,13 +640,26 @@ void Visualizer::updateTrackerParams()
 	}
 }
 
+void Visualizer::updateEvaluatorParams()
+{
+	const auto visualOdometryExperiment = (*visualOdometryExperiment_);
+	const auto trackerExperiment = (*trackerExperiment_);
+	if (evaluatorParams_.visOdometryExperiment != visualOdometryExperiment ||
+		evaluatorParams_.trackerExperiment != trackerExperiment)
+	{
+		evaluatorParams_.visOdometryExperiment = visualOdometryExperiment;
+		evaluatorParams_.trackerExperiment = trackerExperiment;
+		evaluatorParamsChanged_ = true;
+	}
+}
+
 void Visualizer::setLandmarks(const visual_odometry::MapLandmarks& landmarks)
 {
 	landmarks_ = landmarks;
 }
 
 void Visualizer::setActiveFrames(
-	const std::list<visual_odometry::Keyframe>& frames)
+	const std::map<size_t, visual_odometry::Keyframe>& frames)
 {
 	activeFrames_ = frames;
 }
@@ -524,6 +668,27 @@ void Visualizer::setStoredFrames(
 	const std::list<visual_odometry::Keyframe>& frames)
 {
 	storedFrames_ = frames;
+}
+
+void Visualizer::setCompensatedEventImage(const cv::Mat& compensatedEventImage)
+{
+	compensatedEventImage_ = compensatedEventImage;
+}
+
+void Visualizer::setIntegratedEventImage(const cv::Mat& integratedEventImage)
+{
+	integratedEventImage_ = integratedEventImage;
+}
+
+void Visualizer::setGtPoses(const std::vector<common::Pose3d>& gt)
+{
+	gt_ = gt;
+}
+
+void Visualizer::setStoredLandmarks(
+	const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>& lms)
+{
+	storedLandmarks_ = lms;
 }
 
 }  // namespace tools

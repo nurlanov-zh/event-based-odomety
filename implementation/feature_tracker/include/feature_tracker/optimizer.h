@@ -16,10 +16,9 @@ namespace tracker
 struct OptimizerParams
 {
 	bool drawCostMap = false;
-	int maxNumIterations = 50;
-	//	int numThreads = tbb::task_scheduler_init::default_num_threads();
+	int maxNumIterations = 10;
 	int numThreads = 1;
-	double optimizerThreshold = 0.25;
+	double optimizerThreshold = 0.6;
 	double huberLoss = 0.3;
 	int costMapWidth = 11;
 	int costMapHeight = 11;
@@ -43,11 +42,15 @@ class Optimizer
 
 	void setGrad(const cv::Mat& gradX, const cv::Mat& gradY);
 
-	OptimizerParams getParams() { return params_; }
+	OptimizerParams* getParams() { return &params_; }
 
 	std::vector<OptimizerFinalLoss> getFinalCosts() { return vectorFinalCost_; }
 
 	void setParams(const OptimizerParams& params) { params_ = params; }
+
+	void addUser() { used_++; }
+	void deleteUser() { used_--; }
+	bool isUsed() const { return used_ != 0; }
 
    private:
 	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);
@@ -55,6 +58,8 @@ class Optimizer
    private:
 	OptimizerParams params_;
 	cv::Size2i imageSize_;
+
+	size_t used_;
 
 	std::vector<double> grad_;
 	GridPtr gradGrid_;

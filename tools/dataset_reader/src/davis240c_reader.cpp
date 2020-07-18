@@ -5,17 +5,20 @@
 
 namespace tools
 {
-std::string EVENT_FILE = "events.txt";
-std::string GROUND_TRUTH_FILE = "groundtruth.txt";
-std::string IMAGE_FILE = "images.txt";
-std::string CALIBRATION_FILE = "calib.txt";
-std::string SEPARATOR = "/";
+const std::string EVENT_FILE = "events.txt";
+const std::string GROUND_TRUTH_FILE = "groundtruth.txt";
+const std::string IMAGE_FILE = "images.txt";
+const std::string CALIBRATION_FILE = "calib.txt";
+const std::string TRAJECTORY_FILE = "trajectory.txt";
+const std::string SEPARATOR = "/";
+constexpr size_t EVENT_LENGTH = 1000000;
 
 using namespace common;
 
-CameraModelParams Davis240cReader::getCalibrationLine(std::string& line) const
+CameraModelParams<double> Davis240cReader::getCalibrationLine(
+	std::string& line) const
 {
-	CameraModelParams params;
+	CameraModelParams<double> params;
 	size_t pos = line.find(' ');
 	params.fx = std::stod(line.substr(0, pos));
 	line = line.substr(pos + 1);
@@ -147,20 +150,50 @@ GroundTruthSample Davis240cReader::getGroundTruthSample(std::string& line) const
 	return {pose, timestamp};
 }
 
+tracker::Patch Davis240cReader::getTrajectoryLine(std::string& line) const
+{
+	size_t pos = line.find(' ');
+	const int32_t id = std::stoi(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	const auto duration =
+		std::chrono::duration<double>(std::stod(line.substr(0, pos)));
+
+	const timestamp_t timestamp =
+		std::chrono::duration_cast<timestamp_t>(duration);
+	line = line.substr(pos + 1);
+
+	pos = line.find(' ');
+	const double x = std::stod(line.substr(0, pos));
+	line = line.substr(pos + 1);
+
+	const double y = std::stod(line);
+
+	tracker::Patch patch({x, y}, 1, timestamp);
+	patch.setTrackId(id);
+	return patch;
+}
+
 Davis240cReader::Davis240cReader(const std::string& path) : DatasetReader(path)
 {
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
+
+	eventStart_ = 0;
 }
 
-EventSequence Davis240cReader::getEvents() const
+std::optional<EventSequence> Davis240cReader::getEvents()
 {
 	const std::string filePath = path_ + SEPARATOR + EVENT_FILE;
 
+	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
 	const auto events = readFile<EventSequence, EventSample>(
-		filePath, std::bind(&Davis240cReader::getEventSample, this,
-							std::placeholders::_1));
+		filePath,
+		std::bind(&Davis240cReader::getEventSample, this,
+				  std::placeholders::_1),
+		eventStart_, eventStart_ + EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(
@@ -168,17 +201,27 @@ EventSequence Davis240cReader::getEvents() const
 		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
 			.count());
 
-	return events;
+	if (numOfStrings == 0)
+	{
+		return {};
+	}
+
+	eventStart_ += numOfStrings;
+
+	return std::make_optional(events);
 }
 
 ImageSequence Davis240cReader::getImages() const
 {
 	const std::string filePath = path_ + SEPARATOR + IMAGE_FILE;
 
+	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
 	const auto images = readFile<ImageSequence, ImageSample>(
-		filePath, std::bind(&Davis240cReader::getImageSample, this,
-							std::placeholders::_1));
+		filePath,
+		std::bind(&Davis240cReader::getImageSample, this,
+				  std::placeholders::_1),
+		0, EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(
@@ -193,10 +236,13 @@ GroundTruth Davis240cReader::getGroundTruth() const
 {
 	const std::string filePath = path_ + SEPARATOR + GROUND_TRUTH_FILE;
 
+	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
 	const auto groundTruth = readFile<GroundTruth, GroundTruthSample>(
-		filePath, std::bind(&Davis240cReader::getGroundTruthSample, this,
-							std::placeholders::_1));
+		filePath,
+		std::bind(&Davis240cReader::getGroundTruthSample, this,
+				  std::placeholders::_1),
+		0, EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(
@@ -208,15 +254,18 @@ GroundTruth Davis240cReader::getGroundTruth() const
 	return groundTruth;
 }
 
-CameraModelParams Davis240cReader::getCalibration() const
+CameraModelParams<double> Davis240cReader::getCalibration() const
 {
 	const std::string filePath = path_ + SEPARATOR + CALIBRATION_FILE;
 
+	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
-	const auto calibration =
-		readFile<std::vector<CameraModelParams>, CameraModelParams>(
-			filePath, std::bind(&Davis240cReader::getCalibrationLine, this,
-								std::placeholders::_1));
+	const auto calibration = readFile<std::vector<CameraModelParams<double>>,
+									  CameraModelParams<double>>(
+		filePath,
+		std::bind(&Davis240cReader::getCalibrationLine, this,
+				  std::placeholders::_1),
+		0, EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(
@@ -225,5 +274,27 @@ CameraModelParams Davis240cReader::getCalibration() const
 			.count());
 
 	return calibration[0];
+}
+
+tracker::Patches Davis240cReader::getTrajectory() const
+{
+	const std::string filePath = path_ + SEPARATOR + TRAJECTORY_FILE;
+
+	size_t numOfStrings;
+	const auto begin = std::chrono::high_resolution_clock::now();
+	const auto trajectory =
+		readFile<std::list<tracker::Patch>, tracker::Patch>(
+			filePath,
+			std::bind(&Davis240cReader::getTrajectoryLine, this,
+					  std::placeholders::_1),
+			0, EVENT_LENGTH, numOfStrings);
+	const auto end = std::chrono::high_resolution_clock::now();
+
+	consoleLog_->info(
+		"Trajectory is loaded in {} milliseconds",
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+			.count());
+
+	return trajectory;
 }
 }  // namespace tools

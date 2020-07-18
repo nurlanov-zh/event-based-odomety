@@ -11,7 +11,7 @@
 
 tools::Visualizer visualizer;
 const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
-	std::chrono::microseconds(500);
+	std::chrono::microseconds(5000);
 
 int main(int argc, char** argv)
 {
@@ -55,6 +55,8 @@ int main(int argc, char** argv)
 	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
 
+	evaluator.setPatches(replayer.getPatches());
+
 	replayer.addEventCallback(
 		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
 	replayer.addImageCallback(
@@ -71,50 +73,64 @@ int main(int argc, char** argv)
 
 	evaluator.setGroundTruthSamples(replayer.getGroundTruth());
 
-	while (!visualizer.shouldQuit() && !replayer.finished())
+	while (!visualizer.shouldQuit())
 	{
-		const bool stop = visualizer.stopPressed();
-		if (!stop || !showGui)
+		if (!replayer.finished())
 		{
-			replayer.next();
-		}
-		else if (stop && showGui)
-		{
-			if (visualizer.nextPressed())
+			const bool stop = visualizer.stopPressed();
+			if (!stop || !showGui)
 			{
 				replayer.next();
 			}
-			else if (visualizer.nextIntervalPressed())
+			else if (stop && showGui)
 			{
-				replayer.nextInterval(visualizer.getStepInterval());
-			}
-			else if (visualizer.nextImagePressed())
-			{
-				replayer.nextImage();
-			}
-		}
-
-		if (showGui)
-		{
-			const auto timestamp = replayer.getLastTimestamp();
-
-			// redraw only every so often if not stop
-			if (stop ||
-				(!stop &&
-				 (timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
-			{
-				visualizer.setPatches(evaluator.getPatches());
-				visualizer.setTimestamp(timestamp);
-				visualizer.setActiveFrames(evaluator.getActiveFrames());
-				visualizer.setStoredFrames(evaluator.getStoredFrames());
-				visualizer.setLandmarks(evaluator.getMapLandmarks());
-				visualizer.step();
-
-				if (visualizer.isTrackerParamsChanged())
+				if (visualizer.nextPressed())
 				{
-					auto trackerParams = visualizer.getTrackerParams();
-					trackerParams.drawImages = showGui;
-					evaluator.setTrackerParams(trackerParams);
+					replayer.next();
+				}
+				else if (visualizer.nextIntervalPressed())
+				{
+					replayer.nextInterval(visualizer.getStepInterval());
+				}
+				else if (visualizer.nextImagePressed())
+				{
+					replayer.nextImage();
+				}
+			}
+
+			if (showGui)
+			{
+				const auto timestamp = replayer.getLastTimestamp();
+
+				// redraw only every so often if not stop
+				if (stop ||
+					(!stop &&
+					(timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
+				{
+					visualizer.setCompensatedEventImage(
+						evaluator.getCompensatedEventImage());
+					visualizer.setIntegratedEventImage(
+						evaluator.getIntegratedEventImage());
+					visualizer.setPatches(evaluator.getPatches());
+					visualizer.setTimestamp(timestamp);
+					visualizer.setActiveFrames(evaluator.getActiveFrames());
+					visualizer.setStoredFrames(evaluator.getStoredFrames());
+					visualizer.setLandmarks(evaluator.getMapLandmarks());
+					visualizer.setGtPoses(evaluator.getGtPoses());
+					visualizer.setStoredLandmarks(evaluator.getStoredMapLandmarks());
+					visualizer.step();
+
+					if (visualizer.isTrackerParamsChanged())
+					{
+						auto trackerParams = visualizer.getTrackerParams();
+						trackerParams.drawImages = showGui;
+						evaluator.setTrackerParams(trackerParams);
+					}
+
+					if (visualizer.isEvaluatorParamsChanged())
+					{
+						evaluator.setParams(visualizer.getEvaluatorParams());
+					}
 				}
 			}
 		}

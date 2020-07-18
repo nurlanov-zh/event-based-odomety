@@ -39,7 +39,7 @@ using EventSample = Sample<Event>;
 using ImageSample = Sample<cv::Mat>;
 using GroundTruthSample = Sample<Pose3d>;
 
-using EventSequence = std::vector<EventSample>;
+using EventSequence = std::deque<EventSample>;
 using ImageSequence = std::vector<ImageSample>;
 using GroundTruth = std::vector<GroundTruthSample>;
 
