@@ -1,4 +1,5 @@
 #include <dataset_reader/davis240c_reader.h>
+#include <dataset_reader/drone_racing_reader.h>
 #include <evaluator/evaluator.h>
 #include <replayer/replayer.h>
 #include "visualizer/visualizer.h"
@@ -25,12 +26,14 @@ int main(int argc, char** argv)
 	console->info("Event based odometry has been started!");
 
 	bool showGui = true;
-	std::string dataset = "../data/DAVIS240C/shapes_rotation";
+	std::string dataset = "DAVIS240C";
+	std::string sequence = "../data/DAVIS240C/shapes_rotation";
 
 	CLI::App app{"Event based odometry"};
 
 	app.add_option("--show-gui", showGui, "Show GUI");
 	app.add_option("--dataset", dataset, "Dataset. Default: " + dataset);
+	app.add_option("--sequence", sequence, "Sequence. Default: " + sequence);
 
 	try
 	{
@@ -44,13 +47,24 @@ int main(int argc, char** argv)
 	console->info("Options passed are:");
 	console->info("\tshow-gui: {}", showGui);
 	console->info("\tdataset: {}", dataset);
+	console->info("\tsequence: {}", sequence);
 
-	std::shared_ptr<tools::DatasetReader> reader =
-		std::make_shared<tools::Davis240cReader>(dataset);
+	tools::EvaluatorParams param;
+	std::shared_ptr<tools::DatasetReader> reader;
+	if (dataset == "DAVIS240C")
+	{
+		reader =
+			std::make_shared<tools::Davis240cReader>(sequence);
+	} 
+	else if (dataset == "DroneRacing")
+	{
+		param.imageSize = {346, 260};
+		reader =
+			std::make_shared<tools::DroneRacingReader>(sequence);
+	}
 
 	tools::Replayer replayer(reader);
 
-	tools::EvaluatorParams param;
 	param.cameraModelParams = reader->getCalibration();
 	param.drawImages = showGui;
 	tools::Evaluator evaluator(param);
@@ -59,9 +73,9 @@ int main(int argc, char** argv)
 
 	replayer.addEventCallback(
 		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
-	replayer.addImageCallback(
+	/*replayer.addImageCallback(
 		REGISTER_CALLBACK(tools::Evaluator, imageCallback, evaluator));
-
+*/
 	if (showGui)
 	{
 		replayer.addEventCallback(
@@ -134,6 +148,11 @@ int main(int argc, char** argv)
 				}
 			}
 		}
+		else
+		{
+			break;
+		}
+		
 	}
 
 	return 0;

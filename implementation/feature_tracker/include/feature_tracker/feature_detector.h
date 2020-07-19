@@ -11,10 +11,10 @@ struct DetectorParams
 {
 	double qualityLevel = 0.01;
 	double minDistance = 10;
-	double associationDistance = 5;
+	double associationDistance = 6;
 	int32_t patchExtent = 12;
 	int32_t blockSize = 3;
-	cv::Size imageSize = {240, 180};
+	cv::Size imageSize = {346, 260};
 	bool drawImages = false;
 	OptimizerParams optimizerParams = {};
 	int initNumEvents = 75;
@@ -27,7 +27,7 @@ struct DetectorParams
 	double compensateTVHuberLoss = 10;
 	double compensateScale = 1e-3;
 	uint compensateMinNumEvents = 100;
-	size_t maxPatches = 100;
+	size_t maxPatches = 140;
 };
 
 class FeatureDetector

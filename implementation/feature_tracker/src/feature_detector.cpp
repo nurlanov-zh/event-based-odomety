@@ -303,7 +303,7 @@ void FeatureDetector::compensateEventsContrast(
 	int numPatchesY =
 		params_.imageSize.height / params_.patchCompensateSize.height;
 	const auto timestamp = common::timestamp_t(static_cast<int32_t>(
-		(events.front().timestamp + events.back().timestamp).count() * 0.5));
+		(events.back().timestamp).count()));
 	lastCompensation = events.back().timestamp;
 
 	consoleLog_->info(
@@ -461,6 +461,37 @@ void FeatureDetector::compensateEventsContrast(
 				static_cast<double>(1);
 		}
 	}
+
+	static int id = 0;
+	{
+		cv::Mat grayImage;
+
+		double minVal;
+		double maxVal;
+		cv::minMaxLoc(compensatedEventImage_, &minVal, &maxVal);
+		compensatedEventImage_.convertTo(grayImage, CV_8U,
+										255.0 / (maxVal / 2 - minVal),
+										-minVal * 255.0 / (maxVal / 2 - minVal));
+		cv::imwrite(
+			"../results/compensated/outdoors_walking/" + std::to_string(id) + ".png",
+			grayImage);
+	}
+
+	{
+		cv::Mat grayImage;
+
+		double minVal;
+		double maxVal;
+		cv::minMaxLoc(integratedEventImage_, &minVal, &maxVal);
+		integratedEventImage_.convertTo(grayImage, CV_8U,
+										255.0 / (maxVal / 2 - minVal),
+										-minVal * 255.0 / (maxVal / 2 - minVal));
+
+		cv::imwrite(
+			"../results/integrated/outdoors_walking/" + std::to_string(id) + ".png",
+			grayImage);
+	}
+	id++;
 }
 
 void FeatureDetector::integrateEvents(
@@ -630,6 +661,7 @@ void FeatureDetector::addEvent(const common::EventSample& event)
 void FeatureDetector::associatePatches(Patches& newPatches,
 									   const common::timestamp_t& timestamp)
 {
+	std::set<tracker::TrackId> associated;
 	// greedy association...
 	for (auto& patch : patches_)
 	{
@@ -642,6 +674,7 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 			{
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
+				associated.insert(patch.getTrackId());
 				break;
 			}
 		}
@@ -649,6 +682,14 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 		patch.setTs(timestamp);
 		patch.addTrajectoryPosition();
 	}
+
+/*	for (auto& patch : patches_)
+	{
+		if (associated.find(patch.getTrackId()) == associated.end())
+		{
+			patch.setLost();
+		}
+	}*/
 
 	for (auto& newPatch : newPatches)
 	{

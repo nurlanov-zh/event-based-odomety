@@ -1,8 +1,8 @@
 #include "visual_odometry/visual_odometry.h"
+#include "visual_odometry/aligner.h"
 #include "visual_odometry/local_parameterization_se3.hpp"
 #include "visual_odometry/reprojection_error.h"
 #include "visual_odometry/triangulation.h"
-#include "visual_odometry/aligner.h"
 
 #include <sophus/interpolate.hpp>
 
@@ -23,16 +23,17 @@
 
 namespace Sophus
 {
-	// apply sim3 to se3 transformation (returns se3)
-	template <typename Sim3Derived, typename SE3Derived>
-	Sophus::SE3<typename Eigen::ScalarBinaryOpTraits<
-		typename Sim3Derived::Scalar, typename SE3Derived::Scalar>::ReturnType>
-	operator*(const Sophus::Sim3Base<Sim3Derived>& a,
-			const Sophus::SE3Base<SE3Derived>& b) {
+// apply sim3 to se3 transformation (returns se3)
+template <typename Sim3Derived, typename SE3Derived>
+Sophus::SE3<typename Eigen::ScalarBinaryOpTraits<
+	typename Sim3Derived::Scalar, typename SE3Derived::Scalar>::ReturnType>
+operator*(const Sophus::Sim3Base<Sim3Derived>& a,
+		  const Sophus::SE3Base<SE3Derived>& b)
+{
 	return {a.quaternion().normalized() * b.unit_quaternion(),
 			a.rxso3() * b.translation() + a.translation()};
-	}
 }
+}  // namespace Sophus
 
 namespace visual_odometry
 {
@@ -49,13 +50,47 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 	init_ = false;
 }
 
+void VisualOdometryFrontEnd::preExit()
+{
+	if (activeFrames_.size() == 0 && storedFrames_.size() == 0)
+	{
+		return;
+	}
+
+	for (const auto& lm : mapLandmarks_.landmarks)
+	{
+		storedLandmarks_.emplace_back(std::make_pair(lm.first, lm.second));
+	}
+
+	for (const auto& kf : activeFrames_)
+	{
+		storedFrames_.push_back(kf.second);
+	}
+
+	visual_odometry::ErrorMetricValue ate;
+	const auto sim = align_cameras_sim3(gt_, storedFrames_, &ate);
+	alignedFrames_.clear();
+	for (auto& kf : storedFrames_)
+	{
+		Keyframe keyframeAligned;
+		keyframeAligned.pose = sim * kf.pose;
+		keyframeAligned.timestamp = kf.timestamp;
+		alignedFrames_.push_back(keyframeAligned);
+	}
+	consoleLog_->info("RMSE: " + std::to_string(ate.rmse));	
+	consoleLog_->info("Mean: " + std::to_string(ate.mean));
+	consoleLog_->info("Max: " + std::to_string(ate.max));
+	consoleLog_->info("Min: " + std::to_string(ate.min));
+	consoleLog_->info("Scale: " + std::to_string(sim.scale()));
+}
+
 void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 {
-
 	Match match;
 	if (!isNewKeyframeNeeded(keyframe, match))
 	{
 		withoutAdd_++;
+		consoleLog_->warn("Keyframe discarded");
 		return;
 	}
 
@@ -75,11 +110,14 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 
 	optimize();
 
+	deleteFailedMapLandmarks();
+
 	std::list<Keyframe> pose = storedFrames_;
 	for (const auto& kf : activeFrames_)
 	{
 		pose.emplace_back(kf.second);
 	}
+
 	if (pose.size() > 5 && gt_.size() > 0)
 	{
 		gtAligned_.clear();
@@ -129,7 +167,8 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 	localizeCamera(keyframe, match);
 	keyframe.pose = match.Tw2c;
 
-	consoleLog_->info("Localize camera: " + std::to_string(match.inliers.size()) + " inliers");
+	consoleLog_->info("Localize camera: " +
+					  std::to_string(match.inliers.size()) + " inliers");
 	if (match.inliers.size() > params_.numOfInliers)
 	{
 		return true;
@@ -140,10 +179,14 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 		{
 			return true;
 		}
+		else
+		{
+			return false;
+		}
 	}
-	
+
 	consoleLog_->info("Few inliers after localize camera: " +
-						std::to_string(match.inliers.size()));
+					  std::to_string(match.inliers.size()));
 
 	return true;
 }
@@ -189,17 +232,17 @@ bool VisualOdometryFrontEnd::initCameras(Keyframe& keyframe, Match& match)
 	// because Tw2c is relative transform in this case
 	keyframe.pose = startKeyframe.pose * match.Tw2c;
 
-	// findInliersEssential(bearingVectors1, bearingVectors2,
-	// 					 activeFrames_.begin()->second, keyframe, trackIds,
-	// 					 match, 1e-3);
+	/*findInliersEssential(bearingVectors1, bearingVectors2,
+						 activeFrames_.begin()->second, keyframe, trackIds,
+						 match, 1e-3);
 
-	// consoleLog_->info("Init frames with " +
-	// 				  std::to_string(match.inliers.size()) +
-	// 				  " Essential inliers");
-	// if (match.inliers.size() < params_.numOfEssentialInliers)
-	// {
-	// 	return false;
-	// }
+	consoleLog_->info("Init frames with " +
+					  std::to_string(match.inliers.size()) +
+					  " Essential inliers");
+	if (match.inliers.size() < params_.numOfEssentialInliers)
+	{
+		return false;
+	}*/
 
 	return true;
 }
@@ -422,7 +465,7 @@ void VisualOdometryFrontEnd::optimize()
 								  Sophus::SE3d::num_parameters,
 								  new Sophus::test::LocalParameterizationSE3);
 
-		if (i < 2)
+		if (i < 4)
 		{
 			problem.SetParameterBlockConstant(it->second.pose.data());
 		}
@@ -474,7 +517,7 @@ void VisualOdometryFrontEnd::optimize()
 				new BundleAdjustmentReprojectionCostFunctor(cornerIt->second));
 
 			problem.AddResidualBlock(
-				costFunction, new ceres::HuberLoss(params_.huberLoss),
+				costFunction, new ceres::CauchyLoss(params_.huberLoss),
 				frameIt->second.pose.data(), pointIt->second.data(),
 				cameraModel_->getParams());
 		}
@@ -489,6 +532,45 @@ void VisualOdometryFrontEnd::optimize()
 
 	consoleLog_->info("Bundle adjustment optimization info: ");
 	consoleLog_->info(summary.BriefReport());
+}
+
+void VisualOdometryFrontEnd::deleteFailedMapLandmarks()
+{
+	for (auto it = mapLandmarks_.observations.begin();
+		 it != mapLandmarks_.observations.end();)
+	{
+		bool skip = false;
+		for (auto frameIt = it->second.begin(); frameIt != it->second.end();
+			 ++frameIt)
+		{
+			const auto activeFrameIt = activeFrames_.find(*frameIt);
+			if (activeFrameIt != activeFrames_.end())
+			{
+				const auto lmPose = mapLandmarks_.landmarks.find(it->first);
+				if (lmPose == mapLandmarks_.landmarks.end())
+				{
+					continue;
+				}
+
+				// const auto distance =
+				// 	(activeFrameIt->second.pose.translation() - lmPose->second)
+				// 		.norm();
+				// if (distance < 30)
+				// {
+				// 	consoleLog_->warn("Landmark " + std::to_string(it->first) +
+				// 					  "is close to camera.");
+				// 	mapLandmarks_.landmarks.erase(it->first);
+				// 	it = mapLandmarks_.observations.erase(it);
+				// 	skip = true;
+				// 	break;
+				// }
+			}
+		}
+		if (!skip)
+		{
+			++it;
+		}
+	}
 }
 
 void VisualOdometryFrontEnd::getCommonBearingVectors(
@@ -575,6 +657,11 @@ std::map<size_t, Keyframe> const& VisualOdometryFrontEnd::getActiveFrames()
 std::list<Keyframe> const& VisualOdometryFrontEnd::getStoredFrames() const
 {
 	return storedFrames_;
+}
+
+std::list<Keyframe> const& VisualOdometryFrontEnd::getAlignedFrames() const
+{
+	return alignedFrames_;
 }
 
 std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&

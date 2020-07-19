@@ -9,7 +9,8 @@ add_library(mapped_file
     src/mapped_file.cpp)
 
 add_library(${PROJECT_NAME} 
-    src/davis240c_reader.cpp)
+    src/davis240c_reader.cpp
+    src/drone_racing_reader.cpp)
 
 target_link_libraries(${PROJECT_NAME} common mapped_file feature_detector)
 

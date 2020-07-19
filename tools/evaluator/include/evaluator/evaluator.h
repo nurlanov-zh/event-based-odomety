@@ -18,7 +18,7 @@ struct EvaluatorParams
 	common::CameraModelParams<double> cameraModelParams = {};
 	bool drawImages = false;
 	// compensate whole image each k microseconds
-	uint32_t compensationFrequencyTime = 300000;
+	uint32_t compensationFrequencyTime = 20000;
 	uint32_t compensationFrequencyEvents = 15000;
 	bool trackerExperiment = false;
 	bool visOdometryExperiment = false;
@@ -47,6 +47,9 @@ class Evaluator
 
 	void saveGt(const std::vector<common::Pose3d>& gts);
 
+	void saveMap(
+		const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>& map);
+
 	void setGroundTruthSamples(const common::GroundTruth& groundTruthSamples);
 
 	void setPatches(const tracker::Patches& patches);
@@ -55,7 +58,8 @@ class Evaluator
 
 	tracker::Patches const& getPatches() const;
 	visual_odometry::MapLandmarks const& getMapLandmarks();
-	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& getStoredMapLandmarks() const;
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
+	getStoredMapLandmarks() const;
 	std::map<size_t, visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
 	std::vector<common::Pose3d> const& getGtPoses() const;

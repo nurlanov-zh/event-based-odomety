@@ -218,8 +218,8 @@ void Visualizer::drawOriginalOverlay()
 				break;
 			}
 		}
-		integratedNabla_ = integratedEventImage_;
-		predictedNabla_ = compensatedEventImage_;
+/*		integratedNabla_ = integratedEventImage_;
+		predictedNabla_ = compensatedEventImage_;*/
 	}
 
 	// Draw events
@@ -347,8 +347,8 @@ cv::Mat Visualizer::convertImageToGray(const cv::Mat& cvImage)
 	double minVal;
 	double maxVal;
 	cv::minMaxLoc(cvImage, &minVal, &maxVal);
-	cvImage.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
-					  -minVal * 255.0 / (maxVal - minVal));
+	cvImage.convertTo(grayImage, CV_8U, 255.0 / (maxVal / 2 - minVal),
+					  -minVal * 255.0 / (maxVal / 2 - minVal));
 	return grayImage;
 }
 
@@ -601,6 +601,13 @@ void Visualizer::finishVisualizerIteration()
 	// 					std::to_string(id++) + ".png",
 	// 				image1);
 	// }
+	// static int id = 0;
+	// cv::imwrite("../results/compensation/integrated" +
+	// 					std::to_string(id) + ".png",
+	// 				convertImageToGray(integratedNabla_));
+	// cv::imwrite("../results/compensation/compensated" +
+	// 					std::to_string(id++) + ".png",
+	// 				convertImageToGray(compensatedEventImage_));
 
 	pangolin::FinishFrame();
 	quit_ = pangolin::ShouldQuit();

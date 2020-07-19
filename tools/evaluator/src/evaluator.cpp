@@ -14,11 +14,69 @@ Evaluator::Evaluator(const EvaluatorParams& params) : params_(params)
 
 Evaluator::~Evaluator()
 {
-	tracker_->preExit();
-	saveFeaturesTrajectory(tracker_->getArchivedPatches());
-	savePoses(visualOdometry_->getStoredFrames());
-	saveGt(visualOdometry_->getGtPoses());
-	saveFinalCosts(tracker_->getOptimizedFinalCosts());
+	try
+	{
+		tracker_->preExit();
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to pre exit VO");	
+	}
+
+	try
+	{
+		visualOdometry_->preExit();
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to pre exit VO");	
+	}
+
+	try
+	{
+		saveFeaturesTrajectory(tracker_->getArchivedPatches());
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to save trajectory");
+	}
+
+	try
+	{
+		savePoses(visualOdometry_->getAlignedFrames());
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to save poses");	
+	}
+
+	try
+	{
+		saveGt(visualOdometry_->getGtPoses());
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to save gt");	
+	}
+
+	try
+	{
+		saveMap(visualOdometry_->getStoredLandmarks());
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to save map");	
+	}
+
+	try
+	{
+		saveFinalCosts(tracker_->getOptimizedFinalCosts());
+	}
+	catch (const std::exception&)
+	{
+		errLog_->warn("Unable to save final cost");	
+	}
+
 }
 
 tracker::Patches const& Evaluator::getPatches() const
@@ -34,15 +92,29 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 {
 	tracker_->addEvent(sample);
 	tracker_->updatePatches(sample);
-	// if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
-	// 		params_.compensationFrequencyTime or
-	// 	tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
-	// {
-	// 	//		tracker_->compensateEvents(tracker_->getEvents());
-	// 	tracker_->compensateEventsContrast(tracker_->getEvents());
-	// 	tracker_->integrateEvents(tracker_->getEvents());
-	// 	tracker_->clearEvents();
-	// }
+	if ((sample.timestamp - tracker_->getLastCompensation()).count() >=
+			params_.compensationFrequencyTime &&
+		tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
+	{
+		// tracker_->compensateEvents(tracker_->getEvents());
+/*		tracker_->compensateEventsContrast(tracker_->getEvents());
+		tracker_->integrateEvents(tracker_->getEvents());
+		tracker_->clearEvents();
+		cv::Mat image = tracker_->getCompensatedEventImage();
+		cv::Mat grayImage;
+
+		double minVal;
+		double maxVal;
+		cv::minMaxLoc(image, &minVal, &maxVal);
+		image.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
+						-minVal * 255.0 / (maxVal - minVal));
+
+		common::ImageSample imageSample;
+		imageSample.timestamp = sample.timestamp;
+		imageSample.value = grayImage;
+		imageCallback(imageSample);*/
+
+	}
 }
 
 void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
@@ -61,9 +133,6 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 			return;
 		}
 	}
-
-	consoleLog_->info("New image at timestamp " +
-					  std::to_string(sample.timestamp.count()));
 
 	if (!params_.visOdometryExperiment)
 	{
@@ -139,14 +208,31 @@ void Evaluator::saveFeaturesTrajectory(const tracker::Patches& patches)
 			trajFile << std::fixed << std::setprecision(8) << patch.getTrackId()
 					 << " "
 					 << std::chrono::duration<double>(pos.timestamp).count()
-							/*1468939993.086614018 -*/
-							// std::chrono::duration<double>(
-							// 	patch.getTrajectory().front().timestamp)
-							// 	.count()
+					 /*+ 1457432569.609347070 -
+					 std::chrono::duration<double>(
+					 	patch.getTrajectory().front().timestamp)
+					 	.count()*/
 					 << " " << pos.value.x << " " << pos.value.y << std::endl;
 		}
 	}
 	trajFile.close();
+	consoleLog_->info("Saved!");
+}
+
+void Evaluator::saveMap(
+	const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>& map)
+{
+	const std::string outputFilename = params_.outputDir + "/map.txt";
+	consoleLog_->info("Saving map into " + outputFilename);
+	std::ofstream mapFile;
+	mapFile.open(outputFilename);
+	for (const auto& lm : map)
+	{
+		mapFile << std::fixed << std::setprecision(8) << lm.first << " "
+				<< lm.second(0) << " " << lm.second(1) << " " << lm.second(2)
+				<< std::endl;
+	}
+	mapFile.close();
 	consoleLog_->info("Saved!");
 }
 
@@ -177,29 +263,23 @@ void Evaluator::savePoses(const std::list<visual_odometry::Keyframe>& keyframes)
 	consoleLog_->info("Saved!");
 }
 
-
 void Evaluator::saveGt(const std::vector<common::Pose3d>& gts)
 {
-	const std::string outputFilename = params_.outputDir + "/groundtruth_aligned.txt";
+	const std::string outputFilename =
+		params_.outputDir + "/groundtruth_aligned.txt";
 	consoleLog_->info("Saving GT trajectories into " + outputFilename);
 	std::ofstream trajFile;
 	trajFile.open(outputFilename);
 	for (const auto& gt : gts)
 	{
 		// feature_id timestamp x y
-		trajFile << std::fixed << std::setprecision(8)
-				 << gt.matrix3x4()(0, 0) << " "
-				 << gt.matrix3x4()(0, 1) << " "
-				 << gt.matrix3x4()(0, 2) << " "
-				 << gt.matrix3x4()(0, 3) << " "
-				 << gt.matrix3x4()(1, 0) << " "
-				 << gt.matrix3x4()(1, 1) << " "
-				 << gt.matrix3x4()(1, 2) << " "
-				 << gt.matrix3x4()(1, 3) << " "
-				 << gt.matrix3x4()(2, 0) << " "
-				 << gt.matrix3x4()(2, 1) << " "
-				 << gt.matrix3x4()(2, 2) << " "
-				 << gt.matrix3x4()(2, 3) << std::endl;
+		trajFile << std::fixed << std::setprecision(8) << gt.matrix3x4()(0, 0)
+				 << " " << gt.matrix3x4()(0, 1) << " " << gt.matrix3x4()(0, 2)
+				 << " " << gt.matrix3x4()(0, 3) << " " << gt.matrix3x4()(1, 0)
+				 << " " << gt.matrix3x4()(1, 1) << " " << gt.matrix3x4()(1, 2)
+				 << " " << gt.matrix3x4()(1, 3) << " " << gt.matrix3x4()(2, 0)
+				 << " " << gt.matrix3x4()(2, 1) << " " << gt.matrix3x4()(2, 2)
+				 << " " << gt.matrix3x4()(2, 3) << std::endl;
 	}
 	trajFile.close();
 	consoleLog_->info("Saved!");
@@ -265,7 +345,7 @@ cv::Mat const& Evaluator::getIntegratedEventImage()
 
 std::vector<common::Pose3d> const& Evaluator::getGtPoses() const
 {
-	return visualOdometry_->getGtPoses();
+	return visualOdometry_->getGtAlignedPoses();
 }
 
 std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&

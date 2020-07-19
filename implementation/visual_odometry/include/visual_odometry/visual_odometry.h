@@ -26,15 +26,15 @@ namespace visual_odometry
 {
 struct VisualOdometryParams
 {
-	size_t numOfActiveFrames = 20;
+	size_t numOfActiveFrames = 10;
 	size_t numOfInliers = 25;
 	size_t numOfEssentialInliers = 10;
-	size_t ransacMinInliers = 15;
-	size_t maxNumIterations = 50;
+	size_t ransacMinInliers = 25;
+	size_t maxNumIterations = 100;
 	size_t maxNumWithoutAdd = 4;
 	double ransacThreshold = 5e-5;
-	double reprojectionError = 3;
-	double huberLoss = 0.8;
+	double reprojectionError = 0.4;
+	double huberLoss = 0.3;
 };
 
 class VisualOdometryFrontEnd
@@ -53,9 +53,13 @@ class VisualOdometryFrontEnd
 	MapLandmarks const& getMapLandmarks();
 	std::map<size_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
-	std::vector<common::Pose3d> const& getGtPoses() const { return gtAligned_; }
+	std::list<Keyframe> const& getAlignedFrames() const;
+	std::vector<common::Pose3d> const& getGtPoses() const { return gt_; }
+	std::vector<common::Pose3d> const& getGtAlignedPoses() const { return gtAligned_; }
 	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& 
 	getStoredLandmarks() const;
+
+	void preExit();
 
    private:
 	void getCommonBearingVectors(const Keyframe& keyframe1,
@@ -76,6 +80,7 @@ class VisualOdometryFrontEnd
 							 const std::vector<tracker::TrackId>& trackIds,
 							 Keyframe& keyframe, Match& match);
 	void optimize();
+	void deleteFailedMapLandmarks();
 
    private:
 	std::shared_ptr<spdlog::logger> consoleLog_;
@@ -91,6 +96,7 @@ class VisualOdometryFrontEnd
 
 	std::map<size_t, Keyframe> activeFrames_;
 	std::list<Keyframe> storedFrames_;
+	std::list<Keyframe> alignedFrames_;
 	MapLandmarks mapLandmarks_;
 	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> storedLandmarks_;
 	std::unique_ptr<common::CameraModel<double>> cameraModel_;

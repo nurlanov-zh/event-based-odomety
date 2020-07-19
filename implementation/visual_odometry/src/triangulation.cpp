@@ -45,7 +45,7 @@ void findInliersEssential(const opengv::bearingVectors_t& bearingVectors1,
 {
 	assert(bearingVectors1.size() == bearingVectors2.size());
 
-	const Sophus::SE3d T_1_2 = keyframe1.pose.inverse() * keyframe2.pose;
+	const Sophus::SE3d T_1_2 = keyframe2.pose.inverse() * keyframe1.pose;
 	const Eigen::Matrix3d& E = computeEssential(T_1_2);
 
 	match.inliers.clear();
