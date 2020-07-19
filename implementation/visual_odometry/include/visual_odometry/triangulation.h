@@ -17,6 +17,5 @@ void findInliersEssential(const opengv::bearingVectors_t& bearingVectors1,
 						  const opengv::bearingVectors_t& bearingVectors2,
 						  const Keyframe& keyframe1, const Keyframe& keyframe2,
 						  const std::vector<tracker::TrackId>& tracks,
-						  Match& match,
-						  double epipolarErrorThreshold);
+						  Match& match, double epipolarErrorThreshold);
 }  // namespace visual_odometry

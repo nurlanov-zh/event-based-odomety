@@ -54,7 +54,7 @@ class VisualOdometryFrontEnd
 	std::map<size_t, Keyframe> const& getActiveFrames() const;
 	std::list<Keyframe> const& getStoredFrames() const;
 	std::vector<common::Pose3d> const& getGtPoses() const { return gtAligned_; }
-	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& 
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
 	getStoredLandmarks() const;
 
    private:

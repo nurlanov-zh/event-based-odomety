@@ -103,9 +103,9 @@ int main(int argc, char** argv)
 				const auto timestamp = replayer.getLastTimestamp();
 
 				// redraw only every so often if not stop
-				if (stop ||
-					(!stop &&
-					(timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
+				if (stop || (!stop && (timestamp.count() %
+										   REDRAW_DELAY_MICROSECONDS.count() ==
+									   0)))
 				{
 					visualizer.setCompensatedEventImage(
 						evaluator.getCompensatedEventImage());
@@ -117,7 +117,8 @@ int main(int argc, char** argv)
 					visualizer.setStoredFrames(evaluator.getStoredFrames());
 					visualizer.setLandmarks(evaluator.getMapLandmarks());
 					visualizer.setGtPoses(evaluator.getGtPoses());
-					visualizer.setStoredLandmarks(evaluator.getStoredMapLandmarks());
+					visualizer.setStoredLandmarks(
+						evaluator.getStoredMapLandmarks());
 					visualizer.step();
 
 					if (visualizer.isTrackerParamsChanged())

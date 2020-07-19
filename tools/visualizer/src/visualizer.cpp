@@ -200,24 +200,24 @@ void Visualizer::drawOriginalOverlay()
 	else if (nextImagePressed_ || nextPressed_ || nextIntervalPressed_ ||
 			 !stopPressed())
 	{
-		for (const auto& patch : patches_)
-		{
-			if (!patch.isLost())
-			{
-				integratedNabla_ = patch.getIntegratedNabla();
-				predictedNabla_ = patch.getPredictedNabla();
-
-				costMap_ = patch.getCostMap();
-
-				// costMap_ = patch.getCompenatedIntegratedNabla();
-
-				flow_ = patch.getFlow();
-				newPatch_ = patch.getPatch();
-				initPatch_ = patch.getInitPatch();
-				track_id_ = patch.getTrackId();
-				break;
-			}
-		}
+		//		for (const auto& patch : patches_)
+		//		{
+		//			if (!patch.isLost())
+		//			{
+		//				integratedNabla_ = patch.getIntegratedNabla();
+		//				predictedNabla_ = patch.getPredictedNabla();
+		//
+		//				costMap_ = patch.getCostMap();
+		//
+		//				// costMap_ = patch.getCompenatedIntegratedNabla();
+		//
+		//				flow_ = patch.getFlow();
+		//				newPatch_ = patch.getPatch();
+		//				initPatch_ = patch.getInitPatch();
+		//				track_id_ = patch.getTrackId();
+		//				break;
+		//			}
+		//		}
 		integratedNabla_ = integratedEventImage_;
 		predictedNabla_ = compensatedEventImage_;
 	}
@@ -360,39 +360,43 @@ void Visualizer::imageCallback(const common::ImageSample& sample)
 
 void Visualizer::drawPredictedNablaOverlay()
 {
-	pangolin::GlFont::I().Text("Predicted nabla").Draw(1, 1);
+	pangolin::GlFont::I().Text("Variance maximized").Draw(3, 7);
 
-	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(1, 3);
+	//	pangolin::GlFont::I().Text("Predicted nabla").Draw(3, 7);
 
-	const auto start =
-		Eigen::Vector2d(17 - 5 * std::cos(flow_), 17 - 5 * std::sin(flow_));
-	const auto end =
-		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
-	const auto arrow1Start =
-		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
-	const auto arrow1End = Eigen::Vector2d(17 + 2 * std::cos(flow_ + 0.1),
-										   17 + 2 * std::sin(flow_ + 0.1));
-	const auto arrow2Start =
-		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
-	const auto arrow2End = Eigen::Vector2d(17 + 2 * std::cos(flow_ - 0.1),
-										   17 + 2 * std::sin(flow_ - 0.1));
-	glColor3f(0.5f, 0.f, 0.2f);
-	pangolin::glDrawLine(start, end);
-	pangolin::glDrawLine(arrow1Start, arrow1End);
-	pangolin::glDrawLine(arrow2Start, arrow2End);
-
-	glColor3f(1.0f, 0.0f, 0.0f);
-	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
+	//	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(3, 10);
+	//
+	//	const auto start =
+	//		Eigen::Vector2d(17 - 5 * std::cos(flow_), 17 - 5 * std::sin(flow_));
+	//	const auto end =
+	//		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
+	//	const auto arrow1Start =
+	//		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
+	//	const auto arrow1End = Eigen::Vector2d(17 + 2 * std::cos(flow_ + 0.1),
+	//										   17 + 2 * std::sin(flow_ + 0.1));
+	//	const auto arrow2Start =
+	//		Eigen::Vector2d(17 + 5 * std::cos(flow_), 17 + 5 * std::sin(flow_));
+	//	const auto arrow2End = Eigen::Vector2d(17 + 2 * std::cos(flow_ - 0.1),
+	//										   17 + 2 * std::sin(flow_ - 0.1));
+	//	glColor3f(0.5f, 0.f, 0.2f);
+	//	pangolin::glDrawLine(start, end);
+	//	pangolin::glDrawLine(arrow1Start, arrow1End);
+	//	pangolin::glDrawLine(arrow2Start, arrow2End);
+	//
+	//	glColor3f(1.0f, 0.0f, 0.0f);
+	//	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
 }
 
 void Visualizer::drawIntegratedNablaOverlay()
 {
-	pangolin::GlFont::I().Text("Integrated nabla").Draw(1, 1);
+	pangolin::GlFont::I().Text("Edge maximized").Draw(3, 7);
 
-	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(1, 3);
+	//	pangolin::GlFont::I().Text("Integrated nabla").Draw(3, 7);
 
-	glColor3f(1.0f, 0.0f, 0.0f);
-	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
+	//	pangolin::GlFont::I().Text("track_id: %d", track_id_).Draw(3, 10);
+
+	//	glColor3f(1.0f, 0.0f, 0.0f);
+	//	pangolin::glDrawCross(Eigen::Vector2d(*patchExtent_, *patchExtent_), 2);
 }
 
 void Visualizer::drawCostMapOverlay()
@@ -570,22 +574,20 @@ void Visualizer::finishVisualizerIteration()
 	// 				 cv::COLOR_GRAY2RGB);
 	// 	cv::resize(image3, image3, {540, 540});
 	// 	const auto start =
-	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 * std::sin(flow_));
-	// 	const auto end =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow1Start =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow1End = Eigen::Vector2d(270 + 35 * std::cos(flow_ + 0.2),
-	// 										   270 + 35 * std::sin(flow_ + 0.2));
-	// 	const auto arrow2Start =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow2End = Eigen::Vector2d(270 + 35 * std::cos(flow_ - 0.2),
-	// 										   270 + 35 * std::sin(flow_ - 0.2));
-	// 	cv::line(image3, {start(0), start(1)}, {end(0), end(1)}, {50, 0, 127});
-	// 	cv::line(image3, {arrow1Start(0), arrow1Start(1)},
-	// 			 {arrow1End(0), arrow1End(1)}, {50, 0, 127});
-	// 	cv::line(image3, {arrow2Start(0), arrow2Start(1)},
-	// 			 {arrow2End(0), arrow2End(1)}, {50, 0, 127});
+	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 *
+	// std::sin(flow_)); 	const auto end = 		Eigen::Vector2d(270 + 55 *
+	// std::cos(flow_), 270 + 55 * std::sin(flow_)); 	const auto arrow1Start =
+	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 *
+	// std::sin(flow_)); 	const auto arrow1End = Eigen::Vector2d(270 + 35 *
+	// std::cos(flow_ + 0.2), 										   270 + 35 * std::sin(flow_ + 0.2));
+	// const auto
+	// arrow2Start = 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55
+	// * std::sin(flow_)); 	const auto arrow2End = Eigen::Vector2d(270 + 35 *
+	// std::cos(flow_ - 0.2), 										   270 + 35 * std::sin(flow_ -
+	// 0.2)); 	cv::line(image3, {start(0), start(1)}, {end(0), end(1)}, {50, 0,
+	// 127}); 	cv::line(image3, {arrow1Start(0), arrow1Start(1)}, 			 {arrow1End(0),
+	// arrow1End(1)}, {50, 0, 127}); 	cv::line(image3, {arrow2Start(0),
+	// arrow2Start(1)}, 			 {arrow2End(0), arrow2End(1)}, {50, 0, 127});
 
 	// 	cv::Mat grayImage = convertImageToGray(costMap_);
 	// 	cv::Mat imColor;

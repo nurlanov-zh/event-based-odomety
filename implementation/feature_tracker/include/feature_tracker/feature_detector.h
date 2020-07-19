@@ -53,7 +53,8 @@ class FeatureDetector
 
 	void compensateEvents(const std::list<common::EventSample>& events);
 
-	void compensateEventsContrast(const std::list<common::EventSample>& events);
+	void compensateEventsContrast(const std::list<common::EventSample>& events,
+								  std::string mode);
 
 	void clearEvents() { lastEvents_.clear(); }
 
@@ -67,6 +68,8 @@ class FeatureDetector
 	void setPatches(const Patches& patches) { patches_ = patches; }
 	void setParams(const tracker::DetectorParams& params);
 	void setTrackId(TrackId trackId) { nextTrackId_ = trackId; }
+	void setCompensatedEventImage(const cv::Mat& compensatedEventImage);
+	void setIntegratedEventImage(const cv::Mat& integratedEventImage);
 
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }

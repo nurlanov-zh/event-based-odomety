@@ -296,7 +296,7 @@ void FeatureDetector::compensateEvents(
 }
 
 void FeatureDetector::compensateEventsContrast(
-	const std::list<common::EventSample>& events)
+	const std::list<common::EventSample>& events, std::string mode = "edge")
 {
 	int numPatchesX =
 		params_.imageSize.width / params_.patchCompensateSize.width;
@@ -360,7 +360,8 @@ void FeatureDetector::compensateEventsContrast(
 					new ceres::AutoDiffCostFunction<tracker::contrastFunctor, 1,
 													2>(
 						new tracker::contrastFunctor(patchEvents, patchRect,
-													 params_.compensateScale));
+													 params_.compensateScale,
+													 mode));
 
 				problem.AddResidualBlock(cost_function, nullptr,
 										 &mf[2 * (y * numPatchesX + x)]);
@@ -461,6 +462,16 @@ void FeatureDetector::compensateEventsContrast(
 				static_cast<double>(1);
 		}
 	}
+	// Cheat! :)))
+	//	if (mode == "edge")
+	//	{
+	//		cv::Mat out, input;
+	//		compensatedEventImage_.convertTo(input, CV_32F);
+	//		double mean = cv::mean(compensatedEventImage_)[0];
+	//		std::cout << "mode=" << mode <<"; mean = " << mean << std::endl;
+	//		cv::bilateralFilter(input, out, 9, 100, 100);
+	//		out.convertTo(compensatedEventImage_, CV_64F);
+	//	}
 }
 
 void FeatureDetector::integrateEvents(
@@ -754,6 +765,17 @@ cv::Mat const& FeatureDetector::getIntegratedEventImage()
 common::timestamp_t const& FeatureDetector::getLastCompensation()
 {
 	return lastCompensation;
+}
+
+void FeatureDetector::setCompensatedEventImage(
+	const cv::Mat& compensatedEventImage)
+{
+	compensatedEventImage_ = compensatedEventImage;
+}
+void FeatureDetector::setIntegratedEventImage(
+	const cv::Mat& integratedEventImage)
+{
+	integratedEventImage_ = integratedEventImage;
 }
 
 }  // namespace tracker

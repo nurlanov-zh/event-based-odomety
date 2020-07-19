@@ -1,7 +1,6 @@
 #pragma once
 #include <common/data_types.h>
 #include <evaluator/evaluator.h>
-#include <visual_odometry/visual_odometry.h>
 #include <feature_tracker/feature_detector.h>
 #include <visual_odometry/visual_odometry.h>
 
@@ -75,7 +74,8 @@ class Visualizer
 	void setActiveFrames(const std::map<size_t, visual_odometry::Keyframe>&);
 	void setStoredFrames(const std::list<visual_odometry::Keyframe>&);
 	void setGtPoses(const std::vector<common::Pose3d>&);
-	void setStoredLandmarks(const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>&);
+	void setStoredLandmarks(
+		const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>&);
 
    private:
 	void wait() const;

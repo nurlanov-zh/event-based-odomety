@@ -38,8 +38,12 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 		tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
 	{
 		//		tracker_->compensateEvents(tracker_->getEvents());
-		tracker_->compensateEventsContrast(tracker_->getEvents());
-		tracker_->integrateEvents(tracker_->getEvents());
+		tracker_->compensateEventsContrast(tracker_->getEvents(), "edge");
+		tracker_->setIntegratedEventImage(tracker_->getCompensatedEventImage());
+
+		tracker_->compensateEventsContrast(tracker_->getEvents(), "variance");
+
+		//		tracker_->integrateEvents(tracker_->getEvents());
 		tracker_->clearEvents();
 	}
 }
@@ -138,10 +142,10 @@ void Evaluator::saveFeaturesTrajectory(const tracker::Patches& patches)
 			trajFile << std::fixed << std::setprecision(8) << patch.getTrackId()
 					 << " "
 					 << std::chrono::duration<double>(pos.timestamp).count()
-							/*1468939993.086614018 -*/
-							// std::chrono::duration<double>(
-							// 	patch.getTrajectory().front().timestamp)
-							// 	.count()
+					 /*1468939993.086614018 -*/
+					 // std::chrono::duration<double>(
+					 // 	patch.getTrajectory().front().timestamp)
+					 // 	.count()
 					 << " " << pos.value.x << " " << pos.value.y << std::endl;
 		}
 	}

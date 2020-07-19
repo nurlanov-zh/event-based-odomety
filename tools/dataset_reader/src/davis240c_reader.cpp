@@ -282,12 +282,11 @@ tracker::Patches Davis240cReader::getTrajectory() const
 
 	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
-	const auto trajectory =
-		readFile<std::list<tracker::Patch>, tracker::Patch>(
-			filePath,
-			std::bind(&Davis240cReader::getTrajectoryLine, this,
-					  std::placeholders::_1),
-			0, EVENT_LENGTH, numOfStrings);
+	const auto trajectory = readFile<std::list<tracker::Patch>, tracker::Patch>(
+		filePath,
+		std::bind(&Davis240cReader::getTrajectoryLine, this,
+				  std::placeholders::_1),
+		0, EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(

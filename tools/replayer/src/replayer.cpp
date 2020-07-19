@@ -17,7 +17,7 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
-	
+
 	try
 	{
 		groundTruth_ = reader->getGroundTruth();
@@ -26,7 +26,7 @@ Replayer::Replayer(const std::shared_ptr<DatasetReader> reader)
 	{
 		errLog_->warn("No Ground truth");
 	}
-	
+
 	try
 	{
 		traj_ = reader->getTrajectory();

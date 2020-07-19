@@ -1,8 +1,8 @@
 #include "visual_odometry/visual_odometry.h"
+#include "visual_odometry/aligner.h"
 #include "visual_odometry/local_parameterization_se3.hpp"
 #include "visual_odometry/reprojection_error.h"
 #include "visual_odometry/triangulation.h"
-#include "visual_odometry/aligner.h"
 
 #include <sophus/interpolate.hpp>
 
@@ -23,16 +23,17 @@
 
 namespace Sophus
 {
-	// apply sim3 to se3 transformation (returns se3)
-	template <typename Sim3Derived, typename SE3Derived>
-	Sophus::SE3<typename Eigen::ScalarBinaryOpTraits<
-		typename Sim3Derived::Scalar, typename SE3Derived::Scalar>::ReturnType>
-	operator*(const Sophus::Sim3Base<Sim3Derived>& a,
-			const Sophus::SE3Base<SE3Derived>& b) {
+// apply sim3 to se3 transformation (returns se3)
+template <typename Sim3Derived, typename SE3Derived>
+Sophus::SE3<typename Eigen::ScalarBinaryOpTraits<
+	typename Sim3Derived::Scalar, typename SE3Derived::Scalar>::ReturnType>
+operator*(const Sophus::Sim3Base<Sim3Derived>& a,
+		  const Sophus::SE3Base<SE3Derived>& b)
+{
 	return {a.quaternion().normalized() * b.unit_quaternion(),
 			a.rxso3() * b.translation() + a.translation()};
-	}
 }
+}  // namespace Sophus
 
 namespace visual_odometry
 {
@@ -51,7 +52,6 @@ VisualOdometryFrontEnd::VisualOdometryFrontEnd(
 
 void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 {
-
 	Match match;
 	if (!isNewKeyframeNeeded(keyframe, match))
 	{
@@ -93,7 +93,6 @@ void VisualOdometryFrontEnd::newKeyframeCandidate(Keyframe& keyframe)
 		consoleLog_->info("Mean: " + std::to_string(ate.mean));
 		consoleLog_->info("Max: " + std::to_string(ate.max));
 		consoleLog_->info("Min: " + std::to_string(ate.min));
-
 	}
 
 	consoleLog_->info("New keyframe is added " +
@@ -146,9 +145,9 @@ bool VisualOdometryFrontEnd::isNewKeyframeNeeded(Keyframe& keyframe,
 		}
 		return true;
 	}
-	
+
 	consoleLog_->info("Few inliers after localize camera: " +
-						std::to_string(match.inliers.size()));
+					  std::to_string(match.inliers.size()));
 
 	return true;
 }

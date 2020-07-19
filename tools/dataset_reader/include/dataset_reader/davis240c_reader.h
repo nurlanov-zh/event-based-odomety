@@ -18,7 +18,7 @@ class Davis240cReader : public DatasetReader
 	common::CameraModelParams<double> getCalibration() const override;
 
 	tracker::Patches getTrajectory() const override;
-	
+
 	common::EventSample getEventSample(std::string& line) const;
 	common::ImageSample getImageSample(std::string& line) const;
 	common::GroundTruthSample getGroundTruthSample(std::string& line) const;

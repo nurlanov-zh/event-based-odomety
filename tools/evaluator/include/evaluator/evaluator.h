@@ -20,8 +20,8 @@ struct EvaluatorParams
 	// compensate whole image each k microseconds
 	uint32_t compensationFrequencyTime = 300000;
 	uint32_t compensationFrequencyEvents = 15000;
-	bool trackerExperiment = false;
-	bool visOdometryExperiment = false;
+	bool trackerExperiment = true;
+	bool visOdometryExperiment = true;
 };
 
 class Evaluator
@@ -53,7 +53,8 @@ class Evaluator
 
 	tracker::Patches const& getPatches() const;
 	visual_odometry::MapLandmarks const& getMapLandmarks();
-	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& getStoredMapLandmarks() const;
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
+	getStoredMapLandmarks() const;
 	std::map<size_t, visual_odometry::Keyframe> const& getActiveFrames() const;
 	std::list<visual_odometry::Keyframe> const& getStoredFrames() const;
 	std::vector<common::Pose3d> const& getGtPoses() const;

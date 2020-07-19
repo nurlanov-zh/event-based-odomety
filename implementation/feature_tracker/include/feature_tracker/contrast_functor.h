@@ -2,6 +2,7 @@
 
 #include <common/data_types.h>
 
+#include <assert.h>
 #include <ceres/ceres.h>
 #include <ceres/cubic_interpolation.h>
 
@@ -10,10 +11,12 @@ namespace tracker
 struct contrastFunctor
 {
 	contrastFunctor(const std::list<common::EventSample>& events,
-					const cv::Rect2i patchRect, const double compensateScale)
+					const cv::Rect2i patchRect, const double compensateScale,
+					std::string& mode)
 		: events_(events),
 		  patchRect_(patchRect),
-		  compensateScale_(compensateScale)
+		  compensateScale_(compensateScale),
+		  mode_(mode)
 	{
 		timestamp_ = common::timestamp_t(static_cast<int32_t>(
 			(events.front().timestamp + events.back().timestamp).count() *
@@ -30,8 +33,18 @@ struct contrastFunctor
 		compensateEvents(motion, compensatedEventImage_);
 
 		// Calculate loss on compensated event image
-		//		calculateVarianceLoss(motion, compensatedEventImage_, residual);
-		calculateEdgeLoss(motion, compensatedEventImage_, residual);
+		if (mode_ == "edge")
+		{
+			calculateEdgeLoss(motion, compensatedEventImage_, residual);
+		}
+		else if (mode_ == "variance")
+		{
+			calculateVarianceLoss(motion, compensatedEventImage_, residual);
+		}
+		else
+		{
+			assert(mode_ == "edge" || mode_ == "variance");
+		}
 		return true;
 	}
 
@@ -285,9 +298,10 @@ struct contrastFunctor
 	double sigmaCompensate_ = 1;
 	int gaussianCompensateKernelSize_ = 3;
 
-	double sigmaST_ = 1.5;
+	double sigmaST_ = 3;
 	int kernelSizeST_ = 3;
 
-	int kernelSizeNMS_ = 2;
+	int kernelSizeNMS_ = 3;
+	std::string mode_;
 };
 }  // namespace tracker

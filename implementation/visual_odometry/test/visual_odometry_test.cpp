@@ -15,7 +15,8 @@ TEST(VisualOdometryTest, syncGtAndImageTest)
 	}
 
 	const auto param = common::CameraModelParams<double>();
-	visual_odometry::VisualOdometryFrontEnd visualOdometry(param, visual_odometry::VisualOdometryParams());
+	visual_odometry::VisualOdometryFrontEnd visualOdometry(
+		param, visual_odometry::VisualOdometryParams());
 
 	visualOdometry.setGroundTruthSamples(groundTruthSequence);
 

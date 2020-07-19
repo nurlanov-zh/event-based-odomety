@@ -29,9 +29,9 @@ class FlowEstimator
 	std::optional<cv::Point2f> getFlow(const cv::Point2f& curPoint);
 
    private:
-   	std::shared_ptr<spdlog::logger> consoleLog_;
+	std::shared_ptr<spdlog::logger> consoleLog_;
 	std::shared_ptr<spdlog::logger> errLog_;
-	
+
 	size_t imageCounter_;
 	cv::Mat previousImage_;
 	cv::Mat currentImage_;
