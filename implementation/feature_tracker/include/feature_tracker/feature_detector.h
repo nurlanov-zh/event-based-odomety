@@ -18,7 +18,7 @@ struct DetectorParams
 	bool drawImages = false;
 	OptimizerParams optimizerParams = {};
 	int initNumEvents = 75;
-	u_long maxNumEventsToStore = 15000;
+	u_long maxNumEventsToStore = 30000;
 	bool useAverageFlow = true;
 	bool optimizeFlowTV = true;
 	bool useL1 = false;

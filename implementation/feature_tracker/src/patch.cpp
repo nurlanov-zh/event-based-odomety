@@ -82,6 +82,10 @@ void Patch::integrateEvents()
 
 		timeLastUpdate_ = common::timestamp_t(
 			static_cast<int32_t>((events_.back().timestamp).count()));
+		if (cv::countNonZero(integratedNabla_) < 10)
+		{
+			setLost();
+		}
 	}
 }
 
@@ -154,6 +158,10 @@ void Patch::warpImage()
 	//					  warpedGradY(patch_) * std::sin(flowDir_);
 
 	predictedNabla_ = warpedGradX(patch_);
+	if (cv::norm(predictedNabla_) < 1)
+	{
+		setLost();
+	}
 }
 
 cv::Mat Patch::getNormalizedIntegratedNabla() const

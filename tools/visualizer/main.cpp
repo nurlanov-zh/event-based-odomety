@@ -16,7 +16,7 @@ const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 
 int main(int argc, char** argv)
 {
-	spdlog::set_level(spdlog::level::from_str("debug"));
+	spdlog::set_level(spdlog::level::from_str("info"));
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
@@ -121,6 +121,15 @@ int main(int argc, char** argv)
 				{
 					visualizer.setCompensatedEventImage(
 						evaluator.getCompensatedEventImage());
+					if (!evaluator.getCompensatedEventImage().empty() and
+						cv::countNonZero(
+							evaluator.getCompensatedEventImage()) >= 1)
+					{
+						visualizer.set_ = true;
+						visualizer.originalImage_ =
+							evaluator.getCompensatedEventImage();
+					}
+
 					visualizer.setIntegratedEventImage(
 						evaluator.getIntegratedEventImage());
 					visualizer.setPatches(evaluator.getPatches());

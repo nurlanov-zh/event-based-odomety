@@ -77,6 +77,10 @@ class Visualizer
 	void setStoredLandmarks(
 		const std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>>&);
 
+	bool set_ = false;
+
+	cv::Mat originalImage_;
+
    private:
 	void wait() const;
 
@@ -151,7 +155,6 @@ class Visualizer
 	cv::Mat costMap_;
 	cv::Mat predictedNabla_;
 	cv::Mat compensatedEventImage_;
-	cv::Mat originalImage_;
 	cv::Rect2d newPatch_;
 	cv::Rect2d initPatch_;
 	tracker::TrackId track_id_;
@@ -162,7 +165,6 @@ class Visualizer
 	float flow_;
 
 	cv::Mat currentImage_;
-	bool set_ = false;
 };
 
 }  // namespace tools

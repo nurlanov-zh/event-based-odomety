@@ -168,11 +168,11 @@ void Optimizer::optimize(Patch& patch)
 	auto oldCenter = patch.toCorner();
 	patch.updatePatchRect();
 	auto newCenter = patch.toCorner();
-	auto newTimeWithoutUpdate = common::timestamp_t(
-		static_cast<int64_t>(params_.patchTimeWithoutUpdateScale /
-							 fmax(1e-1, cv::norm(newCenter - oldCenter))));
-
-	patch.setTimeWithoutUpdate(newTimeWithoutUpdate);
+	//	auto newTimeWithoutUpdate = common::timestamp_t(
+	//		static_cast<int64_t>(params_.patchTimeWithoutUpdateScale /
+	//			(cv::norm(newCenter - oldCenter) + 1e-5)));
+	//
+	//	patch.setTimeWithoutUpdate(newTimeWithoutUpdate);
 
 	patch.addTrajectoryPosition();
 

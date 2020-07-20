@@ -482,8 +482,9 @@ void FeatureDetector::compensateEventsContrast(
 	//		compensatedEventImage_.convertTo(grayImage, CV_8U,
 	//										255.0 / (maxVal / 2 - minVal),
 	//										-minVal * 255.0 / (maxVal / 2 -
-	//minVal)); 		cv::imwrite(
-	//			"../results/compensated/outdoors_walking/" + std::to_string(id) +
+	// minVal)); 		cv::imwrite(
+	//			"../results/compensated/outdoors_walking/" + std::to_string(id)
+	//+
 	//".png", 			grayImage);
 	//	}
 	//
@@ -496,7 +497,7 @@ void FeatureDetector::compensateEventsContrast(
 	//		integratedEventImage_.convertTo(grayImage, CV_8U,
 	//										255.0 / (maxVal / 2 - minVal),
 	//										-minVal * 255.0 / (maxVal / 2 -
-	//minVal));
+	// minVal));
 	//
 	//		cv::imwrite(
 	//			"../results/integrated/outdoors_walking/" + std::to_string(id) +
@@ -643,20 +644,18 @@ void FeatureDetector::updatePatches(const common::EventSample& event)
 				patch.addEvent(event);
 			}
 
-			// if (event.timestamp - patch.getTimeLastUpdate() >
-			// 	patch.getTimeWithoutUpdate())
-			// {
-			// 	consoleLog_->info(
-			// 		"Lost patch " + std::to_string(patch.getTrackId()) +
-			// 		" because timeWithoutUpdate has been "
-			// 		"reached:\ntime since last update: " +
-			// 		std::to_string(
-			// 			(event.timestamp - patch.getTimeLastUpdate()).count()) +
-			// 		" microseconds vs timeWithoutUpdate: " +
-			// 		std::to_string(patch.getTimeWithoutUpdate().count()) +
-			// 		" microseconds.");
-			// 	patch.setLost();
-			// }
+			//			 if (event.timestamp - patch.getTimeLastUpdate() >
+			//			 	patch.getTimeWithoutUpdate())
+			//			 {
+			//			 	consoleLog_->info(
+			//			 		"Lost patch " + std::to_string(patch.getTrackId())
+			//+ 			 		" because timeWithoutUpdate has been " 			 		"reached:\ntime since
+			//last update: " + 			 		std::to_string( 			 			(event.timestamp -
+			//patch.getTimeLastUpdate()).count()) + 			 		" microseconds vs
+			//timeWithoutUpdate: " +
+			//			 		std::to_string(patch.getTimeWithoutUpdate().count())
+			//+ 			 		" microseconds."); 			 	patch.setLost();
+			//			 }
 
 			if (patch.isReady() && patch.isInit())
 			{
@@ -715,9 +714,9 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 		//		patch.addTrajectoryPosition();
 	}
 	//	consoleLog_->info("Reassosiated " + std::to_string(associated.size()) +
-	//" patches. " + 					  std::to_string(patches_.size() - associated.size()) + "
-	//removed. " + 					  std::to_string(newPatches.size() - associated.size()) + " new
-	//patches.");
+	//" patches. " + 					  std::to_string(patches_.size() -
+	// associated.size()) + " removed. " +
+	// std::to_string(newPatches.size() - associated.size()) + " new patches.");
 	//
 	//	for (auto& patch : patches_)
 	//	{
@@ -730,7 +729,7 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 	for (auto& newPatch : newPatches)
 	{
 		//		if (newPatch.getTrackId() == -1 && patches_.size() <
-		//params_.maxPatches)
+		// params_.maxPatches)
 
 		if (newPatch.getTrackId() == -1)
 		{
@@ -778,11 +777,15 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 				   cv::WARP_INVERSE_MAP);
 
 	const auto gradX = warpedGradX(rect);
+	if (cv::norm(gradX) < 1)
+	{
+		patch.setLost();
+	}
 	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
 	//	size_t sumPatch =
 	//		cv::norm(0.6 * gradX * std::cos(flow) + 0.6 * gradY *
-	//std::sin(flow), 				 cv::NORM_L1);
+	// std::sin(flow), 				 cv::NORM_L1);
 
 	size_t sumPatch = cv::norm(1.5 * gradX, cv::NORM_L1);
 

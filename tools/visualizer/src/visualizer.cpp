@@ -319,7 +319,7 @@ void Visualizer::drawTrajectory(const tracker::Patch& patch)
 	const auto& trajectory = patch.getTrajectory();
 	glColor3f(0.5, 0.0, 0.5);  // purple
 	for (int i = static_cast<int>(trajectory.size()) - 1;
-		 i > static_cast<int>(trajectory.size()) - 15 && i >= 1; --i)
+		 i > static_cast<int>(trajectory.size()) - 60 && i >= 1; --i)
 	{
 		pangolin::glDrawLine(
 			Eigen::Vector2d(trajectory[i].value.x, trajectory[i].value.y),
@@ -356,7 +356,7 @@ cv::Mat Visualizer::convertImageToGray(const cv::Mat& cvImage)
 
 void Visualizer::imageCallback(const common::ImageSample& sample)
 {
-	set_ = true;
+	//	set_ = true;
 	//	originalImage_ = sample.value;
 	originalImage_ = compensatedEventImage_;
 }
@@ -520,95 +520,99 @@ common::timestamp_t Visualizer::getStepInterval() const
 
 void Visualizer::finishVisualizerIteration()
 {
-	// if (set_)
-	// {
-	// 	static int id = 0;
-	// 	cv::Mat image1;
-	// 	cv::cvtColor(originalImage_, image1, cv::COLOR_GRAY2RGB);
+	if (set_)
+	{
+		static int id = 0;
+		cv::Mat image1;
+		cv::cvtColor(originalImage_, image1, cv::COLOR_GRAY2RGB);
+		//		image1 = originalImage_;
 
-	// 	for (const auto& event : integratedEvents_)
-	// 	{
-	// 		Eigen::Vector2d point(event.value.point.x, event.value.point.y);
-	// 		if (event.value.sign == common::EventPolarity::POSITIVE)
-	// 		{
-	// 			image1.at<cv::Vec3b>(event.value.point.y,
-	// 								 event.value.point.x) = {255, 0, 0};
-	// 		}
-	// 		else
-	// 		{  // event.value.sign == common::EventPolarity::NEGATIVE
-	// 			image1.at<cv::Vec3b>(event.value.point.y,
-	// 								 event.value.point.x) = {0, 0, 255};
-	// 		}
-	// 	}
+		for (const auto& event : integratedEvents_)
+		{
+			Eigen::Vector2d point(event.value.point.x, event.value.point.y);
+			if (event.value.sign == common::EventPolarity::POSITIVE)
+			{
+				image1.at<cv::Vec3b>(event.value.point.y,
+									 event.value.point.x) = {255, 0, 0};
+			}
+			else
+			{  // event.value.sign == common::EventPolarity::NEGATIVE
+				image1.at<cv::Vec3b>(event.value.point.y,
+									 event.value.point.x) = {0, 0, 255};
+			}
+		}
 
-	// 	cv::resize(image1, image1, {720, 540});
-	// 	for (const auto& patch : patches_)
-	// 	{
-	// 		if (patch.isLost())
-	// 		{
-	// 			continue;
-	// 		}
+		cv::resize(image1, image1, {720, 540});
+		for (const auto& patch : patches_)
+		{
+			if (patch.isLost())
+			{
+				continue;
+			}
 
-	// 		cv::circle(image1, {patch.toCorner().x * 3, patch.toCorner().y * 3},
-	// 				   4, {0, 255, 0}, 2);
-	// 		const auto& trajectory = patch.getTrajectory();
-	// 		for (int i = static_cast<int>(trajectory.size()) - 1;
-	// 			 i > static_cast<int>(trajectory.size()) - 60 && i >= 1; --i)
-	// 		{
-	// 			cv::line(image1,
-	// 					 {trajectory[i].value.x * 3, trajectory[i].value.y * 3},
-	// 					 {trajectory[i - 1].value.x * 3,
-	// 					  trajectory[i - 1].value.y * 3},
-	// 					 {127, 0, 127}, 2);
-	// 		}
-	// 	}
+			cv::circle(image1,
+					   {static_cast<int>(patch.toCorner().x * 3),
+						static_cast<int>(patch.toCorner().y * 3)},
+					   4, {0, 255, 0}, 2);
+			const auto& trajectory = patch.getTrajectory();
+			for (int i = static_cast<int>(trajectory.size()) - 1;
+				 i > static_cast<int>(trajectory.size()) - 60 && i >= 1; --i)
+			{
+				cv::line(image1,
+						 {static_cast<int>(trajectory[i].value.x * 3),
+						  static_cast<int>(trajectory[i].value.y * 3)},
+						 {static_cast<int>(trajectory[i - 1].value.x * 3),
+						  static_cast<int>(trajectory[i - 1].value.y * 3)},
+						 {127, 0, 127}, 2);
+			}
+		}
 
-	// 	cv::Mat image2;
-	// 	cv::cvtColor(convertImageToGray(integratedNabla_), image2,
-	// 				 cv::COLOR_GRAY2RGB);
-	// 	cv::resize(image2, image2, {540, 540});
+		cv::Mat image2;
+		cv::cvtColor(convertImageToGray(integratedNabla_), image2,
+					 cv::COLOR_GRAY2RGB);
+		cv::resize(image2, image2, {540, 540});
 
-	// 	cv::Mat image3;
-	// 	cv::cvtColor(convertImageToGray(predictedNabla_), image3,
-	// 				 cv::COLOR_GRAY2RGB);
-	// 	cv::resize(image3, image3, {540, 540});
-	// 	const auto start =
-	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 *
-	// std::sin(flow_)); 	const auto end = 		Eigen::Vector2d(270 + 55 *
-	// std::cos(flow_), 270 + 55 * std::sin(flow_)); 	const auto arrow1Start =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 *
-	// std::sin(flow_)); 	const auto arrow1End = Eigen::Vector2d(270 + 35 *
-	// std::cos(flow_ + 0.2), 										   270 + 35 * std::sin(flow_ + 0.2)); 	const auto
-	// arrow2Start = 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 *
-	// std::sin(flow_)); 	const auto arrow2End = Eigen::Vector2d(270 + 35 *
-	// std::cos(flow_ - 0.2), 										   270 + 35 * std::sin(flow_ - 0.2));
-	// 	cv::line(image3, {start(0), start(1)}, {end(0), end(1)}, {50, 0, 127});
-	// 	cv::line(image3, {arrow1Start(0), arrow1Start(1)},
-	// 			 {arrow1End(0), arrow1End(1)}, {50, 0, 127});
-	// 	cv::line(image3, {arrow2Start(0), arrow2Start(1)},
-	// 			 {arrow2End(0), arrow2End(1)}, {50, 0, 127});
+		cv::Mat image3;
+		cv::cvtColor(convertImageToGray(predictedNabla_), image3,
+					 cv::COLOR_GRAY2RGB);
+		cv::resize(image3, image3, {540, 540});
+		//		const auto start = Eigen::Vector2d(270 - 55 * std::cos(flow_),
+		//										   270 - 55 * std::sin(flow_));
+		//		const auto end = Eigen::Vector2d(270 + 55 * std::cos(flow_),
+		//										 270 + 55 * std::sin(flow_));
+		//		const auto arrow1Start = Eigen::Vector2d(270 + 55 *
+		//std::cos(flow_), 												 270 + 55 * std::sin(flow_)); 		const auto arrow1End =
+		//Eigen::Vector2d( 			270 + 35 * std::cos(flow_ + 0.2), 270 + 35 *
+		//std::sin(flow_ + 0.2)); 		const auto arrow2Start = Eigen::Vector2d(270 +
+		//55 * std::cos(flow_), 												 270 + 55 * std::sin(flow_)); 		const auto
+		//arrow2End = Eigen::Vector2d( 			270 + 35 * std::cos(flow_ - 0.2), 270 +
+		//35 * std::sin(flow_ - 0.2)); 		cv::line(image3, {start(0), start(1)},
+		//{end(0), end(1)}, {50, 0, 127}); 		cv::line(image3, {arrow1Start(0),
+		//arrow1Start(1)}, 				 {arrow1End(0), arrow1End(1)}, {50, 0, 127});
+		//		cv::line(image3, {arrow2Start(0), arrow2Start(1)},
+		//				 {arrow2End(0), arrow2End(1)}, {50, 0, 127});
 
-	// 	cv::Mat grayImage = convertImageToGray(costMap_);
-	// 	cv::Mat imColor;
-	// 	applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
-	// 	cv::Mat image4 = imColor;
+		//		cv::Mat grayImage = convertImageToGray(costMap_);
+		//		cv::Mat imColor;
+		//		applyColorMap(grayImage, imColor, cv::COLORMAP_JET);
+		//		cv::Mat image4 = imColor;
 
-	// 	cv::resize(image4, image4, {540, 540});
-	// 	cv::hconcat(image1, image2, image1);
-	// 	cv::hconcat(image1, image3, image1);
-	// 	cv::hconcat(image1, image4, image1);
+		//		cv::resize(image4, image4, {540, 540});
+		cv::hconcat(image1, image2, image1);
+		cv::hconcat(image1, image3, image1);
+		//		cv::hconcat(image1, image4, image1);
 
-	// 	cv::imwrite("../results/tracking_images/second_experiment/" +
-	// 					std::to_string(id++) + ".png",
-	// 				image1);
-	// }
-	// static int id = 0;
-	// cv::imwrite("../results/compensation/integrated" +
-	// 					std::to_string(id) + ".png",
-	// 				convertImageToGray(integratedNabla_));
-	// cv::imwrite("../results/compensation/compensated" +
-	// 					std::to_string(id++) + ".png",
-	// 				convertImageToGray(compensatedEventImage_));
+		cv::imwrite("../results/tracking_images/second_experiment/" +
+						std::to_string(id++) + ".png",
+					image1);
+	}
+	//	static int id = 0;
+	//	cv::imwrite(
+	//		"../results/compensation/integrated" + std::to_string(id) + ".png",
+	//		convertImageToGray(integratedNabla_));
+	//	cv::imwrite(
+	//		"../results/compensation/compensated" + std::to_string(id++) +
+	//".png", 		convertImageToGray(compensatedEventImage_));
 
 	pangolin::FinishFrame();
 	quit_ = pangolin::ShouldQuit();
