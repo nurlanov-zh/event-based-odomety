@@ -9,9 +9,9 @@ namespace tracker
 {
 struct DetectorParams
 {
-	double qualityLevel = 0.01;
+	double qualityLevel = 0.05;
 	double minDistance = 10;
-	double associationDistance = 6;
+	double associationDistance = 7;
 	int32_t patchExtent = 12;
 	int32_t blockSize = 3;
 	cv::Size imageSize = {346, 260};
@@ -47,6 +47,8 @@ class FeatureDetector
 
 	void addEvent(const common::EventSample& event);
 
+	bool isReadyToCompensate();
+
 	void initMotionField(const common::timestamp_t timestamp);
 
 	void interpolateMotionField(const common::timestamp_t timestamp);
@@ -67,6 +69,15 @@ class FeatureDetector
 	void setPatches(const Patches& patches) { patches_ = patches; }
 	void setParams(const tracker::DetectorParams& params);
 	void setTrackId(TrackId trackId) { nextTrackId_ = trackId; }
+
+	void setCompensatedEventImage(const cv::Mat& compensatedEventImage)
+	{
+		compensatedEventImage_ = compensatedEventImage;
+	}
+	void setIntegratedEventImage(const cv::Mat& integratedEventImage)
+	{
+		integratedEventImage_ = integratedEventImage;
+	}
 
 	Patches const& getPatches() const { return patches_; }
 	Patches& getPatches() { return patches_; }

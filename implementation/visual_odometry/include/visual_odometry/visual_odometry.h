@@ -27,9 +27,9 @@ namespace visual_odometry
 struct VisualOdometryParams
 {
 	size_t numOfActiveFrames = 10;
-	size_t numOfInliers = 25;
+	size_t numOfInliers = 17;
 	size_t numOfEssentialInliers = 10;
-	size_t ransacMinInliers = 25;
+	size_t ransacMinInliers = 17;
 	size_t maxNumIterations = 100;
 	size_t maxNumWithoutAdd = 4;
 	double ransacThreshold = 5e-5;
@@ -55,8 +55,11 @@ class VisualOdometryFrontEnd
 	std::list<Keyframe> const& getStoredFrames() const;
 	std::list<Keyframe> const& getAlignedFrames() const;
 	std::vector<common::Pose3d> const& getGtPoses() const { return gt_; }
-	std::vector<common::Pose3d> const& getGtAlignedPoses() const { return gtAligned_; }
-	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const& 
+	std::vector<common::Pose3d> const& getGtAlignedPoses() const
+	{
+		return gtAligned_;
+	}
+	std::vector<std::pair<tracker::TrackId, Eigen::Vector3d>> const&
 	getStoredLandmarks() const;
 
 	void preExit();

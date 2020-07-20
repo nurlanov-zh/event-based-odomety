@@ -16,7 +16,7 @@ const std::chrono::microseconds REDRAW_DELAY_MICROSECONDS =
 
 int main(int argc, char** argv)
 {
-	spdlog::set_level(spdlog::level::from_str("info"));
+	spdlog::set_level(spdlog::level::from_str("debug"));
 
 	spdlog::stdout_color_mt("console");
 	spdlog::stderr_color_mt("stderr");
@@ -53,14 +53,12 @@ int main(int argc, char** argv)
 	std::shared_ptr<tools::DatasetReader> reader;
 	if (dataset == "DAVIS240C")
 	{
-		reader =
-			std::make_shared<tools::Davis240cReader>(sequence);
-	} 
+		reader = std::make_shared<tools::Davis240cReader>(sequence);
+	}
 	else if (dataset == "DroneRacing")
 	{
 		param.imageSize = {346, 260};
-		reader =
-			std::make_shared<tools::DroneRacingReader>(sequence);
+		reader = std::make_shared<tools::DroneRacingReader>(sequence);
 	}
 
 	tools::Replayer replayer(reader);
@@ -73,9 +71,9 @@ int main(int argc, char** argv)
 
 	replayer.addEventCallback(
 		REGISTER_CALLBACK(tools::Evaluator, eventCallback, evaluator));
-	/*replayer.addImageCallback(
+	replayer.addImageCallback(
 		REGISTER_CALLBACK(tools::Evaluator, imageCallback, evaluator));
-*/
+
 	if (showGui)
 	{
 		replayer.addEventCallback(
@@ -117,9 +115,9 @@ int main(int argc, char** argv)
 				const auto timestamp = replayer.getLastTimestamp();
 
 				// redraw only every so often if not stop
-				if (stop ||
-					(!stop &&
-					(timestamp.count() % REDRAW_DELAY_MICROSECONDS.count() == 0)))
+				if (stop || (!stop && (timestamp.count() %
+										   REDRAW_DELAY_MICROSECONDS.count() ==
+									   0)))
 				{
 					visualizer.setCompensatedEventImage(
 						evaluator.getCompensatedEventImage());
@@ -131,7 +129,8 @@ int main(int argc, char** argv)
 					visualizer.setStoredFrames(evaluator.getStoredFrames());
 					visualizer.setLandmarks(evaluator.getMapLandmarks());
 					visualizer.setGtPoses(evaluator.getGtPoses());
-					visualizer.setStoredLandmarks(evaluator.getStoredMapLandmarks());
+					visualizer.setStoredLandmarks(
+						evaluator.getStoredMapLandmarks());
 					visualizer.step();
 
 					if (visualizer.isTrackerParamsChanged())
@@ -152,7 +151,6 @@ int main(int argc, char** argv)
 		{
 			break;
 		}
-		
 	}
 
 	return 0;

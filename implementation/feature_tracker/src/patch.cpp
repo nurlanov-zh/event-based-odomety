@@ -19,7 +19,7 @@ void Patch::init()
 	init_ = false;
 	lost_ = false;
 	trackId_ = -1;
-	numOfEvents_ = 75;
+	numOfEvents_ = 105;
 	initPoint_ = toCorner();
 	counter_ = 0;
 	integratedNabla_ = cv::Mat::zeros(patch_.height, patch_.width, CV_64F);
@@ -72,7 +72,8 @@ void Patch::integrateEvents()
 			{
 				const auto& point = frameToPatchCoords(event.value.point);
 				integratedNabla_.at<double>(point.y, point.x) +=
-					static_cast<double>(event.value.sign);
+					static_cast<double>(1);
+				//					static_cast<double>(event.value.sign);
 			}
 		}
 		currentTimestamp_ = common::timestamp_t(static_cast<int32_t>(
@@ -149,8 +150,10 @@ void Patch::warpImage()
 		return;
 	}
 
-	predictedNabla_ = -warpedGradX(patch_) * std::cos(flowDir_) -
-					  warpedGradY(patch_) * std::sin(flowDir_);
+	//	predictedNabla_ = -warpedGradX(patch_) * std::cos(flowDir_) -
+	//					  warpedGradY(patch_) * std::sin(flowDir_);
+
+	predictedNabla_ = warpedGradX(patch_);
 }
 
 cv::Mat Patch::getNormalizedIntegratedNabla() const

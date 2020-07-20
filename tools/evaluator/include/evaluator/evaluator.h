@@ -20,7 +20,7 @@ struct EvaluatorParams
 	// compensate whole image each k microseconds
 	uint32_t compensationFrequencyTime = 20000;
 	uint32_t compensationFrequencyEvents = 15000;
-	bool trackerExperiment = false;
+	bool trackerExperiment = true;
 	bool visOdometryExperiment = false;
 };
 

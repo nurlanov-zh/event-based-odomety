@@ -302,8 +302,8 @@ void FeatureDetector::compensateEventsContrast(
 		params_.imageSize.width / params_.patchCompensateSize.width;
 	int numPatchesY =
 		params_.imageSize.height / params_.patchCompensateSize.height;
-	const auto timestamp = common::timestamp_t(static_cast<int32_t>(
-		(events.back().timestamp).count()));
+	const auto timestamp = common::timestamp_t(
+		static_cast<int32_t>((events.back().timestamp).count()));
 	lastCompensation = events.back().timestamp;
 
 	consoleLog_->info(
@@ -462,36 +462,47 @@ void FeatureDetector::compensateEventsContrast(
 		}
 	}
 
-	static int id = 0;
-	{
-		cv::Mat grayImage;
+	cv::Mat grayImage;
 
-		double minVal;
-		double maxVal;
-		cv::minMaxLoc(compensatedEventImage_, &minVal, &maxVal);
-		compensatedEventImage_.convertTo(grayImage, CV_8U,
-										255.0 / (maxVal / 2 - minVal),
-										-minVal * 255.0 / (maxVal / 2 - minVal));
-		cv::imwrite(
-			"../results/compensated/outdoors_walking/" + std::to_string(id) + ".png",
-			grayImage);
-	}
+	double minVal;
+	double maxVal;
+	cv::minMaxLoc(compensatedEventImage_, &minVal, &maxVal);
+	compensatedEventImage_.convertTo(grayImage, CV_8U,
+									 255.0 / (maxVal - minVal),
+									 -minVal * 255.0 / (maxVal - minVal));
+	compensatedEventImage_ = grayImage;
 
-	{
-		cv::Mat grayImage;
-
-		double minVal;
-		double maxVal;
-		cv::minMaxLoc(integratedEventImage_, &minVal, &maxVal);
-		integratedEventImage_.convertTo(grayImage, CV_8U,
-										255.0 / (maxVal / 2 - minVal),
-										-minVal * 255.0 / (maxVal / 2 - minVal));
-
-		cv::imwrite(
-			"../results/integrated/outdoors_walking/" + std::to_string(id) + ".png",
-			grayImage);
-	}
-	id++;
+	//	static int id = 0;
+	//	{
+	//		cv::Mat grayImage;
+	//
+	//		double minVal;
+	//		double maxVal;
+	//		cv::minMaxLoc(compensatedEventImage_, &minVal, &maxVal);
+	//		compensatedEventImage_.convertTo(grayImage, CV_8U,
+	//										255.0 / (maxVal / 2 - minVal),
+	//										-minVal * 255.0 / (maxVal / 2 -
+	//minVal)); 		cv::imwrite(
+	//			"../results/compensated/outdoors_walking/" + std::to_string(id) +
+	//".png", 			grayImage);
+	//	}
+	//
+	//	{
+	//		cv::Mat grayImage;
+	//
+	//		double minVal;
+	//		double maxVal;
+	//		cv::minMaxLoc(integratedEventImage_, &minVal, &maxVal);
+	//		integratedEventImage_.convertTo(grayImage, CV_8U,
+	//										255.0 / (maxVal / 2 - minVal),
+	//										-minVal * 255.0 / (maxVal / 2 -
+	//minVal));
+	//
+	//		cv::imwrite(
+	//			"../results/integrated/outdoors_walking/" + std::to_string(id) +
+	//".png", 			grayImage);
+	//	}
+	//	id++;
 }
 
 void FeatureDetector::integrateEvents(
@@ -581,10 +592,18 @@ void FeatureDetector::extractPatches(const common::ImageSample& image)
 		newPatches.emplace_back(patch);
 	}
 
-	const auto& logImage = getLogImage(image.value);
+	//	const auto& logImage = getLogImage(image.value);
 
-	gradX_ = getGradients(logImage, true);
-	gradY_ = getGradients(logImage, false);
+	//	cv::Mat logImage = image.value;
+	//	cv::Mat preGradX = cv::max(getGradients(logImage, true), 0);
+	//	cv::Mat preGradY = cv::max(getGradients(logImage, false), 0);
+	//	gradX_ = getGradients(logImage, true);
+	//	gradY_ = getGradients(logImage, false);
+
+	cv::Mat normalizedImage;
+	image.value.convertTo(normalizedImage, CV_64F, 1.0 / 255.0);
+	gradX_ = normalizedImage;
+	gradY_ = normalizedImage;
 
 	OptimizerParams params;
 	params = params_.optimizerParams;
@@ -658,6 +677,18 @@ void FeatureDetector::addEvent(const common::EventSample& event)
 	}
 }
 
+bool FeatureDetector::isReadyToCompensate()
+{
+	if (lastEvents_.size() >= params_.maxNumEventsToStore)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 void FeatureDetector::associatePatches(Patches& newPatches,
 									   const common::timestamp_t& timestamp)
 {
@@ -674,26 +705,34 @@ void FeatureDetector::associatePatches(Patches& newPatches,
 			{
 				// maybe update respective corner
 				newPatch.setTrackId(patch.getTrackId());
+				patch.setCorner(newPatch.toCorner(), timestamp);
 				associated.insert(patch.getTrackId());
 				break;
 			}
 		}
 
-		patch.setTs(timestamp);
-		patch.addTrajectoryPosition();
+		//		patch.setTs(timestamp);
+		//		patch.addTrajectoryPosition();
 	}
-
-/*	for (auto& patch : patches_)
-	{
-		if (associated.find(patch.getTrackId()) == associated.end())
-		{
-			patch.setLost();
-		}
-	}*/
+	//	consoleLog_->info("Reassosiated " + std::to_string(associated.size()) +
+	//" patches. " + 					  std::to_string(patches_.size() - associated.size()) + "
+	//removed. " + 					  std::to_string(newPatches.size() - associated.size()) + " new
+	//patches.");
+	//
+	//	for (auto& patch : patches_)
+	//	{
+	//		if (associated.find(patch.getTrackId()) == associated.end())
+	//		{
+	//			patch.setLost();
+	//		}
+	//	}
 
 	for (auto& newPatch : newPatches)
 	{
-		if (newPatch.getTrackId() == -1 && patches_.size() < params_.maxPatches)
+		//		if (newPatch.getTrackId() == -1 && patches_.size() <
+		//params_.maxPatches)
+
+		if (newPatch.getTrackId() == -1)
 		{
 			newPatch.setTrackId(nextTrackId_);
 			newPatch.setGrad(gradX_, gradY_);
@@ -741,9 +780,11 @@ void FeatureDetector::updateNumOfEvents(Patch& patch)
 	const auto gradX = warpedGradX(rect);
 	const auto gradY = warpedGradY(rect);
 	const auto flow = patch.getFlow();
-	size_t sumPatch =
-		cv::norm(0.6 * gradX * std::cos(flow) + 0.6 * gradY * std::sin(flow),
-				 cv::NORM_L1);
+	//	size_t sumPatch =
+	//		cv::norm(0.6 * gradX * std::cos(flow) + 0.6 * gradY *
+	//std::sin(flow), 				 cv::NORM_L1);
+
+	size_t sumPatch = cv::norm(1.5 * gradX, cv::NORM_L1);
 
 	patch.setNumOfEvents(sumPatch);
 
@@ -768,7 +809,7 @@ cv::Mat FeatureDetector::getGradients(const cv::Mat& image, bool xDir)
 	assert(image.type() == CV_64F);
 
 	cv::Mat grad;
-	cv::Sobel(image / 8, grad, CV_64F, xDir, !xDir, 3);
+	cv::Sobel(image, grad, CV_64F, xDir, !xDir, 3);
 	return grad;
 }
 

@@ -92,22 +92,22 @@ Sophus::Sim3d align_points_sim3(const Eigen::Ref<const Mat3X> &data,
 // correct extrinsic calibration from camera to IMU frame, that
 // reference_poses are transformations from IMU to world, and that cameras
 // contain cam to world poses.
-Sophus::Sim3d align_cameras_sim3(const std::vector<common::Pose3d> &reference_poses,
-								 const std::list<Keyframe>& cameras,
-								 ErrorMetricValue *ate)
+Sophus::Sim3d align_cameras_sim3(
+	const std::vector<common::Pose3d> &reference_poses,
+	const std::list<Keyframe> &cameras, ErrorMetricValue *ate)
 {
 	const Eigen::Index num_cameras = static_cast<int32_t>(cameras.size());
 
 	Mat3X reference_centers(3, num_cameras);
 	Mat3X camera_centers(3, num_cameras);
 
-    size_t i = 0;
+	size_t i = 0;
 	for (const auto &kf : cameras)
 	{
 		const auto &T_w_i = reference_poses[i];
 		reference_centers.col(i) = T_w_i.translation();
 		camera_centers.col(i) = kf.pose.translation();
-        ++i;
+		++i;
 	}
 
 	return align_points_sim3(reference_centers, camera_centers, ate);

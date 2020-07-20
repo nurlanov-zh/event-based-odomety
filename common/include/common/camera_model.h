@@ -39,7 +39,7 @@ class CameraModel
 		return Scalar(2) * p1 * x * y + p2 * (r2 + Scalar(2) * x * x);
 	}
 
-	inline Scalar getRadialDistortion(const Scalar& r2) const 
+	inline Scalar getRadialDistortion(const Scalar& r2) const
 	{
 		const Scalar& k1 = param_.k1;
 		const Scalar& k2 = param_.k2;
@@ -98,11 +98,13 @@ class CameraModel
 		{
 			const Scalar r2 = xOpt * xOpt + yOpt * yOpt;
 			const Scalar radial = getRadialDistortion(r2);
-			const Scalar deltaX = getTangentialDistortion(p1, p2, xOpt, yOpt, r2);
-			const Scalar deltaY = getTangentialDistortion(p2, p1, yOpt, xOpt, r2);
+			const Scalar deltaX =
+				getTangentialDistortion(p1, p2, xOpt, yOpt, r2);
+			const Scalar deltaY =
+				getTangentialDistortion(p2, p1, yOpt, xOpt, r2);
 
-	        xOpt = (xDistort - deltaX) / radial;
-	        yOpt = (yDistort - deltaY) / radial;
+			xOpt = (xDistort - deltaX) / radial;
+			yOpt = (yDistort - deltaY) / radial;
 		}
 
 		const Scalar norm = sqrt(xOpt * xOpt + yOpt * yOpt + Scalar(1));

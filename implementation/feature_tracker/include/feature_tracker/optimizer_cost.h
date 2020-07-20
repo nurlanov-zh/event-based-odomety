@@ -27,17 +27,17 @@ struct OptimizerCostFunctor
 	}
 
 	template <typename T>
-	bool operator()(const T* sPose2D, const T* sFlowDir, T* sResiduals) const
+	bool operator()(const T* sPose2D, T* sResiduals) const
 	{
 		T normPredictedNabla(1e-5);
-		warp(sPose2D, sFlowDir, sResiduals, normPredictedNabla);
+		warp(sPose2D, sResiduals, normPredictedNabla);
 		for (int y = 0; y < static_cast<int>(patch_.height); y++)
 		{
 			for (int x = 0; x < static_cast<int>(patch_.width); x++)
 			{
 				sResiduals[x + y * static_cast<int>(patch_.width)] =
 					sResiduals[x + y * static_cast<int>(patch_.width)] /
-						ceres::sqrt(normPredictedNabla) +
+						ceres::sqrt(normPredictedNabla) -
 					T(normalizedIntegratedNabla_.at<double>(y, x));
 			}
 		}
@@ -45,12 +45,9 @@ struct OptimizerCostFunctor
 	}
 
 	template <typename T>
-	void warp(const T* sPose2D, const T* sFlowDir, T* sResiduals,
-			  T& normPredictedNabla) const
+	void warp(const T* sPose2D, T* sResiduals, T& normPredictedNabla) const
 	{
 		Eigen::Map<Sophus::SE2<T> const> pose2D(sPose2D);
-		T vx = ceres::cos(sFlowDir[0]);
-		T vy = ceres::sin(sFlowDir[0]);
 
 		const auto transform = pose2D.matrix2x3();
 
@@ -79,7 +76,7 @@ struct OptimizerCostFunctor
 
 					// compute predicted nabla at this point
 					sResiduals[x + static_cast<int>(patch_.width) * y] =
-						grads[0] * vx + grads[1] * vy;
+						grads[0];
 
 					// accumulate norm of predicted nabla
 					normPredictedNabla += ceres::pow(

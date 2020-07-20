@@ -94,8 +94,7 @@ EventSample DroneRacingReader::getEventSample(std::string& line) const
 ImageSample DroneRacingReader::getImageSample(std::string& line) const
 {
 	size_t pos = line.find(' ');
-	const auto id =
-		std::stoi(line.substr(0, pos));
+	const auto id = std::stoi(line.substr(0, pos));
 	line = line.substr(pos + 1);
 
 	pos = line.find(' ');
@@ -106,17 +105,18 @@ ImageSample DroneRacingReader::getImageSample(std::string& line) const
 		std::chrono::duration_cast<timestamp_t>(duration);
 	line = line.substr(pos + 1);
 
-	const std::string inputFilePath = path_ + SEPARATOR + line.substr(0, line.size()-1);
+	const std::string inputFilePath =
+		path_ + SEPARATOR + line.substr(0, line.size() - 1);
 	const cv::Mat image = cv::imread(inputFilePath, cv::IMREAD_GRAYSCALE);
 
 	return {image, timestamp};
 }
 
-GroundTruthSample DroneRacingReader::getGroundTruthSample(std::string& line) const
+GroundTruthSample DroneRacingReader::getGroundTruthSample(
+	std::string& line) const
 {
 	size_t pos = line.find(' ');
-	const auto id =
-		std::stoi(line.substr(0, pos));
+	const auto id = std::stoi(line.substr(0, pos));
 	line = line.substr(pos + 1);
 
 	pos = line.find(' ');
@@ -185,7 +185,8 @@ tracker::Patch DroneRacingReader::getTrajectoryLine(std::string& line) const
 	return patch;
 }
 
-DroneRacingReader::DroneRacingReader(const std::string& path) : DatasetReader(path)
+DroneRacingReader::DroneRacingReader(const std::string& path)
+	: DatasetReader(path)
 {
 	consoleLog_ = spdlog::get("console");
 	errLog_ = spdlog::get("stderr");
@@ -292,12 +293,11 @@ tracker::Patches DroneRacingReader::getTrajectory() const
 
 	size_t numOfStrings;
 	const auto begin = std::chrono::high_resolution_clock::now();
-	const auto trajectory =
-		readFile<std::list<tracker::Patch>, tracker::Patch>(
-			filePath,
-			std::bind(&DroneRacingReader::getTrajectoryLine, this,
-					  std::placeholders::_1),
-			0, EVENT_LENGTH, numOfStrings);
+	const auto trajectory = readFile<std::list<tracker::Patch>, tracker::Patch>(
+		filePath,
+		std::bind(&DroneRacingReader::getTrajectoryLine, this,
+				  std::placeholders::_1),
+		0, EVENT_LENGTH, numOfStrings);
 	const auto end = std::chrono::high_resolution_clock::now();
 
 	consoleLog_->info(

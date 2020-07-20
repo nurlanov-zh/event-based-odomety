@@ -218,8 +218,8 @@ void Visualizer::drawOriginalOverlay()
 				break;
 			}
 		}
-/*		integratedNabla_ = integratedEventImage_;
-		predictedNabla_ = compensatedEventImage_;*/
+		/*		integratedNabla_ = integratedEventImage_;
+				predictedNabla_ = compensatedEventImage_;*/
 	}
 
 	// Draw events
@@ -332,6 +332,8 @@ void Visualizer::eventCallback(const common::EventSample& sample)
 {
 	integratedEvents_.emplace_back(sample);
 
+	originalImage_ = compensatedEventImage_;
+
 	while (integratedEvents_.back().timestamp -
 			   integratedEvents_.front().timestamp >=
 		   INTEGRATION_TIME)
@@ -355,7 +357,8 @@ cv::Mat Visualizer::convertImageToGray(const cv::Mat& cvImage)
 void Visualizer::imageCallback(const common::ImageSample& sample)
 {
 	set_ = true;
-	originalImage_ = sample.value;
+	//	originalImage_ = sample.value;
+	originalImage_ = compensatedEventImage_;
 }
 
 void Visualizer::drawPredictedNablaOverlay()
@@ -570,17 +573,15 @@ void Visualizer::finishVisualizerIteration()
 	// 				 cv::COLOR_GRAY2RGB);
 	// 	cv::resize(image3, image3, {540, 540});
 	// 	const auto start =
-	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 * std::sin(flow_));
-	// 	const auto end =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow1Start =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow1End = Eigen::Vector2d(270 + 35 * std::cos(flow_ + 0.2),
-	// 										   270 + 35 * std::sin(flow_ + 0.2));
-	// 	const auto arrow2Start =
-	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 * std::sin(flow_));
-	// 	const auto arrow2End = Eigen::Vector2d(270 + 35 * std::cos(flow_ - 0.2),
-	// 										   270 + 35 * std::sin(flow_ - 0.2));
+	// 		Eigen::Vector2d(270 - 55 * std::cos(flow_), 270 - 55 *
+	// std::sin(flow_)); 	const auto end = 		Eigen::Vector2d(270 + 55 *
+	// std::cos(flow_), 270 + 55 * std::sin(flow_)); 	const auto arrow1Start =
+	// 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 *
+	// std::sin(flow_)); 	const auto arrow1End = Eigen::Vector2d(270 + 35 *
+	// std::cos(flow_ + 0.2), 										   270 + 35 * std::sin(flow_ + 0.2)); 	const auto
+	// arrow2Start = 		Eigen::Vector2d(270 + 55 * std::cos(flow_), 270 + 55 *
+	// std::sin(flow_)); 	const auto arrow2End = Eigen::Vector2d(270 + 35 *
+	// std::cos(flow_ - 0.2), 										   270 + 35 * std::sin(flow_ - 0.2));
 	// 	cv::line(image3, {start(0), start(1)}, {end(0), end(1)}, {50, 0, 127});
 	// 	cv::line(image3, {arrow1Start(0), arrow1Start(1)},
 	// 			 {arrow1End(0), arrow1End(1)}, {50, 0, 127});

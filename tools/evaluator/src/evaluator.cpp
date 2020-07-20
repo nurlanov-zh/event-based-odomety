@@ -20,7 +20,7 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to pre exit VO");	
+		errLog_->warn("Unable to pre exit VO");
 	}
 
 	try
@@ -29,7 +29,7 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to pre exit VO");	
+		errLog_->warn("Unable to pre exit VO");
 	}
 
 	try
@@ -47,7 +47,7 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to save poses");	
+		errLog_->warn("Unable to save poses");
 	}
 
 	try
@@ -56,7 +56,7 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to save gt");	
+		errLog_->warn("Unable to save gt");
 	}
 
 	try
@@ -65,7 +65,7 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to save map");	
+		errLog_->warn("Unable to save map");
 	}
 
 	try
@@ -74,9 +74,8 @@ Evaluator::~Evaluator()
 	}
 	catch (const std::exception&)
 	{
-		errLog_->warn("Unable to save final cost");	
+		errLog_->warn("Unable to save final cost");
 	}
-
 }
 
 tracker::Patches const& Evaluator::getPatches() const
@@ -96,24 +95,7 @@ void Evaluator::eventCallback(const common::EventSample& sample)
 			params_.compensationFrequencyTime &&
 		tracker_->getEvents().size() >= params_.compensationFrequencyEvents)
 	{
-		// tracker_->compensateEvents(tracker_->getEvents());
-/*		tracker_->compensateEventsContrast(tracker_->getEvents());
-		tracker_->integrateEvents(tracker_->getEvents());
-		tracker_->clearEvents();
-		cv::Mat image = tracker_->getCompensatedEventImage();
-		cv::Mat grayImage;
-
-		double minVal;
-		double maxVal;
-		cv::minMaxLoc(image, &minVal, &maxVal);
-		image.convertTo(grayImage, CV_8U, 255.0 / (maxVal - minVal),
-						-minVal * 255.0 / (maxVal - minVal));
-
-		common::ImageSample imageSample;
-		imageSample.timestamp = sample.timestamp;
-		imageSample.value = grayImage;
-		imageCallback(imageSample);*/
-
+		//		 tracker_->compensateEvents(tracker_->getEvents());
 	}
 }
 
@@ -123,8 +105,27 @@ void Evaluator::groundTruthCallback(const common::GroundTruthSample& /*sample*/)
 
 void Evaluator::imageCallback(const common::ImageSample& sample)
 {
+	if (!tracker_->isReadyToCompensate() && imageNum_ < 1)
+	{
+		consoleLog_->info("Should be image at timestamp " +
+						  std::to_string(sample.timestamp.count()) +
+						  ".\nBut there are not enough events to compensate!");
+		return;
+	}
 	consoleLog_->info("New image at timestamp " +
 					  std::to_string(sample.timestamp.count()));
+	consoleLog_->info("Using compensated event image instead!");
+
+	tracker_->compensateEventsContrast(tracker_->getEvents());
+	tracker_->integrateEvents(tracker_->getEvents());
+	//	tracker_->clearEvents();
+	cv::Mat image = tracker_->getCompensatedEventImage();
+
+	common::ImageSample imageSample;
+	imageSample.timestamp = sample.timestamp;
+	imageSample.value = image;
+	//	imageCallback(imageSample);
+
 	imageNum_++;
 	if (params_.trackerExperiment)
 	{
@@ -136,12 +137,12 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 
 	if (!params_.visOdometryExperiment)
 	{
-		tracker_->newImage(sample);
+		tracker_->newImage(imageSample);
 		corners_ = tracker_->getFeatures();
 	}
 	else
 	{
-		const auto it = keyframes_.find(sample.timestamp.count());
+		const auto it = keyframes_.find(imageSample.timestamp.count());
 		if (it != keyframes_.end())
 		{
 			patches_ = it->second;
@@ -153,17 +154,17 @@ void Evaluator::imageCallback(const common::ImageSample& sample)
 		if (!params_.visOdometryExperiment)
 		{
 			auto keyframe = visual_odometry::Keyframe(tracker_->getPatches(),
-													  sample.timestamp);
+													  imageSample.timestamp);
 			visualOdometry_->newKeyframeCandidate(keyframe);
 		}
 		else
 		{
 			std::cout << "here" << std::endl;
-			const auto it = keyframes_.find(sample.timestamp.count());
+			const auto it = keyframes_.find(imageSample.timestamp.count());
 			if (it != keyframes_.end())
 			{
-				auto keyframe =
-					visual_odometry::Keyframe(it->second, sample.timestamp);
+				auto keyframe = visual_odometry::Keyframe(
+					it->second, imageSample.timestamp);
 				visualOdometry_->newKeyframeCandidate(keyframe);
 			}
 		}
@@ -210,8 +211,8 @@ void Evaluator::saveFeaturesTrajectory(const tracker::Patches& patches)
 					 << std::chrono::duration<double>(pos.timestamp).count()
 					 /*+ 1457432569.609347070 -
 					 std::chrono::duration<double>(
-					 	patch.getTrajectory().front().timestamp)
-					 	.count()*/
+						patch.getTrajectory().front().timestamp)
+						.count()*/
 					 << " " << pos.value.x << " " << pos.value.y << std::endl;
 		}
 	}

@@ -77,7 +77,7 @@ void VisualOdometryFrontEnd::preExit()
 		keyframeAligned.timestamp = kf.timestamp;
 		alignedFrames_.push_back(keyframeAligned);
 	}
-	consoleLog_->info("RMSE: " + std::to_string(ate.rmse));	
+	consoleLog_->info("RMSE: " + std::to_string(ate.rmse));
 	consoleLog_->info("Mean: " + std::to_string(ate.mean));
 	consoleLog_->info("Max: " + std::to_string(ate.max));
 	consoleLog_->info("Min: " + std::to_string(ate.min));

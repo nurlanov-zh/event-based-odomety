@@ -52,8 +52,8 @@ class Optimizer
 	void deleteUser() { used_--; }
 	bool isUsed() const { return used_ != 0; }
 
-   private:
-	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);
+	//   private:
+	//	void drawCostMap(Patch& patch, tracker::OptimizerCostFunctor* c);
 
    private:
 	OptimizerParams params_;
