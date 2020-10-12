@@ -10,3 +10,4 @@ __pycache__
 *.png
 .ipynb_checkpoints/
 pictures/
+results/
